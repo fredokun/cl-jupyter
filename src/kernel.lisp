@@ -14,18 +14,6 @@
                    :config config
                    :ctx ctx)))
 
-(defun get-argv ()
-  ;; Borrowed from apply-argv, command-line-arguments.  Temporary solution (?)
-  #+sbcl (cdr sb-ext:*posix-argv*)
-  #+clozure CCL:*UNPROCESSED-COMMAND-LINE-ARGUMENTS*  ;(ccl::command-line-arguments)
-  #+gcl si:*command-args*
-  #+ecl (loop for i from 0 below (si:argc) collect (si:argv i))
-  #+cmu extensions:*command-line-strings*
-  #+allegro (sys:command-line-arguments)
-  #+lispworks sys:*line-arguments-list*
-  #+clisp ext:*args*
-  #-(or sbcl clozure gcl ecl cmu allegro lispworks clisp)
-  (error "get-argv not supported for your implementation"))
 
 (defun join (e l)
   (cond ((endp l) (list))
