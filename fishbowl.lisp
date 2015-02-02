@@ -20,7 +20,8 @@
     (push def-dir asdf:*central-registry*)))
 
 ;; for debugging
-;;(push (truename "./src") asdf:*central-registry*)
+;;
+(push (truename "./src") asdf:*central-registry*)
 
 ;; activate debugging
 (declaim (optimize (speed 0) (space 0) (debug 3) (safety 3)))
@@ -33,5 +34,5 @@
 (in-package #:fishbowl-user)
 
 ;; start main loop
-(fishbowl:kernel-start)
+(fishbowl:kernel-launch "test.ipynb")
 

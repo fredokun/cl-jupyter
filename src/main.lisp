@@ -131,9 +131,13 @@ Note that the dependencies are exactly the same in both cases.
                                       (profile-name "fishbowl")
                                       (profile-dir nil)
                                       (profile-overwrite nil)
-                                      (shell-port 0)
-                                      (iopub-port 0)
-                                      (hb-port 0)
+				      (transport "tcp")
+				      (ip "127.0.0.1")
+                                      (shell-port 40000)
+                                      (iopub-port 40001)
+                                      (hb-port 40002)
+				      (signature-scheme "")
+				      (sig-key "")
                                       (ipython-program "ipython")
                                       (ipython-extra-opts ""))
   (banner)
@@ -144,6 +148,39 @@ Note that the dependencies are exactly the same in both cases.
                                  (fetch-ipython-custom-profile-dir ipython-program profile-dir)
                                  (fetch-ipython-default-profile-dir ipython-program profile-name))))
     (when (null ipython-profile-dir)
-      (error "Cannot initialize IPython profile directory."))        
-    (error "Not yet implemented.")))
-
+      (error "Cannot initialize IPython profile directory."))
+    ;; configuration
+    (let ((config
+	   (make-instance 'kernel-config
+			  :transport transport
+			  :ip ip
+			  :shell-port shell-port
+			  :iopub-port iopub-port
+			  ;;:control-port  ;; XXX: Not in version 2 ? 
+			  :hb-port hb-port
+			  :signature-scheme signature-scheme
+			  :key sig-key)))
+      (let* ((kernel (make-kernel config))
+	     (evaluator (make-evaluator kernel))
+	     (shell (make-shell-channel kernel))
+	     (iopub (make-iopub-channel kernel)))
+	;; Launch the hearbeat thread
+	(let ((hb-socket (pzmq:socket (kernel-ctx kernel) :rep)))  
+	  (let ((hb-endpoint (format nil "~A://~A:~A"
+				     (config-transport config)
+				     (config-ip config)
+				     (config-hb-port config))))
+	    ;;(format t "heartbeat endpoint is: ~A~%" endpoint)
+	    (pzmq:bind hb-socket hb-endpoint)
+	    (let ((heartbeat-thread-id (start-heartbeat hb-socket)))
+	      ;; main loop
+	      (unwind-protect 
+		   ;;(format t "[Kernel] Entering mainloop ...~%")
+		   (shell-loop shell)
+		;; clean up when exiting
+		(bordeaux-threads:destroy-thread heartbeat-thread-id)
+		(pzmq:close hb-socket)
+		(pzmq:close (iopub-socket iopub))
+		(pzmq:close (shell-socket shell))
+		(pzmq:ctx-destroy (kernel-ctx kernel))
+		(format t "Bye bye.~%")))))))))

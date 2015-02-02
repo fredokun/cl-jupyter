@@ -20,4 +20,6 @@
 	       (:file "display")
 	       (:file "evaluator")
                (:file "user")
-               (:file "kernel")))
+               (:file "kernel")
+	       (:file "main"))
+  )

@@ -36,6 +36,7 @@
    #:display-svg render-svg
    #:display-json render-json
    #:display-javascript render-javascript
+   #:kernel-launch
    #:kernel-start))
 
 (defpackage #:fishbowl-user
