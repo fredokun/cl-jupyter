@@ -78,7 +78,6 @@ Note that the dependencies are exactly the same in both cases.
           )
       (error (se)
         (declare (ignore se))
-        (format t "here")
         (return-from run-program-to-string nil)))
     #-(or sbcl clozure)
     (error "Cannot run program: Lisp implementation unsupported (please report).")
@@ -126,6 +125,10 @@ Note that the dependencies are exactly the same in both cases.
 (defun install-ipython-fishbowl-custom-files (profile-dir)
   (let ((custom-dir (truename (concatenate 'string (namestring profile-dir) "static/custom/"))))                                       
     (error "Not yet implemented")))
+
+(defun run-ipython-frontend (notebook-file ipython-program ipython-profile-dir ipython-extra-opts
+			     transport ip shell-port iopub-port hb-port) 
+  (error "todo"))
 
 (defun kernel-launch (notebook-file &key
                                       (profile-name "fishbowl")
