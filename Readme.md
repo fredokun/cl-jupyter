@@ -1,6 +1,18 @@
 Fishbowl
 ========
 
+----
+
+**WARNING** :  this branch is an attempt to reverse the control
+flow, letting the lisp side manage the REPL and using the
+python part only as a frontend.
+
+However, the ipython notebook server does not allow, for the moment at least,
+ the connection to an existing kernel... So for now this branch will not developed
+ anymore as long as the Ipython (Jupyter) side does not evolve on the topic.
+
+----
+
 An enhanced interactive Shell for Common Lisp  (based on IPython)
 
 ```
