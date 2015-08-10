@@ -1,6 +1,13 @@
 Fishbowl
 ========
 
+----
+
+**Warning**:  this branch is for the old 2.x branch of IPython, the predecessor of the Jupyter framework. The development will not continue on this branch (only minor fixes will be considered).
+
+----
+
+
 An enhanced interactive Shell for Common Lisp  (based on IPython)
 
 ```
