@@ -1,4 +1,4 @@
-**INFORMATION**: this branch is an intermediate "almost usable" version using protocl v.4.1 for Ipython 3.x   (the master branch use 5.0 and does not work at the moment).
+**INFORMATION**: this branch is an intermediate "almost usable" version using protocl v.4.1 for Ipython 3.x   (the master branch use protocol v5.0).
 
 
 cl-Jupyter
