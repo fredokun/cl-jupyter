@@ -249,14 +249,23 @@ The wire-deserialization part follows.
       (pzmq:send socket part :sndmore t))
     (pzmq:send socket nil)))
 
+(defun recv-string (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
+  "Receive a message part from a socket as a string."
+  (pzmq:with-message msg
+    (pzmq:msg-recv msg socket :dontwait dontwait)
+    (values
+     (handler-case 
+         (cffi:foreign-string-to-lisp (pzmq:msg-data msg) :count (pzmq:msg-size msg) :encoding encoding)
+       (BABEL-ENCODINGS:INVALID-UTF8-STARTER-BYTE
+           ()
+         ;; if it's not utf-8 we try latin-1 (Ugly !)
+         (format t "[Recv]: issue with UTF-8 decoding~%")
+         (cffi:foreign-string-to-lisp (pzmq:msg-data msg) :count (pzmq:msg-size msg) :encoding :latin-1)))
+     (pzmq:getsockopt socket :rcvmore))))
+
 (defun zmq-recv-list (socket &optional (parts nil) (part-num 1))
   (multiple-value-bind (part more)
-      (handler-case (pzmq:recv-string socket)
-		    (BABEL-ENCODINGS:INVALID-UTF8-STARTER-BYTE
-		     ()
-		     ;; if it's not utf-8 we try latin-1 (Ugly !)
-		     (format t "[Recv]: issue with UTF-8 decoding~%")
-		     (pzmq:recv-string socket :encoding :latin-1)))
+      (recv-string socket)
     ;;(format t "[Shell]: received message part #~A: ~W (more? ~A)~%" part-num part more)
     (if more
         (zmq-recv-list socket (cons part parts) (+ part-num 1))

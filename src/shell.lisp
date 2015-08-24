@@ -98,7 +98,7 @@
                                               ("pygments_lexer" . ,language-info-pygments-lexer)
                                               ("codemirror_mode" . ,language-info-codemirror-mode)))
                                               ;("nbconvert_exporter" . ,language-info-nbconvert-exporter)))
-                          ("banner" . "")) ; ,banner)
+                          ("banner" . "cl-jupyter")) ; ,banner)
                           ;("help_links" . ,help-links))
                  :indent indent :first-line first-line)))
 
