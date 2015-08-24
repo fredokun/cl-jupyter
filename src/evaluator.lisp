@@ -40,7 +40,7 @@ The history of evaluations is also saved by the evaluator.
 
 (defun evaluate-code (evaluator code)
   ;;(format t "[Evaluator] Code to evaluate: ~W~%" code)
-  (vector-push code (evaluator-history-in evaluator))
+  (vector-push-extend code (evaluator-history-in evaluator))
   (let ((execution-count (length (evaluator-history-in evaluator))))
     (let ((code-to-eval (read-from-string (format nil "~A" code))))
       (if (and (consp code-to-eval)
@@ -66,6 +66,6 @@ The history of evaluations is also saved by the evaluator.
 				  ;; normal evaluation
 				  (multiple-value-list (eval code-to-eval))))))));)
 	      ;;(format t "[Evaluator] : results = ~W~%" results)
-	      (vector-push results (evaluator-history-out evaluator))
+	      (vector-push-extend results (evaluator-history-out evaluator))
 	      (values execution-count results stdout-str stderr-str)))))))
 
