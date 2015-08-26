@@ -20,8 +20,10 @@
     ;; (format t "Definition dir = ~A~%" def-dir)
     (push def-dir asdf:*central-registry*)))
 
-;; for debugging
-(push (truename "./src") asdf:*central-registry*)
+;; not yet installed in quicklisp directory
+;; (format t "path = ~A~%" (directory-namestring *load-truename*))
+(push (truename (format nil "~Asrc/" (directory-namestring *load-truename*)))
+      asdf:*central-registry*)
 
 ;; activate debugging
 (declaim (optimize (speed 0) (space 0) (debug 3) (safety 3)))
