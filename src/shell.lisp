@@ -108,10 +108,10 @@
 (defun handle-kernel-info-request (shell identities msg buffers)
   ;;(format t "[Shell] handling 'kernel-info-request'~%")
   ;; status to busy
-  (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy")
+  (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))
   ;; for protocol version 5
   (let ((reply (make-message
-                msg "kernel_info_reply" nil 
+                msg "kernel_info_reply" nil
                 (make-instance
                  'content-kernel-info-reply
                  :protocol-version (header-version (message-header msg))
@@ -135,7 +135,7 @@
     ;;   				  :language "common-lisp"))))
     (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))
     ;; status back to idle
-    (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle")))
+    (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))))
 
 #|
 
@@ -146,7 +146,7 @@
 
 (defun handle-execute-request (shell identities msg buffers)
   ;;(format t "[Shell] handling 'execute_request'~%")
-  (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy")
+  (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))
   (let ((content (parse-json-from-string (message-content msg))))
     ;;(format t "  ==> Message content = ~W~%" content)
     (let ((code (afetch "code" content :test #'equal)))
@@ -177,7 +177,7 @@
 	(send-execute-result (kernel-iopub (shell-kernel shell)) 
 			     msg execution-count (car results) :key (kernel-key shell))
 	;; status back to idle
-	(send-status-update (kernel-iopub (shell-kernel shell)) msg "idle")
+	(send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))
 	;; send reply (control)
 	(let ((reply (make-message msg "execute_reply" nil
 				   `(("status" . "ok")
