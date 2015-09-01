@@ -7,17 +7,18 @@
   :depends-on (:pzmq
                :bordeaux-threads
                :uuid
-	       ;; :ironclad  (for signed messages)
-	       :cl-base64)
+               :babel
+               :ironclad
+               :cl-base64)
   :serial t
   :components ((:file "packages")
                (:file "utils")
-	       (:file "myjson")
-	       (:file "config")
+               (:file "myjson")
+               (:file "config")
                (:file "message")
                (:file "shell")
-	       (:file "iopub")
-	       (:file "display")
-	       (:file "evaluator")
+               (:file "iopub")
+               (:file "display")
+               (:file "evaluator")
                (:file "user")
                (:file "kernel")))
