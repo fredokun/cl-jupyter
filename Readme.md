@@ -69,17 +69,15 @@ the following command line:
 
 ### Console mode
 
-    ipython3 console --no-secure --kernel=lisp
+    ipython3 console --kernel=lisp
 
-**Remark**: the `--no-secure` option is for the moment required because cl-jupyter
-does not yet support message encryption.
 
 ### Notebooks
 
 The real interest of cl-Jupyter is its use conjointly
  with the Jupyter notebook frontend. For a try, type:
 
-    ipython3 notebook --Session.key="b''" --kernel=lisp
+    ipython3 notebook --kernel=lisp
 
 
 The file [about-cl-jupyter.ipynb](https://github.com/fredokun/cl-jupyter/blob/master/about-cl-jupyter.ipynb) is an example of a Lisp-based notebook.
