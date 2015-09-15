@@ -42,30 +42,37 @@ The history of evaluations is also saved by the evaluator.
   ;;(format t "[Evaluator] Code to evaluate: ~W~%" code)
   (vector-push-extend code (evaluator-history-in evaluator))
   (let ((execution-count (length (evaluator-history-in evaluator))))
-    (let ((code-to-eval (read-from-string (format nil "~A" code))))
-      (if (and (consp code-to-eval)
-	       (eql (car code-to-eval) 'quicklisp-client:quickload)
-	       (stringp (cadr code-to-eval)))
-	  ;; quicklisp hook
-	  (let ((results (multiple-value-list (ql:quickload (cadr code-to-eval)))))
-	    (values execution-count results "" ""))
-	  ;; else "normal" evaluation
-	  ;;(format t "[Evaluator] Code to evaluate: ~W~%" code-to-eval)
-	  (let* ((stdout-str (make-array 0 :element-type 'character :fill-pointer 0 :adjustable t))
-		 (stderr-str (make-array 0 :element-type 'character :fill-pointer 0 :adjustable t)))
-	    (let ((results (with-output-to-string (stdout stdout-str)
-			     (with-output-to-string (stderr stderr-str)
-			       (let ((*standard-output* stdout)
-				     (*error-output* stderr))
-				 (handling-errors
-					;(if (and (consp code-to-eval)
-					;	(eql (car code-to-eval) 'quicklisp-client:quickload)
-					;	(stringp (cadr code-to-eval)))
-				  ;; quicklisp hook
-					;  (multiple-value-list (ql:quickload (cadr code-to-eval)))
-				  ;; normal evaluation
-				  (multiple-value-list (eval code-to-eval))))))));)
-	      ;;(format t "[Evaluator] : results = ~W~%" results)
-	      (vector-push-extend results (evaluator-history-out evaluator))
-	      (values execution-count results stdout-str stderr-str)))))))
+ 
+    (let ((code-to-eval (handler-case
+                            (read-from-string (format nil "~A" code))
+                          (END-OF-FILE (err) :read-error))))
+      ;; (format t "code-to-eval = ~A~%" code-to-eval)
+      (cond
+        ((eq code-to-eval :read-error) (values execution-count nil "" "Incomplete input (END-OF-FILE condition)"))
+        ((and (consp code-to-eval)
+              (eql (car code-to-eval) 'quicklisp-client:quickload)
+              (stringp (cadr code-to-eval)))
+         ;; quicklisp hook
+         (let ((results (multiple-value-list (ql:quickload (cadr code-to-eval)))))
+           (values execution-count results "" "")))
+        (t
+         ;; else "normal" evaluation
+         ;;(format t "[Evaluator] Code to evaluate: ~W~%" code-to-eval)
+         (let* ((stdout-str (make-array 0 :element-type 'character :fill-pointer 0 :adjustable t))
+                (stderr-str (make-array 0 :element-type 'character :fill-pointer 0 :adjustable t)))
+           (let ((results (with-output-to-string (stdout stdout-str)
+                            (with-output-to-string (stderr stderr-str)
+                              (let ((*standard-output* stdout)
+                                    (*error-output* stderr))
+                                (handling-errors
+                                        ;(if (and (consp code-to-eval)
+                                        ;	(eql (car code-to-eval) 'quicklisp-client:quickload)
+                                        ;	(stringp (cadr code-to-eval)))
+                                 ;; quicklisp hook
+                                        ;  (multiple-value-list (ql:quickload (cadr code-to-eval)))
+                                 ;; normal evaluation
+                                 (multiple-value-list (eval code-to-eval))))))));)
+             ;;(format t "[Evaluator] : results = ~W~%" results)
+             (vector-push-extend results (evaluator-history-out evaluator))
+             (values execution-count results stdout-str stderr-str))))))))
 
