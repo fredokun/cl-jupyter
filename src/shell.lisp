@@ -28,7 +28,7 @@
 (defun shell-loop (shell)
   (let ((active t))
     (format t "[Shell] loop started~%")
-    (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)))
+    (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
     (while active
       (vbinds (identities sig msg buffers)  (message-recv (shell-socket shell))
 	      ;;(format t "Shell Received:~%")
