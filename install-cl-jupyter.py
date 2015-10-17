@@ -260,12 +260,7 @@ with open(config.ipython_dir + "/kernels/lisp/kernel.json", "w") as kernel_spec_
     json.dump(KERNEL_SPEC, kernel_spec_file)
 
 print("Installation Complete.")
-print("---- Running cl-jupyter:")
 
-print("ipython3 console --kernel lisp")
-print("ipython3 notebook --kernel lisp")
-
-print("---- enjoy !")
 
 
 

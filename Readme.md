@@ -65,23 +65,26 @@ a veeeerrrry long first startup.
 
   - using SBCL
 
-    sbcl --load ./cl-jupyter.lisp
+        sbcl --load ./cl-jupyter.lisp
 
    - using CCL
 
-    ccl --load ./cl-jupyter.lisp
+        ccl --load ./cl-jupyter.lisp
 
 ## Running cl-jupyter
+
+The console mode is a simple REPL that is useful to
+check that cl-jupyter is working.
 
 ### Console mode
 
  - for Jupyter
 
-    jupyter console --kernel=lisp
+        jupyter console --kernel=lisp
 
  - for IPython 3.x
 
-    ipython3 console --kernel=lisp
+        ipython3 console --kernel=lisp
 
 ### Notebooks
 
@@ -90,11 +93,11 @@ The real interest of cl-jupyter is its use conjointly
 
   - for Jupyter
 
-    jupyter notebook
+        jupyter notebook
 
   - for IPython 3.x
 
-    ipython3 notebook
+        ipython3 notebook
 
 The file [about-cl-jupyter.ipynb](https://github.com/fredokun/cl-jupyter/blob/master/about-cl-jupyter.ipynb) is an example of a Lisp-based notebook.
 
