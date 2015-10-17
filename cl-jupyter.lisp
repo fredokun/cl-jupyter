@@ -1,3 +1,6 @@
+;; not yet installed in quicklisp directory
+(push (truename (format nil "~Asrc/" (directory-namestring *load-truename*)))
+      asdf:*central-registry*)
 
 (let ((cmd-args
        ;; Borrowed from apply-argv, command-line-arguments.  Temporary solution (?)
@@ -12,17 +15,23 @@
        #+clisp ext:*args*
        #-(or sbcl clozure gcl ecl cmu allegro lispworks clisp)
        (error "get-argv not supported for your implementation")))
+  (when (= (length cmd-args) 0)
+    (progn
+      (format t "... initialization mode... please wait...~%")
+      (ql:quickload "cl-jupyter")
+      (format t "... initialization done...~%")
+      #+sbcl (sb-ext:exit :code 0)
+      #+(or openmcl mcl) (ccl::quit)
+      #-(or sbcl openmcl mcl)
+      (error 'not-implemented :proc (list 'quit code)))) 
   (when (not (>= (length cmd-args) 3))
     (error "Wrong number of arguments (given ~A, expecting at least 3)" (length cmd-args)))
   (let ((def-dir (truename (car (last cmd-args 3)))))
-        ;;(run-dir (truename (cadr cmd-args))))
+    ;;(run-dir (truename (cadr cmd-args))))
     ;; add the source directory to the ASDF registry
     ;; (format t "Definition dir = ~A~%" def-dir)
     (push def-dir asdf:*central-registry*)))
 
-;; not yet installed in quicklisp directory
-(push (truename (format nil "~Asrc/" (directory-namestring *load-truename*)))
-      asdf:*central-registry*)
 
 ;; for debugging only:
 ;; (push (truename "./src/") asdf:*central-registry*)

@@ -14,7 +14,8 @@
 	   #:while
 	   #:read-file-lines
 	   #:read-string-file
-	   #:read-binary-file))
+	   #:read-binary-file
+	   #:quit))
 
 (defpackage #:myjson
   (:use #:cl #:fredo-utils)
