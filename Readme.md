@@ -1,24 +1,19 @@
-----
 
-**INFORMATION**: this is master branch for IPython 3.x (protocol version 5.0). A version for Ipython 2.x is in the branch `2.x`.
-
-----
-
-cl-Jupyter
+cl-jupyter
 ==========
 
 An enhanced interactive Shell for Common Lisp (based on the Jupyter protocol)
 
 ```
  cl-jupyter: an enhanced interactive Common Lisp Shell
-(Version 0.5 - Ipython protocol v.4.1)
+(Version 0.7 - Ipython protocol v.5.0)
 --> (C) 2014-2015 Frederic Peschanski (cf. LICENSE)
                                  __________       
                                 /         /.      
      .-----------------.       /_________/ |      
     /                 / |      |         | |      
    /+================+\ |      | |====|  | |      
-   ||cl-Jupyter      || |      |         | |      
+   ||cl-jupyter      || |      |         | |      
    ||                || |      | |====|  | |      
    ||* (fact 5)      || |      |         | |      
    ||120             || |      |   ___   | |      
@@ -32,25 +27,25 @@ An enhanced interactive Shell for Common Lisp (based on the Jupyter protocol)
    ------------------                          
 ```
 
-**Important** : this is alpha version non-officially released software. **Use it at your own risk and peril !**
+**Important** : this is beta-quality software, expect (and please report) some bugs... 
 
 ## Requirements ##
 
-To try cl-Jupyter you need :
+To try cl-jupyter you need :
 
  - a Common lisp implementation, for now
 
    - either SBCL 1.2.x or above (with native threads enabled)
 
-   - or Clozure CL 1.10 or aboce (with native threads enabled) ...
+   - or Clozure CL 1.10 or above (with native threads enabled) ...
 
    - ECL is planned, for other implementations please fill an issue.
 
- - Quicklisp (cf. http://www.quicklisp.org/)
+ - Quicklisp (cf. http://www.quicklisp.org)
 
- - Python 3.2 or above
+ - Python 3.x (cf. http://www.python.org)
 
- - IPython 3.0 or above
+ - Jupyter (a.k.a. IPython 4.x) or IPython 3.x (cf. http://www.jupyter.org)
 
 ## Quick install ##
 
@@ -58,27 +53,48 @@ Please run the installation script :
 
     python3 ./install-cl-jupyter.py
 
-By default, cl-Jupyter assumes SBCL as the default lisp implementation. Using CCL instead requires
+By default, cl-jupyter assumes SBCL as the default lisp implementation. Using CCL instead requires
 the following command line:
 
     python3 ./install-cl-jupyter.py  --lisp=ccl
 
-**Note**: cl-Jupyter seems to work better with CCL on MacOS  (but on Linux everything's fine with SBCL).
+**Note**: cl-jupyter seems to work better with CCL on MacOS (but on Linux everything's fine with SBCL).
+
+As an optional step, you can pre-install the quicklisp dependencies to avoid
+a veeeerrrry long first startup.
+
+  - using SBCL
+
+    sbcl --load ./cl-jupyter.lisp
+
+   - using CCL
+
+    ccl --load ./cl-jupyter.lisp
 
 ## Running cl-jupyter
 
 ### Console mode
 
-    ipython3 console --kernel=lisp
+ - for Jupyter
 
+    jupyter console --kernel=lisp
+
+ - for IPython 3.x
+
+    ipython3 console --kernel=lisp
 
 ### Notebooks
 
-The real interest of cl-Jupyter is its use conjointly
+The real interest of cl-jupyter is its use conjointly
  with the Jupyter notebook frontend. For a try, type:
 
-    ipython3 notebook --kernel=lisp
+  - for Jupyter
 
+    jupyter notebook
+
+  - for IPython 3.x
+
+    ipython3 notebook
 
 The file [about-cl-jupyter.ipynb](https://github.com/fredokun/cl-jupyter/blob/master/about-cl-jupyter.ipynb) is an example of a Lisp-based notebook.
 

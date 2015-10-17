@@ -34,7 +34,7 @@ The history of evaluations is also saved by the evaluator.
               (simple-condition-format-control   err)
               (simple-condition-format-arguments err))
        (format *error-output* "~&"))
-     (condition (err) 
+     (condition (err)
        (format *error-output* "~&~A: ~%  ~S~%"
                (class-name (class-of err)) err))))
 
