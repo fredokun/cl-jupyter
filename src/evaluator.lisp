@@ -44,7 +44,7 @@ The history of evaluations is also saved by the evaluator.
   (let ((execution-count (length (evaluator-history-in evaluator))))
  
     (let ((code-to-eval (handler-case
-                            (read-from-string (format nil "~A" code))
+                            (read-from-string (format nil "(progn ~A)" code))
                           (END-OF-FILE (err) :read-error))))
       ;; (format t "code-to-eval = ~A~%" code-to-eval)
       (cond
