@@ -26,9 +26,24 @@ The history of evaluations is also saved by the evaluator.
     evaluator))
 
 ;;; macro taken from: http://www.cliki.net/REPL
+;;; modified to handle warnings correctly
 (defmacro handling-errors (&body body)
-  `(handler-case (progn ,@body)
-     (simple-condition (err) 
+  `(handler-case
+       (handler-bind ((simple-warning
+		       #'(lambda (wrn) 
+			   (format *error-output* "~&~A: ~%" (class-name (class-of wrn)))
+			   (apply (function format) *error-output*
+				  (simple-condition-format-control   wrn)
+				  (simple-condition-format-arguments wrn))
+			   (format *error-output* "~&")
+			   (muffle-warning)))
+		      (warning 
+		       #'(lambda (wrn) 
+			   (format *error-output* "~&~A: ~%  ~S~%"
+				   (class-name (class-of wrn)) wrn)
+			   (muffle-warning))))
+	 (progn ,@body))
+     (simple-condition (err)
        (format *error-output* "~&~A: ~%" (class-name (class-of err)))
        (apply (function format) *error-output*
               (simple-condition-format-control   err)
