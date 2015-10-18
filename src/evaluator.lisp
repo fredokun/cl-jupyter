@@ -19,6 +19,8 @@ The history of evaluations is also saved by the evaluator.
    (history-out :initform (make-array 64 :fill-pointer 0 :adjustable t)
 		:reader evaluator-history-out)))
 
+(defvar *evaluator* nil)
+
 (defun make-evaluator (kernel)
   (let ((evaluator (make-instance 'evaluator
 				  :kernel kernel)))
@@ -86,7 +88,8 @@ The history of evaluations is also saved by the evaluator.
                                  ;; quicklisp hook
                                         ;  (multiple-value-list (ql:quickload (cadr code-to-eval)))
                                  ;; normal evaluation
-                                 (multiple-value-list (eval code-to-eval))))))));)
+				 (let ((*evaluator* evaluator))  ;; put the evaluator in the environment
+				   (multiple-value-list (eval code-to-eval)))))))));)
              ;;(format t "[Evaluator] : results = ~W~%" results)
              (vector-push-extend results (evaluator-history-out evaluator))
              (values execution-count results stdout-str stderr-str))))))))
