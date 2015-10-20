@@ -21,6 +21,25 @@ The history of evaluations is also saved by the evaluator.
 
 (defvar *evaluator* nil)
 
+(defun take-history-in (hist-ref)
+  (let ((history-in (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-in)))
+    (if (and (>= hist-ref 0)
+	     (< hist-ref (length history-in))) 
+	(aref history-in hist-ref)
+	nil)))
+
+(defun take-history-out (hist-ref &optional (value-ref 0))
+  (let ((history-out (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-out)))
+    (if (and (>= hist-ref 0)
+	     (< hist-ref (length history-out)))
+	(let ((out-values  (aref history-out hist-ref)))
+	  (if (and (>= value-ref 0)
+		   (< value-ref (length out-values))) 
+	      (elt out-values value-ref)
+	      nil)))))
+
+
+
 (defun make-evaluator (kernel)
   (let ((evaluator (make-instance 'evaluator
 				  :kernel kernel)))
@@ -87,8 +106,12 @@ The history of evaluations is also saved by the evaluator.
                                  ;; quicklisp hook
                                         ;  (multiple-value-list (ql:quickload (cadr code-to-eval)))
                                  ;; normal evaluation
-				 (let ((*evaluator* evaluator))  ;; put the evaluator in the environment
-				   (multiple-value-list (eval code-to-eval)))))))));)
+				  (let ((*evaluator* evaluator)
+					* (take-history-out 0)
+					** (take-history-out 1)
+					*** (take-history-out 2))
+				    ;; put the evaluator in the environment
+				    (multiple-value-list (eval code-to-eval)))))))));)
              ;;(format t "[Evaluator] : results = ~W~%" results)
 	     (vector-push-extend code (evaluator-history-in evaluator))
              (vector-push-extend results (evaluator-history-out evaluator))
