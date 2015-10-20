@@ -57,7 +57,6 @@ The history of evaluations is also saved by the evaluator.
 
 (defun evaluate-code (evaluator code)
   ;;(format t "[Evaluator] Code to evaluate: ~W~%" code)
-  (vector-push-extend code (evaluator-history-in evaluator))
   (let ((execution-count (length (evaluator-history-in evaluator))))
  
     (let ((code-to-eval (handler-case
@@ -91,6 +90,7 @@ The history of evaluations is also saved by the evaluator.
 				 (let ((*evaluator* evaluator))  ;; put the evaluator in the environment
 				   (multiple-value-list (eval code-to-eval)))))))));)
              ;;(format t "[Evaluator] : results = ~W~%" results)
+	     (vector-push-extend code (evaluator-history-in evaluator))
              (vector-push-extend results (evaluator-history-out evaluator))
              (values execution-count results stdout-str stderr-str))))))))
 
