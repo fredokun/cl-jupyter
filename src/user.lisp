@@ -121,7 +121,7 @@
   ;; 	(aref history-in hist-ref)
   ;; 	nil)))
 
-(defun %out (hist-ref &optional (value-ref 0))
+(defun %out (hist-ref &optional (value-ref 1))
   (cl-jupyter::take-history-out hist-ref value-ref))
   ;; (let ((history-out (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-out)))
   ;;   (if (and (>= hist-ref 0)

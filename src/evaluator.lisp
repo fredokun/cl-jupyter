@@ -5,7 +5,7 @@
 # Evaluator #
 
 The evaluator is where the "interesting stuff" takes place :
- user expressions are evaluated here. 
+ user expressions are evaluated here.
 
 The history of evaluations is also saved by the evaluator.
 
@@ -23,22 +23,26 @@ The history of evaluations is also saved by the evaluator.
 
 (defun take-history-in (hist-ref)
   (let ((history-in (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-in)))
-    (if (and (>= hist-ref 0)
-	     (< hist-ref (length history-in))) 
-	(aref history-in hist-ref)
-	nil)))
+    (let ((href (if (< hist-ref 0)
+                    (+ (+ (length history-in) 1) hist-ref)
+                  hist-ref)))
+      (if (and (>= href 1)
+               (<= href (length history-in)))
+          (aref history-in (- href 1))
+        nil))))
 
-(defun take-history-out (hist-ref &optional (value-ref 0))
+(defun take-history-out (hist-ref &optional (value-ref 1))
   (let ((history-out (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-out)))
-    (if (and (>= hist-ref 0)
-	     (< hist-ref (length history-out)))
-	(let ((out-values  (aref history-out hist-ref)))
-	  (if (and (>= value-ref 0)
-		   (< value-ref (length out-values))) 
-	      (elt out-values value-ref)
-	      nil)))))
-
-
+    (let ((href (if (< hist-ref 0)
+                    (+ (+ (length history-out) 1) hist-ref)
+                  hist-ref)))
+      (if (and (>= href 1)
+               (<= href (length history-out)))
+          (let ((out-values  (aref history-out (- href 1))))
+            (if (and (>= value-ref 1)
+                     (<= value-ref (length out-values)))
+                (elt out-values (- value-ref 1))
+              nil))))))
 
 (defun make-evaluator (kernel)
   (let ((evaluator (make-instance 'evaluator
@@ -76,7 +80,7 @@ The history of evaluations is also saved by the evaluator.
 
 (defun evaluate-code (evaluator code)
   ;;(format t "[Evaluator] Code to evaluate: ~W~%" code)
-  (let ((execution-count (length (evaluator-history-in evaluator))))
+  (let ((execution-count (+ (length (evaluator-history-in evaluator)) 1)))
  
     (let ((code-to-eval (handler-case
                             (read-from-string (format nil "(progn ~A)" code))
@@ -106,14 +110,16 @@ The history of evaluations is also saved by the evaluator.
                                  ;; quicklisp hook
                                         ;  (multiple-value-list (ql:quickload (cadr code-to-eval)))
                                  ;; normal evaluation
-				  (let ((*evaluator* evaluator)
-					* (take-history-out 0)
-					** (take-history-out 1)
-					*** (take-history-out 2))
-				    ;; put the evaluator in the environment
-				    (multiple-value-list (eval code-to-eval)))))))));)
+                                 (let ((*evaluator* evaluator))
+                                   (let ((* (take-history-out -1))
+                                         (** (take-history-out -2))
+                                         (*** (take-history-out -3)))
+                                   ;; put the evaluator in the environment
+                                     (multiple-value-list (eval code-to-eval))))))))))
              ;;(format t "[Evaluator] : results = ~W~%" results)
-	     (vector-push-extend code (evaluator-history-in evaluator))
+             (let ((in-code (format nil "~A" code-to-eval)))
+               (vector-push-extend (subseq in-code 7 (1- (length in-code)))
+                                   (evaluator-history-in evaluator)))
              (vector-push-extend results (evaluator-history-out evaluator))
              (values execution-count results stdout-str stderr-str))))))))
 
