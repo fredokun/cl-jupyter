@@ -67,7 +67,7 @@ a veeeerrrry long first startup.
 
         sbcl --load ./cl-jupyter.lisp
 
-   - using CCL
+  - using CCL
 
         ccl --load ./cl-jupyter.lisp
 
