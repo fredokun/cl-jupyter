@@ -31,18 +31,19 @@ The history of evaluations is also saved by the evaluator.
           (aref history-in (- href 1))
         nil))))
 
-(defun take-history-out (hist-ref &optional (value-ref 1))
+(defun take-history-out (hist-ref &optional value-ref)
   (let ((history-out (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-out)))
     (let ((href (if (< hist-ref 0)
                     (+ (+ (length history-out) 1) hist-ref)
-                  hist-ref)))
-      (if (and (>= href 1)
-               (<= href (length history-out)))
-          (let ((out-values  (aref history-out (- href 1))))
-            (if (and (>= value-ref 1)
-                     (<= value-ref (length out-values)))
-                (elt out-values (- value-ref 1))
-              nil))))))
+		    hist-ref)))
+      (when (and (>= href 1)
+                 (<= href (length history-out)))
+        (let ((out-values  (aref history-out (- href 1))))
+          (if value-ref
+              (when (and (>= value-ref 1)
+                         (<= value-ref (length out-values)))
+                (elt out-values (- value-ref 1)))
+              (values-list out-values)))))))
 
 (defun make-evaluator (kernel)
   (let ((evaluator (make-instance 'evaluator
