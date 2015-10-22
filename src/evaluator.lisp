@@ -56,15 +56,15 @@ The history of evaluations is also saved by the evaluator.
 (defmacro handling-errors (&body body)
   `(handler-case
        (handler-bind ((simple-warning
-		       #'(lambda (wrn) 
+		       #'(lambda (wrn)
 			   (format *error-output* "~&~A: ~%" (class-name (class-of wrn)))
 			   (apply (function format) *error-output*
 				  (simple-condition-format-control   wrn)
 				  (simple-condition-format-arguments wrn))
 			   (format *error-output* "~&")
 			   (muffle-warning)))
-		      (warning 
-		       #'(lambda (wrn) 
+		      (warning
+		       #'(lambda (wrn)
 			   (format *error-output* "~&~A: ~%  ~S~%"
 				   (class-name (class-of wrn)) wrn)
 			   (muffle-warning))))
@@ -82,14 +82,24 @@ The history of evaluations is also saved by the evaluator.
 (defun evaluate-code (evaluator code)
   ;;(format t "[Evaluator] Code to evaluate: ~W~%" code)
   (let ((execution-count (+ (length (evaluator-history-in evaluator)) 1)))
- 
     (let ((code-to-eval (handler-case
-                            (read-from-string (format nil "(progn ~A)" code))
-                          (END-OF-FILE (err) :read-error))))
-      ;; (format t "code-to-eval = ~A~%" code-to-eval)
+                         (read-from-string (format nil "(progn ~A)" code))
+                         (END-OF-FILE (err) (list :read-error-eof (format nil "~A" (class-name (class-of err)))))
+                         #+sbcl (SB-INT:SIMPLE-READER-ERROR (err)
+                                                            (list :read-error (format nil "~A (condition of type ~A)" err (class-name (class-of err))))))))
+      ;;(format t "code-to-eval = ~A~%" code-to-eval)
       (cond
-        ((eq code-to-eval :read-error) (values execution-count nil "" "Incomplete input (END-OF-FILE condition)"))
-        ((and (consp code-to-eval)
+       ((and (consp code-to-eval)
+             (eq (car code-to-eval) :read-error-eof))
+        (values execution-count nil ""
+                (format nil "Reader error: incomplete input (condition of type: ~A)~%" (cadr code-to-eval))))
+       ((and (consp code-to-eval)
+             (eq (car code-to-eval) :read-error))
+        (values execution-count nil ""
+                (format nil "Reader error: ~A~%" (cadr code-to-eval))))
+       ((equal code-to-eval '(progn))
+        (values execution-count nil "" (format nil "Warning: no evaluable input~%")))
+       ((and (consp code-to-eval)
               (eql (car code-to-eval) 'quicklisp-client:quickload)
               (stringp (cadr code-to-eval)))
          ;; quicklisp hook

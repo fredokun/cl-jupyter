@@ -143,6 +143,7 @@
 		    (format t "Bye bye.~%")))))))))))
 
 (defun start-heartbeat (socket)
+  (format t "[Hearbeat] starting...~%")
   (let ((thread-id (bordeaux-threads:make-thread
 		    (lambda ()
 		      (format t "[Heartbeat] thread started~%")
