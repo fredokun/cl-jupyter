@@ -11,6 +11,11 @@ import shutil
 import os
 import json
 
+
+class RequirementException(BaseException):
+    pass
+
+
 def halt(msg):
     print(msg, file=sys.stderr)
     print("Abort.", file=sys.stderr)
@@ -175,17 +180,23 @@ if config.lisp_implementation == "sbcl":
     except subprocess.CalledProcessError as e:
         halt("Error: {} from SBCL".format(e))
 
-    #print("sbcl version string = {}".format(sbcl_version_string))
+    print("sbcl reports version {}".format(sbcl_version_string))
 
     import re
-    m = re.match(r".*([0-9]+\.[0-9]+\.[0-9]+)", sbcl_version_string)
-    if not m:
+    try:
+        regexp = re.compile(r'(\d+)\.(\d+)\.(\d+)')
+        version = regexp.findall(sbcl_version_string)[0]
+    except IndexError:
         halt("Error: issue with sbcl version string (please report)")
 
-    config.sbcl_version = tuple([int(d) for d in m.group(1).split(".")])
-    #print("sbcl version = {}".format(config.sbcl_version))
-    if config.sbcl_version[0] < 1 or config.sbcl_version[1] < 2:
-        halt("Error: require SBCL v1.2.x or above")
+    config.sbcl_version = map(int, version)
+
+    sbcl_min_version = (1, 2, 0)
+    for have, need in zip(config.sbcl_version, sbcl_min_version):
+        if have < need:
+            message = "found {}; required: sbcl >= {}"
+            message = message.format(config.sbcl_version, sbcl_min_version)
+            raise RequirementException(message)
 
     print("... Kernel: using {}".format(sbcl_version_string))
 
@@ -246,7 +257,7 @@ elif config.lisp_implementation == "ccl":
     KERNEL_SPEC = {
         "argv": [
             config.lisp_executable,'--batch', '--load',
-            "{0}/cl-jupyter.lisp".format(config.cl_jupyter_startup_def_dir), "--", 
+            "{0}/cl-jupyter.lisp".format(config.cl_jupyter_startup_def_dir), "--",
             "{0}/src".format(config.cl_jupyter_startup_def_dir),
             config.cl_jupyter_startup_def_dir,
             '{connection_file}'],
