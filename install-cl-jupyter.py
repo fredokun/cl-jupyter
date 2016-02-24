@@ -58,7 +58,7 @@ print("... Frontend: using IPython v{}.{}".format(ipython_version_major, ipython
 
 class Config:
     def __init__(self):
-        self.ipython_dir = IPython.utils.path.get_ipython_dir()
+        self.ipython_dir = IPython.paths.get_ipython_dir()
         self.ipython_profile_dir = self.ipython_dir + "/profile_cl_jupyter"
         self.lisp_implementation = "sbcl" # TODO: ccl support (others ? requires threading)
         self.lisp_executable = None # we'll derive executable from implementation later if need be
