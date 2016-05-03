@@ -58,7 +58,9 @@ the following command line:
 
     python3 ./install-cl-jupyter.py  --lisp=ccl
 
-**Note**: cl-jupyter seems to work better with CCL on MacOS (but on Linux everything's fine with SBCL).
+**Note**: cl-jupyter seems to work better with CCL on MacOS but on Linux everything's fine with SBCL
+ and it is the most tested configuration. Alas, it seems cl-jupyter does *not* work on Windows (I cannot try myself).
+ If using a VM I would recommend the Linux/SBCL configuration.
 
 As an optional step, you can pre-install the quicklisp dependencies to avoid
 a veeeerrrry long first startup.
