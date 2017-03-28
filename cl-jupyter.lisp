@@ -8,12 +8,12 @@
        #+sbcl (cdr sb-ext:*posix-argv*) ; remove the program argument
        #+clozure CCL:*UNPROCESSED-COMMAND-LINE-ARGUMENTS*  ;(ccl::command-line-arguments)
        #+gcl si:*command-args*
-       #+ecl (loop for i from 0 below (si:argc) collect (si:argv i))
+       #+(or ecl clasp) (loop for i from 0 below (si:argc) collect (si:argv i))
        #+cmu extensions:*command-line-strings*
        #+allegro (sys:command-line-arguments)
        #+lispworks sys:*line-arguments-list*
        #+clisp ext:*args*
-       #-(or sbcl clozure gcl ecl cmu allegro lispworks clisp)
+       #-(or sbcl clozure gcl ecl clasp cmu allegro lispworks clisp)
        (error "get-argv not supported for your implementation")))
   (when (= (length cmd-args) 0)
     (progn

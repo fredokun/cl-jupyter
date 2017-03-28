@@ -31,18 +31,20 @@
     (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
     (while active
       (vbinds (identities sig msg buffers)  (message-recv (shell-socket shell))
-	      ;;(format t "Shell Received:~%")
-	      ;;(format t "  | identities: ~A~%" identities)
-	      ;;(format t "  | signature: ~W~%" sig)
-	      ;;(format t "  | message: ~A~%" (encode-json-to-string (message-header msg)))
-	      ;;(format t "  | buffers: ~W~%" buffers)
-
+	      (progn
+		(format t "Shell Received:~%")
+		(format t "  | identities: ~A~%" identities)
+		(format t "  | signature: ~W~%" sig)
+		(format t "  | message: ~A~%" (encode-json-to-string (message-header msg)))
+		(format t "  | buffers: ~W~%" buffers))
 	      ;; TODO: check the signature (after that, sig can be forgotten)
 	      (let ((msg-type (header-msg-type (message-header msg))))
 		(cond ((equal msg-type "kernel_info_request")
 		       (handle-kernel-info-request shell identities msg buffers))
 		      ((equal msg-type "execute_request")
 		       (setf active (handle-execute-request shell identities msg buffers)))
+		      ((equal msg-type "comm_open")
+		       (handle-comm-open shell identities msg buffers))
 		      (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))
 
 
@@ -137,6 +139,23 @@
     ;; status back to idle
     (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))))
 
+
+
+(defun handle-comm-open (shell identities msg buffers)
+  (format t "[Shell] handling 'comm_open' - parsing message~%")
+  (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))'
+  (format t "[Shell] done sending busy~%")
+  (unwind-protect
+       (progn
+	 (format t "[Shell] Parsing message~%")
+	 (let ((content (parse-json-from-string (message-content msg))))
+	   (format t "  ==> comm_open Message content = ~W~%" content)))
+    (format t "    Unwound when trying to parse-json-from-string ~%")
+    (finish-output))
+  ;; status back to idle
+  (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell)))
+  
+
 #|
 
 ### Message type: execute_request ###
@@ -145,18 +164,18 @@
 
 
 (defun handle-execute-request (shell identities msg buffers)
-  ;;(format t "[Shell] handling 'execute_request'~%")
+  (format t "[Shell] handling 'execute_request'~%")
   (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))
   (let ((content (parse-json-from-string (message-content msg))))
-    ;;(format t "  ==> Message content = ~W~%" content)
+    (format t "  ==> Message content = ~W~%" content)
     (let ((code (afetch "code" content :test #'equal)))
-      ;;(format t "  ===> Code to execute = ~W~%" code)
+      (format t "  ===> Code to execute = ~W~%" code)
       (vbinds (execution-count results stdout stderr)
           (evaluate-code (kernel-evaluator (shell-kernel shell)) code)
-        ;(format t "Execution count = ~A~%" execution-count)
-        ;(format t "results = ~A~%" results)
-        ;(format t "STDOUT = ~A~%" stdout)
-        ;(format t "STDERR = ~A~%" stderr)
+	  (format t "Execution count = ~A~%" execution-count)
+	  (format t "results = ~A~%" results)
+	  (format t "STDOUT = ~A~%" stdout)
+	  (format t "STDERR = ~A~%" stderr)
         ;; broadcast the code to connected frontends
         (send-execute-code (kernel-iopub (shell-kernel shell)) msg execution-count code :key (kernel-key shell))
 	(when (and (consp results) (typep (car results) 'cl-jupyter-user::cl-jupyter-quit-obj))

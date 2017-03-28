@@ -156,9 +156,9 @@
       #+scl (ext:quit code)                     ; XXX Pretty sure this *does*.
       #+(or openmcl mcl) (ccl::quit)
       #+abcl (cl-user::quit)
-      #+ecl (si:quit)
+      #+(or ecl clasp) (si:quit)
       ;; This group from <hebi...@math.uni.wroc.pl>
       #+poplog (poplog::bye)                    ; XXX Does this take an arg?
       #-(or allegro clisp cmu cormanlisp gcl lispworks lucid sbcl
-            kcl scl openmcl mcl abcl ecl)
+            kcl scl openmcl mcl abcl ecl clasp)
       (error 'not-implemented :proc (list 'quit code))) 
