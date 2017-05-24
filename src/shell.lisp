@@ -44,7 +44,14 @@
 		      ((equal msg-type "execute_request")
 		       (setf active (handle-execute-request shell identities msg buffers)))
 		      ((equal msg-type "comm_open")
-		       (handle-comm-open shell identities msg buffers))
+		       (when *handle-comm-open-hook*
+			 (funcall *handle-comm-open-hook* shell identities msg buffers)))
+		      ((equal msg-type "comm_msg")
+		       (when *handle-comm-msg-hook*
+			 (funcall *handle-comm-msg-hook* shell identities msg buffers)))
+		      ((equal msg-type "comm_close")
+		       (when *handle-comm-close-hook*
+			 (funcall *handle-comm-close-hook* shell identities msg buffers)))
 		      (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))
 
 
@@ -149,6 +156,7 @@
        (progn
 	 (format t "[Shell] Parsing message~%")
 	 (let ((content (parse-json-from-string (message-content msg))))
+	   (format t "  ==> msg = ~W~%" msg)
 	   (format t "  ==> comm_open Message content = ~W~%" content)))
     (format t "    Unwound when trying to parse-json-from-string ~%")
     (finish-output))
@@ -162,6 +170,8 @@
 
 |#
 
+(defvar *parent-msg* nil)
+(defvar *shell* nil)
 
 (defun handle-execute-request (shell identities msg buffers)
   (format t "[Shell] handling 'execute_request'~%")
@@ -171,7 +181,9 @@
     (let ((code (afetch "code" content :test #'equal)))
       (format t "  ===> Code to execute = ~W~%" code)
       (vbinds (execution-count results stdout stderr)
-          (evaluate-code (kernel-evaluator (shell-kernel shell)) code)
+	      (let ((*parent-msg* msg)
+		    (*shell* shell))
+		(evaluate-code (kernel-evaluator (shell-kernel shell)) code))
 	  (format t "Execution count = ~A~%" execution-count)
 	  (format t "results = ~A~%" results)
 	  (format t "STDOUT = ~A~%" stdout)

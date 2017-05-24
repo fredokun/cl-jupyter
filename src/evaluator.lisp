@@ -77,8 +77,9 @@ The history of evaluations is also saved by the evaluator.
               (simple-condition-format-arguments err))
        (format *error-output* "~&"))
      (serious-condition (err)
-       (format *error-output* "~&~A: ~%  ~S~%"
-               (class-name (class-of err)) err))))
+       (format *error-output* "~&An error occurred of type: ~A: ~%  ~S~%"
+               (class-name (class-of err)) err)
+       (core::clasp-backtrace))))
 
 (defun evaluate-code (evaluator code)
   ;;(format t "[Evaluator] Code to evaluate: ~W~%" code)

@@ -37,6 +37,11 @@
    #:display-svg render-svg
    #:display-json render-json
    #:display-javascript render-javascript
+   #:*kernel-start-hook*
+   #:*kernel-shutdown-hook*
+   #:*handle-comm-open-hook*
+   #:*handle-comm-msg-hook*
+   #:*handle-comm-close-hook*
    #:kernel-start))
 
 (defpackage #:cl-jupyter-user
