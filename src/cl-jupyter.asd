@@ -21,5 +21,4 @@
 		 (:file "display")
 		 (:file "evaluator")
 		 (:file "user")
-		 (:file "kernel")
-		 (:file "comm")))
+		 (:file "kernel")))
