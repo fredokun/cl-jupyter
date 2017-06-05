@@ -146,24 +146,6 @@
     ;; status back to idle
     (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))))
 
-
-
-(defun handle-comm-open (shell identities msg buffers)
-  (format t "[Shell] handling 'comm_open' - parsing message~%")
-  (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))'
-  (format t "[Shell] done sending busy~%")
-  (unwind-protect
-       (progn
-	 (format t "[Shell] Parsing message~%")
-	 (let ((content (parse-json-from-string (message-content msg))))
-	   (format t "  ==> msg = ~W~%" msg)
-	   (format t "  ==> comm_open Message content = ~W~%" content)))
-    (format t "    Unwound when trying to parse-json-from-string ~%")
-    (finish-output))
-  ;; status back to idle
-  (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell)))
-  
-
 #|
 
 ### Message type: execute_request ###
