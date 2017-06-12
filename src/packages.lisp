@@ -37,11 +37,6 @@
    #:display-svg render-svg
    #:display-json render-json
    #:display-javascript render-javascript
-   #:*kernel-start-hook*
-   #:*kernel-shutdown-hook*
-   #:*handle-comm-open-hook*
-   #:*handle-comm-msg-hook*
-   #:*handle-comm-close-hook*
    #:kernel-start))
 
 (defpackage #:cl-jupyter-user
@@ -61,5 +56,19 @@
    #:png-from-file
    #:svg-from-file
    #:quit))
+
+
+(defpackage #:cl-jupyter-widgets
+  (:nicknames #:cljw)
+  (:use #:cl)
+  (:shadow #:open #:close)
+  (:export
+   #:*kernel*
+   #:*kernel-start-hook*
+   #:*kernel-shutdown-hook*
+   #:*handle-comm-open-hook*
+   #:*handle-comm-msg-hook*
+   #:*handle-comm-close-hook*
+   ))
 
 (in-package #:cl-jupyter)

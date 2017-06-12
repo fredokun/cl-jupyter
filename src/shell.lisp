@@ -32,7 +32,7 @@
     (while active
       (vbinds (identities sig msg buffers)  (message-recv (shell-socket shell))
 	      (progn
-		(format t "Shell Received:~%")
+		(format t "Shell Received message:~%")
 		(format t "  | identities: ~A~%" identities)
 		(format t "  | signature: ~W~%" sig)
 		(format t "  | message: ~A~%" (encode-json-to-string (message-header msg)))
@@ -44,14 +44,14 @@
 		      ((equal msg-type "execute_request")
 		       (setf active (handle-execute-request shell identities msg buffers)))
 		      ((equal msg-type "comm_open")
-		       (when *handle-comm-open-hook*
-			 (funcall *handle-comm-open-hook* shell identities msg buffers)))
+		       (when cl-jupyter-widgets:*handle-comm-open-hook*
+			 (funcall cl-jupyter-widgets:*handle-comm-open-hook* shell identities msg buffers)))
 		      ((equal msg-type "comm_msg")
-		       (when *handle-comm-msg-hook*
-			 (funcall *handle-comm-msg-hook* shell identities msg buffers)))
+		       (when cl-jupyter-widgets:*handle-comm-msg-hook*
+			 (funcall cl-jupyter-widgets:*handle-comm-msg-hook* shell identities msg buffers)))
 		      ((equal msg-type "comm_close")
-		       (when *handle-comm-close-hook*
-			 (funcall *handle-comm-close-hook* shell identities msg buffers)))
+		       (when cl-jupyter-widgets:*handle-comm-close-hook*
+			 (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg buffers)))
 		      (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))
 
 
@@ -161,10 +161,12 @@
   (let ((content (parse-json-from-string (message-content msg))))
     (format t "  ==> Message content = ~W~%" content)
     (let ((code (afetch "code" content :test #'equal)))
-      (format t "  ===> Code to execute = ~W~%" code)
+      (format t "  ===>    Code to execute = ~W~%" code)
       (vbinds (execution-count results stdout stderr)
 	      (let ((*parent-msg* msg)
-		    (*shell* shell))
+		    (*shell* shell)
+		    (cl-jupyter-widgets:*kernel* (shell-kernel shell)))
+		(format t "Set cl-jupyter-widgets:*kernel* -> ~a~%" cl-jupyter-widgets:*kernel*)
 		(evaluate-code (kernel-evaluator (shell-kernel shell)) code))
 	  (format t "Execution count = ~A~%" execution-count)
 	  (format t "results = ~A~%" results)

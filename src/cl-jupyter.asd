@@ -21,4 +21,12 @@
 		 (:file "display")
 		 (:file "evaluator")
 		 (:file "user")
-		 (:file "kernel")))
+		 (:file "kernel")
+;;; cl-jupyter-widgets stuff
+		 (:file "tools")
+		 (:file "manager")
+		 (:file "interface")
+		 (:file "traitlets")
+		 (:file "widget")
+		 (:file "comm")
+		 ))

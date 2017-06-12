@@ -9,17 +9,6 @@
    (evaluator :initarg :evaluator :initform nil :reader kernel-evaluator))
   (:documentation "Kernel state representation."))
 
-(defvar *kernel-start-hook* nil
-  "Set this to a function to invoke a callback whenever a kernel is started")
-(defvar *kernel-shutdown-hook* nil
-  "Set this to a function to invoke a callback whenever a kernel is shutdown")
-(defvar *handle-comm-open-hook* nil
-  "Set this to a function to invoke a callback whenever an comm_open message is received")
-(defvar *handle-comm-msg-hook* nil
-  "Set this to a function to invoke a callback whenever an comm_msg message is received")
-(defvar *handle-comm-close-hook* nil
-  "Set this to a function to invoke a callback whenever an comm_close message is received")
-
 (defun make-kernel (config)
   (let ((ctx (pzmq:ctx-new))
 	(session-id (format nil "~W" (uuid:make-v4-uuid))))
@@ -133,7 +122,7 @@
                  (shell (make-shell-channel kernel))
                  (iopub (make-iopub-channel kernel)))
 	    ;; Invoke the *kernel-start-hook* if available
-	    (when *kernel-start-hook* (funcall *kernel-start-hook* kernel))
+	    (when cl-jupyter-widgets:*kernel-start-hook* (funcall cl-jupyter-widgets:*kernel-start-hook* kernel))
 	    ;; Launch the hearbeat thread
 	    (let ((hb-socket (pzmq:socket (kernel-ctx kernel) :rep)))
 	      (let ((hb-endpoint (format nil "~A://~A:~A"
@@ -149,7 +138,7 @@
 			 (format t "[Kernel] Entering mainloop ...~%")
 			 (shell-loop shell))
 		    ;; clean up when exiting
-		    (when *kernel-shutdown-hook* (funcall *kernel-shutdown-hook* kernel))
+		    (when cl-jupyter-widgets:*kernel-shutdown-hook* (funcall cl-jupyter-widgets:*kernel-shutdown-hook* kernel))
 		    (bordeaux-threads:destroy-thread heartbeat-thread-id)
 		    (pzmq:close hb-socket)
 		    (pzmq:close (iopub-socket iopub))
