@@ -18,6 +18,8 @@
 		 (:file "interface")
 		 (:file "traitlets")
 		 (:file "widget")
+		 (:file "domwidget")
+		 (:file "widget_int")
 		 (:file "comm")
 ;;; cl-jupyter stuff
 		 (:file "utils")
