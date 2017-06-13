@@ -68,7 +68,11 @@ The history of evaluations is also saved by the evaluator.
              #'(lambda (wrn)
                  (format *error-output* "~&~A: ~%  ~A~%"
                          (class-name (class-of wrn)) wrn)
-                 (muffle-warning))))
+                 (muffle-warning)))
+	    (serious-condition
+	     #'(lambda (err)
+		 (let ((*standard-output* cl-jupyter-widgets::*widget-log*))
+		   (core::clasp-backtrace)))))
 	 (progn ,@body))
      (simple-condition (err)
        (format *error-output* "~&~A: ~%" (class-name (class-of err)))
@@ -78,11 +82,12 @@ The history of evaluations is also saved by the evaluator.
        (format *error-output* "~&"))
      (serious-condition (err)
        (format *error-output* "~&An error occurred of type: ~A: ~%  ~S~%"
-               (class-name (class-of err)) err)
-       (core::clasp-backtrace))))
+               (class-name (class-of err)) err))))
 
 (defun evaluate-code (evaluator code)
-  ;;(format t "[Evaluator] Code to evaluate: ~W~%" code)
+  ;; (format t "[Evaluator] Code to evaluate: ~W~%" code)
+  (cl-jupyter-widgets::widget-log "[Evaluator] Code to evaluate: ~W  cl-jupyter-widgets::*kernel*->~a~%"
+				  code cl-jupyter-widgets:*kernel*)
   (let ((execution-count (+ (length (evaluator-history-in evaluator)) 1)))
     (let ((code-to-eval (handler-case
                          (read-from-string (format nil "(progn ~A~%)" code))
@@ -129,9 +134,11 @@ The history of evaluations is also saved by the evaluator.
                                    (let ((* (take-history-out -1))
                                          (** (take-history-out -2))
                                          (*** (take-history-out -3)))
-                                   ;; put the evaluator in the environment
+				     ;; put the evaluator in the environment
+				     (cl-jupyter-widgets::widget-log "In evaluator.lisp:133  cl-jupyter-widgets::*kernel* -> ~a~%" cl-jupyter-widgets::*kernel*)
                                      (multiple-value-list (eval code-to-eval))))))))))
              ;;(format t "[Evaluator] : results = ~W~%" results)
+             (cl-jupyter-widgets::widget-log "[Evaluator] : results = ~W~%" results)
              (let ((in-code (format nil "~A" code-to-eval)))
                (vector-push-extend (subseq in-code 7 (1- (length in-code)))
                                    (evaluator-history-in evaluator)))

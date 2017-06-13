@@ -12,6 +12,14 @@
 		 :cl-base64)
     :serial t
     :components ((:file "packages")
+;;; cl-jupyter-widgets stuff
+		 (:file "tools")
+		 (:file "manager")
+		 (:file "interface")
+		 (:file "traitlets")
+		 (:file "widget")
+		 (:file "comm")
+;;; cl-jupyter stuff
 		 (:file "utils")
 		 (:file "myjson")
 		 (:file "config")
@@ -22,11 +30,4 @@
 		 (:file "evaluator")
 		 (:file "user")
 		 (:file "kernel")
-;;; cl-jupyter-widgets stuff
-		 (:file "tools")
-		 (:file "manager")
-		 (:file "interface")
-		 (:file "traitlets")
-		 (:file "widget")
-		 (:file "comm")
 		 ))

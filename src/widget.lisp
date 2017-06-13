@@ -23,15 +23,36 @@
   (defparameter *widget-serialization*
     (list :from-json 'json-to-widget
 	  :to-json 'widget-to-json)))
-(deftype bool () '(T NULL))
+(deftype boolean () '(member :true :false :null))
 (deftype unicode () '(simple-array character *))
 (deftype cunicode () '(simple-array character *))
 (deftype color () T)
 (deftype instance () T)
 
 
+(defclass callback-dispatcher ()
+  ((%callbacks :initarg :callbacks :initform nil :accessor callbacks)))
+
+(defmethod do-call ((self callback-dispatcher) &rest args)
+  (let (value)
+    (loop for cb in (callbacks self)
+       do (handler-case (setf value (apply cb args))
+	    (error (err)
+	      (warn "Exception in callback ~a" cb))))
+    value))
+
+(defmethod register-callback ((self callback-dispatcher) callback remove)
+  (if (and remove (find callback (callbacks self)))
+      (setf (callbacks self) (delete callback (callbacks self)))
+      (push callback (callbacks self))))
+
+
+
+
 (defclass widget ()
-  ((%widget-construction-callback :initform nil :accessor widget-construction-callback)
+  ((%widget-construction-callback
+    :accessor widget-construction-callback
+    :initform (make-instance 'callback-dispatcher))
    (%widgets :allocation :class :initform (make-hash-table) :accessor widgets)
    (%widget-types :allocation :class :initform (make-hash-table) :accessor widget-types)
    ;; Traits
@@ -67,15 +88,25 @@
    (%property-lock :initarg :property-lock :accessor property-lock)
    (%holding-sync :initarg :holding-sync :accessor holding-sync)
    (%states-to-send :initarg :states-to-send :accessor states-to-send)
-   (%display-callbacks :initarg :display-callbacks :accessor display-callbacks)
-   (%msg-callbacks :initarg :msg-callbacks :accessor msg-callbacks)
+   (%display-callbacks :initarg :display-callbacks :accessor display-callbacks
+		       :initform (make-instance 'callback-dispatcher))
+   (%msg-callbacks :initarg :msg-callbacks :accessor msg-callbacks
+		   :initform (make-instance 'callback-dispatcher))
    (%model-id :initarg :model-id :accessor model-id :initform nil)
    )
   (:metaclass traitlets:traitlet-class))
 
+;;; observe('comm')
+(defmethod (setf comm) :after (value (widg widget))
+  (setf (model-id widg) (comm-id value)))
+
+(defmethod model-id ((widg widget))
+  (if (comm widg)
+      (comm-id (comm widg))))
+
 (defun call-widget-constructed (w)
-  (when (widget-construction-callback w)
-    (funcall widget-construction-callback w)))
+  (widget-log "call-widget-constructed widget -> ~a~%" w)
+  (do-call (widget-construction-callback w) w))
 
 (defmethod initialize-instance :around ((w widget) &rest initargs)
   (let ((w (call-next-method)))
@@ -85,15 +116,18 @@
 (defun widget-open (self)
   (multiple-value-bind (state buffer-keys buffers)
       (split-state-buffers self (get-state self))
-    (format t "In widget-open~%")
-    (format t "state -> ~s~%" state)
-    (format t "buffer-keys -> ~s~%" buffer-keys)
-    (format t "buffers -> ~s~%" buffers)
+    (widget-log "In widget-open~%")
+    (widget-log "state -> ~a~%"
+		(with-output-to-string (sout)
+		  (print-as-python state sout)))
+    (widget-log "buffer-keys -> ~s~%" buffer-keys)
+    (widget-log "buffers -> ~s~%" buffers)
     (let ((kwargs (list :target-name "jupyter.widget"
 			:data state)))
       (when (model-id self)
 	(setf (getf kwargs :comm-id) (model-id self)))
       (setf (comm self) (apply #'comm.__init__ kwargs))
+      (widget-log "    creating comm -> ~s~%" (comm self))
       (when buffers
 	;; See comment about buffers at
 	;; https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget.py#L205
@@ -135,11 +169,20 @@ key : a key or a list of keys (optional)
 *Arguments
 content : alist - Content of the message to send
 buffers : list  - A list of binary buffers "
-  (widget-send* self (list (cons "method" "custom")
+  (%send self (list (cons "method" "custom")
 		    (cons "content" content))
 	 :buffers buffers))
 
-(defun widget-send* (self msg &key buffers)
+(defun %ipython-display (self &rest kwargs)
+  (when (view-name self)
+    (%send self '(("method" . "display")))
+    (%handle-displayed self)))
+
+(defmethod %handle-displayed ((self widget))
+  (do-call (display-callbacks self) self))
+
+    
+(defun %send (self msg &key buffers)
   "Sends a message to the widget model in the front-end.
 See: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget.py#L485
 Sends a message to the model in the front-end."
@@ -152,7 +195,7 @@ Sends a message to the model in the front-end."
 		 :initform nil
 		 :metadata
 		 (:sync t
-			:json-name "dom_classes")
+			:json-name "_dom_classes")
 		 )
    (%background-color :initarg :background-color :accessor background-color
 		      :type (or color null)
@@ -193,8 +236,8 @@ Sends a message to the model in the front-end."
 		 (:sync t
 			:json-name "font_weight"))
    (%visible :initarg :visible :accessor visible
-	     :type (or bool null)
-	     :initform nil
+	     :type boolean
+	     :initform :true
 	     :metadata
 	     (:sync t
 		    :json-name "visible"
@@ -209,33 +252,44 @@ Sends a message to the model in the front-end."
    )
   (:default-initargs
    :model-name (unicode "DOMWidgetModel")
-    :visible t
+    :visible :true
     :dom-classes nil
     :layout (make-instance 'layout))
   (:metaclass traitlets:traitlet-class))
 
 
 
-(defclass int (dom-widget)
+(defclass %int (dom-widget)
   ((%value :initarg :value :accessor value
 	   :type integer
 	   :initform 0
 	   :metadata (:sync t
 			    :json-name "value"))
    (%disabled :initarg :disabled :accessor disabled
-	      :type bool
-	      :initform nil
+	      :type boolean
+	      :initform :false
 	      :metadata (:sync t
 			       :json-name "disabled"
-			       :help "enable or disable user changes")))
+			       :help "enable or disable user changes"))
+   (%description :initarg :description :accessor description
+		 :type unicode
+		 :initform (unicode "")
+		 :metadata (:sync t
+				  :json-name "description"
+				  :help "Description of the value this widget represents"))
+   )
+  (:default-initargs
+   :model-module (unicode "jupyter-js-widgets")
+   :view-module (unicode "jupyter-js-widgets")
+   )
   (:metaclass traitlets:traitlet-class))
 
 
-(defclass int-text (int)
+(defclass int-text (%int)
   ()
   (:default-initargs
-;;   :view-name (unicode "IntTextView")
-   ;;    :model-name (unicode "IntTextModel")
+   :view-name (unicode "IntTextView")
+    :model-name (unicode "IntTextModel")
    )
   (:metaclass traitlets:traitlet-class))
 
