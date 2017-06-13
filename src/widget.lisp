@@ -198,14 +198,14 @@ Sends a message to the model in the front-end."
 			:json-name "_dom_classes")
 		 )
    (%background-color :initarg :background-color :accessor background-color
-		      :type (or color null)
-		      :initform nil
+		      :type (or color (eql :null))
+		      :initform :null
 		      :metadata
 		      (:sync t
 			     :json-name "background_color"))
    (%color :initarg :color :accessor color
-	   :type (or color null)
-	   :initform nil
+	   :type (or color (eql :null))
+	   :initform :null
 	   :metadata
 	   (:sync t
 		  :json-name "color"))
@@ -222,19 +222,21 @@ Sends a message to the model in the front-end."
 	       (:sync t
 		      :json-name "font_size"))
    (%font-style :initarg :font-style :accessor font-style
-		:type (member :normal :italic :oblique :initial :inherit nil)
-		:initform nil
+		:type string
+		:initform (unicode "")
 		:metadata
 		(:sync t
-		       :json-name "font_style"))
+		       :json-name "font_style"
+		       :allowed-caseless-values '("normal" "italic" "oblique" "initial" "inherit" "")
+		       ))
    (%font-weight :initarg :font-weight :accessor font-weight
-		 :type (or (member :normal :bold :bolder :lighter :initial :inherit nil)
-			   #.(list* 'member (loop for weight from 100 below 1000 by 100
-					       collect weight)))
-		 :initform nil
+		 :type cunicode
+		 :initform (unicode "")
 		 :metadata
 		 (:sync t
-			:json-name "font_weight"))
+			:json-name "font_weight"
+			:allowed-caseless-values '("normal" "bold" "bolder" "lighter" "initial" "inherit" ""
+						   "100" "200" "300" "400" "500" "600" "700" "800" "900" )))
    (%visible :initarg :visible :accessor visible
 	     :type boolean
 	     :initform :true

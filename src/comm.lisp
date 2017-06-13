@@ -9,8 +9,9 @@
    (target-name :initarg :target-name :accessor target-name :initform "comm" :type string)
    (target-module :initarg :target-module 
 		  :accessor target-module
-		  :initform nil
-		  :type string :documentation "requirejs module from which to load comm target.")
+		  :initform :null
+		  :type (or string (eql :null))
+		  :documentation "requirejs module from which to load comm target.")
    (topic :initarg :topic :accessor topic)
    (%open-data :initarg :open-data :accessor %open-data :documentation "data dict, if any, to be included in comm-open")
    (%close-data :initarg :close-data :accessor %close-data :documentation "data dict, if any, to be included in comm-close")
