@@ -68,14 +68,15 @@
 	(log-error "Could not close comm during comm-open failure cleanup. The comm may not have been opened yet err: ~a" err)))))
 
 (defmethod comm-msg ((self comm-manager) stream ident msg)
-    (let* ((content (cdr (assoc "content" msg)))
-	   (comm-id (cdr (assoc "comm_id" content)))
-	   (comm (get-comm self comm-id)))
-      (unless comm (return-from comm-msg nil))
-      (handler-case
-	  (handle-msg comm msg)
-	(error (err)
-	  (log-error "Exception in comm-msg for %s error: %s" comm-id err)))))
+  (widget-log "[comm-msg] msg -> ~a~%" (as-python msg))
+  (let* ((content (cdr (assoc "content" msg)))
+	 (comm-id (cdr (assoc "comm_id" content)))
+	 (comm (get-comm self comm-id)))
+    (unless comm (return-from comm-msg nil))
+    (handler-case
+	(handle-msg comm msg)
+      (error (err)
+	(log-error "Exception in comm-msg for ~a error: ~a" comm-id err)))))
 
 (defmethod comm-close ((self comm-manager) stream ident msg)
   (let* ((content (cdr (assoc "content" msg)))

@@ -48,12 +48,12 @@
   (cl-jupyter::send-status-update (cl-jupyter::kernel-iopub (cl-jupyter::shell-kernel shell)) msg "idle" :key (cl-jupyter::kernel-key shell)))
 
 (defun handle-comm-msg (shell identities msg buffers)
-  (widget-log "[Shell] handling 'comm_msg' - parsing message~%")
+  (widget-log "[Shell/handle-comm-msg] handling 'comm_msg' - parsing message~%")
   (cl-jupyter::send-status-update (cl-jupyter::kernel-iopub (cl-jupyter::shell-kernel shell)) msg "busy" :key (cl-jupyter::kernel-key shell))'
-  (widget-log "[Shell] done sending busy~%")
+  (widget-log "[Shell/handle-comm-msg] done sending busy~%")
   (unwind-protect
        (progn
-	 (widget-log "[Shell] Parsing message~%")
+	 (widget-log "[Shell/handle-comm-msg] Parsing message~%")
 	 (let ((content (myjson:parse-json-from-string (cl-jupyter::message-content msg))))
 	   (widget-log "  ==> msg = ~W~%" msg)
 	   (widget-log "  ==> comm_msg Message content = ~W~%" content)
@@ -62,7 +62,7 @@
 	     ;; Should I pass identities for ident??????
 	     ;; I have no idea what the stream is
 	     (comm-msg manager :I-dont-know-what-to-pass-for-stream :i-dont-know-what-to-pass-for-ident content))))
-    (widget-log "    Unwounding after parse-json-from-string or comm-msg~%"))
+    (widget-log "[Shell/handle-comm-msg]    Unwound stack after parse-json-from-string or comm-msg~%"))
   ;; status back to idle
   (cl-jupyter::send-status-update (cl-jupyter::kernel-iopub (cl-jupyter::shell-kernel shell)) msg "idle" :key (cl-jupyter::kernel-key shell)))
 

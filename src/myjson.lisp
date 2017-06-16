@@ -26,6 +26,8 @@ There are several libraries available for json encoding and decoding,
 
  - JSon null maps to :null
 
+Note:   Python None maps to NIL
+
 |#
 
 #|

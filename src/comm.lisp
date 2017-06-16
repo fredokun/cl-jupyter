@@ -15,8 +15,8 @@
    (topic :initarg :topic :accessor topic)
    (%open-data :initarg :open-data :accessor %open-data :documentation "data dict, if any, to be included in comm-open")
    (%close-data :initarg :close-data :accessor %close-data :documentation "data dict, if any, to be included in comm-close")
-   (%msg-callback :initarg :msg-callback :accessor %msg-callback)
-   (%close-callback :initarg :close-callback :accessor %close-callback)
+   (%msg-callback :initarg :msg-callback :accessor %msg-callback :initform nil)
+   (%close-callback :initarg :close-callback :accessor %close-callback initform nil)
    (%closed :initarg :closed :accessor %closed :initform t :type boolean))
   )
 
@@ -107,8 +107,9 @@
    Will be called with the DATA of any comm-msg messages.
 
    Call (on-msg nil) to disable an existing callback."
-   (check-type callback (or function null) "A function of one argument or NIL")
-   (setf (%msg-callback self) callback))
+  (check-type callback (or function null) "A function of one argument or NIL")
+  (widget-log "Got on-msg with callback: ~a~%" callback)
+  (setf (%msg-callback self) callback))
 
 (defmethod handle-close ((self comm) msg)
   "Handle a comm-close message"
@@ -117,9 +118,12 @@
 
 (defmethod handle-msg ((self comm) msg)
   "Handle a comm-msg message"
-   (print (list 'handle-msg (comm-id self) msg) *error-output*)
-   (when (%msg-callback self)
-     (let ((shell (cl-jupyter::kernel-shell (kernel self))))
-       (when shell (trigger (events shell) "pre_execute"))
-       (funcall (%msg-callback self) msg)
-       (when shell (trigger (events shell) "post_execute")))))
+  (widget-log "Handling message =================================~%")
+  (widget-log "comm-id -> ~a~%" (comm-id self))
+  (widget-log "msg -> ~a~%" (as-python msg))
+  (if (%msg-callback self)
+    (let ((shell (cl-jupyter::kernel-shell (kernel self))))
+      (when shell (trigger (events shell) "pre_execute"))
+      (funcall (%msg-callback self) msg)
+      (when shell (trigger (events shell) "post_execute")))
+    (widget-log "The comm msg_callback is unbound")))

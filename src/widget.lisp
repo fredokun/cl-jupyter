@@ -1,6 +1,8 @@
 (in-package :cl-jupyter-widgets)
 
-(defun unicode (string)
+(defparameter *Widget.widgets* (make-hash-table :test #'equal))
+
+(defun unicode (&optional (string ""))
   (make-array (length string) :element-type 'character :initial-contents string))
 
 (defun widget-to-json (x obj)
@@ -93,16 +95,27 @@
    (%msg-callbacks :initarg :msg-callbacks :accessor msg-callbacks
 		   :initform (make-instance 'callback-dispatcher))
    (%model-id :initarg :model-id :accessor model-id :initform nil)
+   (%ipython-display :initarg :ipython-display :accessor ipython-display
+		     :initform #'ipython-display-callback)
    )
   (:metaclass traitlets:traitlet-class))
 
 ;;; observe('comm')
-(defmethod (setf comm) :after (value (widg widget))
-  (setf (model-id widg) (comm-id value)))
+(defmethod (setf comm) :after (comm (widg widget))
+  (setf (model-id widg) (comm-id comm))
+  (on-msg comm #'%handle-msg)
+  (setf (gethash (model-id widg) *widget.widgets*) widg))
 
 (defmethod model-id ((widg widget))
   (if (comm widg)
       (comm-id (comm widg))))
+
+(defmethod widget-close ((self widget))
+  (when (comm self)
+    (remhash (model-id self) *Widget.widgets*)
+    (close (comm self))
+    (setf (comm self) nil)
+    (setf (ipython-display self) nil)))
 
 (defun call-widget-constructed (w)
   (widget-log "call-widget-constructed widget -> ~a~%" w)
@@ -173,14 +186,92 @@ buffers : list  - A list of binary buffers "
 		    (cons "content" content))
 	 :buffers buffers))
 
-(defun %ipython-display (self &rest kwargs)
+(defun display (widget)
+  (if (ipython-display widget)
+      (funcall (ipython-display widget) widget)
+      (warn "ipython-display callback is nil for widget ~a" widget)))
+
+(defun ipython-display-callback (self &rest kwargs)
+  "This is called to display the widget"
   (when (view-name self)
     (%send self '(("method" . "display")))
     (%handle-displayed self)))
 
+(defun assoc-value (key-string alist &optional (default nil default-p))
+  (let ((pair (assoc key-string alist :test #'string=)))
+    (if pair
+	(car pair)
+	(if default-p
+	    default
+	    (error "Could not find key ~a in dict ~a" key-string alist)))))
+
+  
+(defmethod handle-msg ((self widget) msg)
+  (let* ((content (assoc-value "content" msg))
+	 (data    (assoc-value "data" content))
+	 (method  (assoc-value "method" data)))
+    (cond
+      ((string= method "backbone")
+       (let ((sync-data (assoc-value "sync_data" data nil)))
+	 (if (member "sync_data" data :key #'car :test #'string=)
+	     ;; get binary buffers
+	     ;; push them into sync-data as (buffer-key . buffer-value) pairs
+	     (let ((sync-data (assoc-value "sync_data" data nil))
+		   (buffers (assoc-value "buffers" msg)))
+	       (when sync-data
+		 (loop for buffer-key in buffer-keys
+		    for index from 0
+		    do (push (cons buffer-key (svref index buffers)) sync-data)))
+	       ;; At this point sync-data should contain (buffer-key . buffer ) pairs
+	       (set-state self sync-data)))))
+      ((string= method "request_state")
+       (send-state self))
+      ((string= method "custom")
+       (when (member "content" data :key #'car :test #'string=)
+	 (handle-custom-msg self
+			    (assoc-value "content" data)
+			    (assoc-value "buffers" msg))))
+      (t (cl-jupyter::log-error "Unknown front-end to back-end widget msg with method ~a" method)))))
+
+(defmethod set-state ((self widget) sync-data)
+  (error "Handle setting state of widgets using lock-property"))
+
+
+#|
+
+    # Event handlers
+    @_show_traceback
+    def _handle_msg(self, msg):
+        """Called when a msg is received from the front-end"""
+        data = msg['content']['data']
+        method = data['method']
+
+        # Handle backbone sync methods CREATE, PATCH, and UPDATE all in one.
+        if method == 'backbone':
+            if 'sync_data' in data:
+                # get binary buffers too
+                sync_data = data['sync_data']
+                for i,k in enumerate(data.get('buffer_keys', [])):
+                    sync_data[k] = msg['buffers'][i]
+                self.set_state(sync_data) # handles all methods
+
+        # Handle a state request.
+        elif method == 'request_state':
+            self.send_state()
+
+        # Handle a custom msg from the front-end.
+        elif method == 'custom':
+            if 'content' in data:
+                self._handle_custom_msg(data['content'], msg['buffers'])
+
+        # Catch remainder.
+        else:
+            self.log.error('Unknown front-end to back-end widget msg with method "%s"' % method)
+
+
+|#
 (defmethod %handle-displayed ((self widget))
   (do-call (display-callbacks self) self))
-
     
 (defun %send (self msg &key buffers)
   "Sends a message to the widget model in the front-end.

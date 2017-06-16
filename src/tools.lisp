@@ -5,7 +5,7 @@
 
 (defvar *widget-log* nil)
 (eval-when (:execute :load-toplevel)
-  (setf *widget-log* (cl:open "/home/app/quicklisp/local-projects/cl-jupyter/widgets.log"
+  (setf *widget-log* (cl:open "/home/app/logs/cl-jupyter.log"
 			      :direction :output
 			      :if-exists :append
 			      :if-does-not-exist :create))
@@ -84,3 +84,6 @@
      (format stream "]~%"))))
 
 
+(defun as-python (msg)
+  (with-output-to-string (sout)
+    (print-as-python msg sout)))
