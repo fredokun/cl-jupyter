@@ -206,7 +206,7 @@ buffers : list  - A list of binary buffers "
 	    (error "Could not find key ~a in dict ~a" key-string alist)))))
 
   
-(defmethod handle-msg ((self widget) msg)
+(defmethod %handle-msg ((self widget) msg)
   (let* ((content (assoc-value "content" msg))
 	 (data    (assoc-value "data" content))
 	 (method  (assoc-value "method" data)))
