@@ -26,6 +26,74 @@
    )
   (:metaclass traitlets:traitlet-class))
 
+(defclass bounded-int (%int)
+  ((%step :initarg :step :accessor step
+	 :type integer
+	 :initform 1
+	 :metadata (:sync t
+			  :json-name "step"
+			  :help "Minimum step to increment the value (ignored by some views)."))
+  (%max :initarg :max :accessor max
+	:type integer
+	:initform 100
+	:metadata (:sync t
+			 :json-name "max"
+			 :help "Max value."))
+  (%min :initarg :min :accessor min
+	:type integer
+	:initform 0
+	:metadata (:sync t
+			 :json-name "min"
+			 :help "Min value."))))
+
+(defclass bounded-int-text (bounded-int)
+  ()
+  (:default-initargs
+   :view-name (unicode "IntTextView")
+    :model-name (unicode "IntTextModel")))
+
+(defclass int-slider (bounded-int)
+  ((%orientation :initarg :orientation :accessor orientation
+		 :type unicode
+		 :initform "horizontal"
+		 :metadata (:sync t
+				  :json-name "orientation"
+				  :help "vertical or horizontal"))
+   (%range :initarg :range :accessor range
+	   :type boolean
+	   :initform :false
+	   :metadata (:sync t
+			    :json-name "_range"
+			    :help "Display a range selector"))
+   (%readout :initarg :range :accessor range
+	     :type boolean
+	     :initform :false
+	     :metadata (:sync t
+			      :json-name "readout"
+			      :help "Dispaly the current value of the slider next to it."))
+   (%readout-format :initarg :readout-format :accessor readout-format
+		    :type unicode
+		    :initform (unicode "d")
+		    :metadata (:sync t
+				     :json-name "readout_format"
+				     :help "Format for the readout."))
+   (%slider-color :initarg :slider-color :accessor slider-color
+		  :type unicode
+		  :initform (unicode "None")
+		  :metadata (:sync t
+				   :json-name "slider_color"
+				   :help "Color of the slider"))
+   (%continuous-update :initarg :continuous-update :accessor continuous-update
+		       :type boolean
+		       :initform :true
+		       :metadata (:sync t
+					:json-name "continuous_update"
+					:help "Update the value of the widget as the user is holding the slider.")))
+  (:default-initargs
+   :view-name (unicode "IntSliderView")
+    :model-name (unicode "IntSliderModel"))
+  (:metaclass traitlets:traitlet-class))
+
 
 (defclass int-text (%int)
   ()
@@ -36,6 +104,44 @@
   (:metaclass traitlets:traitlet-class))
 
 
+(defclass int-progress (bounded-int)
+  ((%orientation :initarg :orientation :accessor orientation
+		 :type unicode
+		 :default (unicode "horizontal")
+		 :metadata (:sync t
+				  :json-name "orientation"
+				  :help "vertical or horizontal."))
+   (%bar-style :initarg :bar-style :accessor bar-style
+	       :type unicode
+	       :default (unicode "")
+	       :metadata (:sync t
+				:json-name "bar_style"
+				:help "Use a predefined styling for the progress bar. Options: \"success\", \"info\", \"warning\", and \"danger\". Default: \"\".")))
+  (:default-initargs
+   :view-name (unicode "ProgressView")
+    :model-name (unicode "ProgressModel"))
+  (:metaclass traitlets:traitlet-class))
+
+(defclass play (bounded-int)
+  ((%interval :initarg :interval :accessor interval
+	      :type integer
+	      :initform 100
+	      :metadata (:sync t
+			       :json-name "interval"
+			       :help "Interval"))
+   (%playing :initarg :playing :accessor playing
+	     :type boolean
+	     :initform :true
+	     :metadata (:sync t
+			      :json-name "_playing"
+			      :help "I don't know.")))
+  (:default-initargs
+   :view-name (unicode "PlayView")
+    :model-name (unicode "PlayModel")
+    :view-module (unicode "jupyter-js-widgets")
+    :model-module (unicode "jupyter-js-widgets"))
+  (:metaclass traitlets:traitlet-class))
+  
 
 
 

@@ -20,6 +20,8 @@
 		 (:file "widget")
 		 (:file "domwidget")
 		 (:file "widget_int")
+		 (:file "widget_bool")
+		 (:file "widget_color")
 		 (:file "comm")
 ;;; cl-jupyter stuff
 		 (:file "utils")
