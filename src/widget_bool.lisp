@@ -52,13 +52,17 @@
 		  :initform ""
 		  :metadata (:sync t
 				   :json-name "button-style"
-				   :help "Use a predefined styling for the button."))))
+				   :help "Use a predefined styling for the button.")))
+  (:metaclass traitlets:traitlet-class))
+
+
 (defclass valid (%bool)
   ()
   (:default-initargs
    :readout (unicode "Invalid")
     :view-name (unicode "ValidView")
-    :model-name (unicode "ValidModel")))
+    :model-name (unicode "ValidModel"))
+  (:metaclass traitlets:traitlet-class))
 
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
@@ -69,7 +73,8 @@
    :view-name (unicode "ToggleButtonView")
     :model-name (unicode "ToggleButtonModel")
     :tool-tip (unicode)
-    :icon (unicode "")))
+    :icon (unicode ""))
+  (:metaclass traitlets:traitlet-class))
    ;;;HELP ME :button-style
     ;; button_style = CaselessStrEnum(
    ; ;   values=['primary', 'success', 'info', 'warning', 'danger', ''], default_value='',
@@ -80,4 +85,5 @@
   (:default-initargs
    :readout (unicode "Invalid")
     :view-name (unicode "ValidView")
-    :model-name (unicode "ValidModel")))
+    :model-name (unicode "ValidModel"))
+  (:metaclass traitlets:traitlet-class))

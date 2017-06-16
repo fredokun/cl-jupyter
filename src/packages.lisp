@@ -61,7 +61,7 @@
 (defpackage #:cl-jupyter-widgets
   (:nicknames #:cljw)
   (:use #:cl)
-  (:shadow #:open #:close)
+  (:shadow #:open #:close #:step #:min #:max)
   (:export
    #:*kernel*
    #:*kernel-start-hook*
