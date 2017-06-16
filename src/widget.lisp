@@ -186,7 +186,7 @@ buffers : list  - A list of binary buffers "
 		    (cons "content" content))
 	 :buffers buffers))
 
-(defun display (widget)
+(defun disp (widget)
   (if (ipython-display widget)
       (funcall (ipython-display widget) widget)
       (warn "ipython-display callback is nil for widget ~a" widget)))
