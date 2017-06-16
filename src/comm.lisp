@@ -16,7 +16,7 @@
    (%open-data :initarg :open-data :accessor %open-data :documentation "data dict, if any, to be included in comm-open")
    (%close-data :initarg :close-data :accessor %close-data :documentation "data dict, if any, to be included in comm-close")
    (%msg-callback :initarg :msg-callback :accessor %msg-callback :initform nil)
-   (%close-callback :initarg :close-callback :accessor %close-callback initform nil)
+   (%close-callback :initarg :close-callback :accessor %close-callback :initform nil)
    (%closed :initarg :closed :accessor %closed :initform t :type boolean))
   )
 
