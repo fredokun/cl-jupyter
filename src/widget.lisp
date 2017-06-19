@@ -5,6 +5,8 @@
 (defun unicode (&optional (string ""))
   (make-array (length string) :element-type 'character :initial-contents string))
 
+(defun tuple (&rest args) (apply #'vector args))
+
 (defun widget-to-json (x obj)
   (cond ((hash-table-p x)
 	 (loop for key being the hash-keys of x
@@ -13,6 +15,9 @@
 	((listp x)
 	 (loop for (k . v) in x
 	    collect (cons k (widget-to-json v obj))))
+	((stringp x) x)
+	((vectorp x)
+	 (map 'vector (lambda (x) (widget-to-json x obj)) x))
 	((typep x 'widget)
 	 (format nil "IPY_MODEL_~a" (model-id x)))
 	(t x)))
@@ -28,6 +33,7 @@
 (deftype boolean () '(member :true :false :null))
 (deftype unicode () '(simple-array character *))
 (deftype cunicode () '(simple-array character *))
+(deftype tuple () '(vector * *))
 (deftype color () T)
 (deftype instance () T)
 
