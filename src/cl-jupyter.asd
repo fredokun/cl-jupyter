@@ -23,6 +23,7 @@
 		 (:file "widget_int")
 		 (:file "widget_bool")
 		 (:file "widget_color")
+		 (:file "widget_selection")
 		 (:file "comm")
 ;;; cl-jupyter stuff
 		 (:file "utils")
