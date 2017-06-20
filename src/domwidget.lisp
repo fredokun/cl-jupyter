@@ -8,18 +8,20 @@
 		 (:sync t
 			:json-name "_dom_classes")
 		 )
+   #+deprecated-widgets
    (%background-color :initarg :background-color :accessor background-color
 		      :type (or color (eql :null))
 		      :initform :null
 		      :metadata
 		      (:sync t
 			     :json-name "background_color"))
+   #+deprecated-widgets
    (%color :initarg :color :accessor color
 	   :type (or color (eql :null))
 	   :initform :null
 	   :metadata
 	   (:sync t
-		  :json-name "color"))
+		  :json-name "color"))  ; deprecated in ipywidgets 5.0
    (%font-family :initarg :font-family :accessor font-family
 		 :type cunicode
 		 :initform (unicode "")
