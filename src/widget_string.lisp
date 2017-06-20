@@ -21,28 +21,28 @@ class _String(DOMWidget):
 ||#
 
 (defclass %string (dom-widget)
-  ((%value :initarg :value :accessor value
+  ((value :initarg :value :accessor value
 	   :type unicode
 	   :initform (unicode "")
-	   :metadeta (:sync t
+	   :metadata (:sync t
 			    :json-name "value"
 			    :help "String value"))
-   (%disabled :initarg :disabled :accessor disabled
+   (disabled :initarg :disabled :accessor disabled
 	      :type boolean
 	      :initform :false
-	      :metadeta (:sync t
+	      :metadata (:sync t
 			       :json-name "disabled"
 			       :help "enable or disable user changes"))
-   (%description :initarg :description :accessor description
+   (description :initarg :description :accessor description
 		 :type unicode
 		 :initform (unicode "")
 		 :metadata (:sync t
 				  :json-name "description"
 				  :help "Description of the value this widget represents"))
-   (%placeholder :initarg placeholder :accessor placeholder
+   (placeholder :initarg :placeholder :accessor placeholder
 		 :type unicode
 		 :initform (unicode "")
-		 :metadeta (:sync t
+		 :metadata (:sync t
 				  :json-name "placeholder"
 				  :help "Placeholder text to display when nothing has been typed")))
 
@@ -61,13 +61,32 @@ class HTML(_String):
 _model_name = Unicode('HTMLModel').tag(sync=True)
 ||#
   
-  (defclass html(%string)
-    ()
-    (:default-initargs
-     :view-name (unicode "HTMLView")
-      :model-name (unicode "HTMLModel")
-      )
-    (:metaclass traitlets:traitlet-class))
+(defclass html(%string)
+  ()
+  (:default-initargs
+   :view-name (unicode "HTMLView")
+    :model-name (unicode "HTMLModel")
+    )
+  (:metaclass traitlets:traitlet-class))
+
+
+#||@register('Jupyter.Label')
+class Label(_String):
+    """Label widget.
+    It also renders math inside the string `value` as Latex (requires $ $ or
+    $$ $$ and similar latex tags).
+    """
+_view_name = Unicode('LabelView').tag(sync=True)
+||#
+
+(defclass label(%string)
+  ()
+  (:default-initargs
+   :view-name (unicode "LabelView")
+    :model-name (unicode "LabelModel")
+    )
+  (:metaclass traitlets:traitlet-class))
+
 
 #||
 @register('Jupyter.Textarea')
@@ -80,20 +99,56 @@ class Textarea(_String):
 self.send({"method": "scroll_to_bottom"})
 ||#
 
-  (defclass textarea(%string)
-    ()
-    (:default-initargs
-     :view-name (unicode "TextareaView")
-      :model-name (unicode "TextareaModel")
-      )
-    (:metaclass traitlets:traitlet-class))
+(defclass textarea(%string)
+  ()
+  (:default-initargs
+   :view-name (unicode "TextareaView")
+    :model-name (unicode "TextareaModel")
+    )
+  (:metaclass traitlets:traitlet-class))
 
-  (defclass text(%string)
-    ()
-    (:default-initargs
-     :view-name (unicode "TextView")
-      :model-name (unicode "TextModel")
-      )
-    (:metaclass traitlets:traitlet-class)))
+
+#||
+@register('Jupyter.Text')
+class Text(_String):
+    """Single line textbox widget."""
+    _view_name = Unicode('TextView').tag(sync=True)
+    _model_name = Unicode('TextModel').tag(sync=True)
+
+    def __init__(self, *args, **kwargs):
+        super(Text, self).__init__(*args, **kwargs)
+        self._submission_callbacks = CallbackDispatcher()
+        self.on_msg(self._handle_string_msg)
+
+    def _handle_string_msg(self, _, content, buffers):
+        """Handle a msg from the front-end.
+        Parameters
+        ----------
+        content: dict
+            Content of the msg.
+        """
+        if content.get('event', '') == 'submit':
+            self._submission_callbacks(self)
+
+    def on_submit(self, callback, remove=False):
+        """(Un)Register a callback to handle text submission.
+        Triggered when the user clicks enter.
+        Parameters
+        ----------
+        callback: callable
+            Will be called with exactly one argument: the Widget instance
+        remove: bool (optional)
+            Whether to unregister the callback
+        """
+self._submission_callbacks.register_callback(callback, remove=remove)
+||#
+
+(defclass text(%string)
+  ()
+  (:default-initargs
+   :view-name (unicode "TextView")
+    :model-name (unicode "TextModel")
+    )
+  (:metaclass traitlets:traitlet-class))
 
  
