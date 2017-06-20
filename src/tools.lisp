@@ -3,6 +3,7 @@
 
 (defvar *debug-cl-jupyter-widgets* t)
 
+;;; Use widget-log to log messages to a file
 (defvar *widget-log* nil)
 (eval-when (:execute :load-toplevel)
   (setf *widget-log* (cl:open "/home/app/logs/cl-jupyter.log"
