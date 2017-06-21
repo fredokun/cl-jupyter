@@ -75,11 +75,7 @@
 	   :metadata (:sync t
 			    :json-name "_range"
 			    :help "Display a range selector"))
-<<<<<<< HEAD
    (readout :initarg :readout :accessor readout
-=======
-   (%readout :initarg :readout :accessor readout
->>>>>>> Minor bug fixes in int and bool widgets
 	     :type boolean
 	     :initform :true
 	     :metadata (:sync t
@@ -91,12 +87,8 @@
 		    :metadata (:sync t
 				     :json-name "readout_format"
 				     :help "Format for the readout."))
-<<<<<<< HEAD
    (slider-color :initarg :slider-color :accessor slider-color
-=======
    ;;;Slider-color should be using the deprecated widgets handle
-   (%slider-color :initarg :slider-color :accessor slider-color
->>>>>>> Minor bug fixes in int and bool widgets
 		  :type unicode
 		  :initform (unicode "None")
 		  :metadata (:sync t

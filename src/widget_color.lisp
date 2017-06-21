@@ -1,19 +1,19 @@
 (in-package :cl-jupyter-widgets)
 
-(defclass %color-picker (dom-widget)
-  ((%value :initarg :value :accessor value
+(defclass color-picker (dom-widget)
+  ((value :initarg :value :accessor value
 	   :type unicode 
 	   :initform "black"
 	   :metadata (:sync t
 			    :json-name "value"
 			    :help "Color"))
-   (%concise :initarg :concise :accessor concise
+   (concise :initarg :concise :accessor concise
 	     :type boolean
 	     :initform :false
 	     :metadata (:sync t
 			      :json-name "concise"
 			      ))
-   (%description :initarg :description :accessor description
+   (description :initarg :description :accessor description
 		 :type unicode
 		 :initform (unicode "")
 		 :metadata (:sync t
