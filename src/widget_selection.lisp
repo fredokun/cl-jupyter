@@ -140,9 +140,10 @@
    (loop for v in k collect (%label-to-value v obj)))
 
 (defun %value-to-label (value obj)
-  (with-slots (options) obj
-    (car (rassoc value (options obj) :test #'equal))))
+    (car (rassoc value (options obj) :test #'equal)))
 
+;;; This implements
+;;; https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget_selection.py#L106
 (defun %values-to-labels (values obj)
   (loop for v in values collect (%value-to-label v obj)))
 
