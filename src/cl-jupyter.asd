@@ -25,6 +25,7 @@
 		 (:file "widget_color")
 		 (:file "widget_selection")
 		 (:file "widget_float")
+		 (:file "widget_button")
 		 (:file "comm")
 ;;; cl-jupyter stuff
 		 (:file "utils")

@@ -44,7 +44,7 @@
   )
   (:default-initargs
    :model-module (unicode "jupyter-js-widgets")
-    :view-module (unicode "juypter-js-widgets")
+    :view-module (unicode "jupyter-js-widgets")
     :view-name (unicode "ButtonView")
     :model-name (unicode "ButtonModel"))
  (:metaclass traitlets:traitlet-class))
