@@ -76,7 +76,7 @@
 			    :json-name "_range"
 			    :help "Display a range selector"))
    (readout :initarg :readout :accessor readout
-	     :type boolean
+	    :type boolean
 	     :initform :true
 	     :metadata (:sync t
 			      :json-name "readout"
