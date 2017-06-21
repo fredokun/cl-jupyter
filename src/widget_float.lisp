@@ -382,6 +382,12 @@ continuous_update = Bool(True, help="Update the value of the widget as the user 
 	     :metadata (:sync t
 			      :json-name "readout"
 			      :help "Display the current value of the slider next to it"))
+   (readout-format :initarg :readout-format :accessor readout-format
+		    :type unicode
+		    :initform (unicode ".2f")
+		    :metadata (:sync t
+				     :json-name "readout_format"
+				     :help "Format for the readout"))
    (slider-color :initarg :slider-color :accessor slider-color
 		  :type unicode
 		  :initform (unicode "None")
