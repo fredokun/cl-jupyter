@@ -67,7 +67,6 @@
 			     :json-name "readout"
 			     :help "Message displayed when the value is False.")))
   (:default-initargs
-   :readout (unicode "Invalid")
     :view-name (unicode "ValidView")
     :model-name (unicode "ValidModel"))
   (:metaclass traitlets:traitlet-class))
