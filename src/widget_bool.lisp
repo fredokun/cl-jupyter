@@ -13,7 +13,7 @@
 		 :metadata (:sync t
 				  :json-name "description"
 				  :help "Description of the boolean (label)."))
-   (%disabled :initarg disabled :accessor disabled
+   (%disabled :initarg :disabled :accessor disabled
 	      :type boolean
 	      :initform :false
 	      :metadata (:sync t
@@ -51,7 +51,7 @@
 		  :type unicode
 		  :initform (unicode "")
 		  :metadata (:sync t
-				   :json-name "button-style"
+				   :json-name "button_style"
 				   :help "Use a predefined styling for the button.Options include: \"primary\", \"success\", \"info\", \"warning\", \"danger\", \"""\".")))
   (:default-initargs
    :view-name (unicode "ToggleButtonView")
@@ -60,7 +60,12 @@
 
 
 (defclass valid (%bool)
-  ()
+  ((readout :accessor readout
+	    :type unicode
+	    :initform (unicode "Invalid")
+	    :metadata (:sync t
+			     :json-name "readout"
+			     :help "Message displayed when the value is False.")))
   (:default-initargs
    :readout (unicode "Invalid")
     :view-name (unicode "ValidView")
