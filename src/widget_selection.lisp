@@ -77,7 +77,7 @@
   (:metaclass traitlets:traitlet-class))
 
 (defclass dropdown (%selection)
-  ((button_style :initarg :button-style :accessor button-style
+  ((button_style :initarg :button_style :accessor button_style
 		  :type unicode
 		  :initform (unicode "")
 		  :metadata (:sync t
@@ -141,9 +141,7 @@
 
 (defun %value-to-label (value obj)
   (with-slots (options) obj
-    (loop for v in options
-       if (equalp obj (list v value))
-       do (collect v))))
+    (car (rassoc value (options obj) :test #'equal))))
 
 (defun %values-to-labels (values obj)
   (loop for v in values collect (%value-to-label v obj)))
