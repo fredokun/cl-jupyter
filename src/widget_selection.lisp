@@ -66,7 +66,7 @@
 
 (defclass multiple-selection (%selection)
   ((value :initarg :value :accessor value
-	  :type list
+	  :type vector
 	  :initform ()
 	  :metadata (:sync t
 			   :json-name "value"
