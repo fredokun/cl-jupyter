@@ -66,7 +66,7 @@
 	   :metadata (:sync t
 			    :json-name "_range"
 			    :help "Display a range selector"))
-   (%readout :initarg :range :accessor range
+   (%readout :initarg :readout :accessor readout
 	     :type boolean
 	     :initform :false
 	     :metadata (:sync t
@@ -78,6 +78,7 @@
 		    :metadata (:sync t
 				     :json-name "readout_format"
 				     :help "Format for the readout."))
+   ;;;Slider-color should be using the deprecated widgets handle
    (%slider-color :initarg :slider-color :accessor slider-color
 		  :type unicode
 		  :initform (unicode "None")
