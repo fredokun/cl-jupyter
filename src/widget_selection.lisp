@@ -148,11 +148,12 @@
   (loop for v in values collect (%value-to-label v obj)))
 
 (defmethod initialize-instance :after ((%selection %selection) &key)
-  (with-slots (_options_labels _options_values _options_dict options) %selection
+  (with-slots (value _options_labels _options_values _options_dict options) %selection
     (loop for (k . v) in options
 	 do (setf (gethash k _options_dict) v))
     (setf _options_labels (map 'vector #'car options))
-    (setf _options_values (map 'vector #'cdr options))))
+    (setf _options_values (map 'vector #'cdr options))
+    (setf value (car (rassoc value options :test #'equal)))))
 
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
