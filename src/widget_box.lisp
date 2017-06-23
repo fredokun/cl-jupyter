@@ -113,15 +113,15 @@ def HBox(*pargs, **kwargs):
 |#
 
 
-;;;Thought process:box is an instance of box. go to the layout class and change fields display, align-items, and for VBox, change flex-flow. Then return the box object. NOTE THE FIELDS ARE HYPTHENATED NOT UNDERSCORED IN LISP!!!
+;;;Thought process:box is an instance of box. go to the layout class and change fields display, align-items, and for VBox, change flex-flow. Then return the box object. NOTE THE FIELDS ARE HYPTHENATED NOT UNDERSCORED IN LISP!!! vector + kw args
 (defmethod VBox (idk &rest kwargs)
   (let ((box (make-instance 'Box idk kwargs)))
-    (with-slots (display flex-flow align-items) box
+    (with-slots (display flex-flow align-items) (layout box)
       (setf display "flex" flex-flow "column" align-items "stretch")
       box)))
 
 (defmethod HBox (idk &rest kwargs)
   (let ((box (make-instance 'Box idk kwargs)))
-    (with-slots (display align-items) box
+    (with-slots (display align-items) (layout box)
       (setf display "flex" align-items "stretch")
       box)))
