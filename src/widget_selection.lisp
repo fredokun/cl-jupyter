@@ -7,8 +7,8 @@
 	  :metadata (:sync t
 			   :json-name "value"
 			   :help "Selected value"
-			   :to_json %value-to-label
-			   :from_json %label-to-value
+			   :to-json %value-to-label
+			   :from-json %label-to-value
 			   ))
    (options :initarg :options :accessor options
 	     :type list
@@ -71,8 +71,8 @@
 	  :metadata (:sync t
 			   :json-name "value"
 			   :help "Selected values"
-			   :to_json %values-to-labels
-			   :from_json %labels-to-values
+			   :to-json %values-to-labels
+			   :from-json %labels-to-values
 			   )))
   (:metaclass traitlets:traitlet-class))
 
@@ -152,8 +152,7 @@
     (loop for (k . v) in options
 	 do (setf (gethash k _options_dict) v))
     (setf _options_labels (map 'vector #'car options))
-    (setf _options_values (map 'vector #'cdr options))
-    (setf value (car (rassoc value options :test #'equal)))))
+    (setf _options_values (map 'vector #'cdr options))))
 
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
