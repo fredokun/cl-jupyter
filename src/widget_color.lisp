@@ -1,6 +1,6 @@
 (in-package :cl-jupyter-widgets)
 
-(defclass color-picker (dom-widget)
+(defclass color-picker (labeled-widget dom-widget core-widget)
   ((value :initarg :value :accessor value
 	   :type unicode 
 	   :initform "black"
@@ -12,13 +12,7 @@
 	     :initform :false
 	     :metadata (:sync t
 			      :json-name "concise"
-			      ))
-   (description :initarg :description :accessor description
-		 :type unicode
-		 :initform (unicode "")
-		 :metadata (:sync t
-				  :json-name "description"
-				  )))
+			      )))
   (:default-initargs
    :model-module (unicode "jupyter-js-widgets")
     :view-module (unicode "jupyter-js-widgets")
