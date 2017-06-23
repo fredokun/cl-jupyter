@@ -183,6 +183,37 @@ key : a key or a list of keys (optional)
 		       (cons "buffers" buffer-keys))))
 	(widget-send* self msg :buffers buffers)))))
 
+
+(defun get-state (object &key key)
+  "Gets the widget state, or a piece of it.
+
+        Parameters
+        ----------
+        key : unicode or iterable (optional)
+            A single property's name or iterable of property names to get.
+
+        Returns
+        -------
+        state : dict of states
+        metadata : dict
+            metadata for each field: {key: metadata}
+        "
+  (let ((keys (cond
+		((null key) (get-keys object))
+		((atom key) (list key))
+		((listp key) key)
+		(t (error "key must be a slot name, a list or NIL, key -> ~a" key))))
+	state)
+    (loop for slot-name in keys
+       for slot-def = (or (find slot-name (clos:class-slots (class-of object))
+				:key #'clos:slot-definition-name)
+			  (error "Could not find slot-definition with name ~a" slot-name))
+       for to-json = (or (traitlets:traitlet-metadata (class-of object) slot-name :to-json)
+			 'widget-to-json)
+       collect (cons (or (traitlets:traitlet-metadata (class-of object) slot-name :json-name)
+			 (string (clos:slot-definition-name slot-def)))
+		     (funcall to-json (widget-slot-value object slot-name) object)))))
+
 (defmethod widget-send (self content &key buffers)
   "Send a custom msg to the widget model in the front-end.
 *Arguments
