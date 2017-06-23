@@ -2,7 +2,7 @@
 
 
 (defclass %selection (dom-widget)
-  ((value :initarg :value :accessor value
+    ((value :initarg :value :accessor value
 	  :initform nil
 	  :metadata (:sync t
 			   :json-name "value"
@@ -65,15 +65,10 @@
   (:metaclass traitlets:traitlet-class))
 
 (defclass multiple-selection (%selection)
-  ((value :initarg :value :accessor value
-	  :type vector
-	  :initform ()
-	  :metadata (:sync t
-			   :json-name "value"
-			   :help "Selected values"
-			   :to-json %values-to-labels
-			   :from-json %labels-to-values
-			   )))
+    ((value :type vector :initform (make-array 0 :fill-pointer 0 :adjustable t)
+	    :metadata (:help "Selected values"
+		     :to-json %values-to-labels
+		     :from-json %labels-to-values)))
   (:metaclass traitlets:traitlet-class))
 
 (defclass dropdown (%selection)
@@ -137,15 +132,15 @@
       (gethash 'k (slot-value object '_options_dict)))
 
  (defun %labels-to-values (k obj)
-   (loop for (o . v) in k collect (%label-to-value o obj)))
+   (loop for o across k collect (%label-to-value o obj)))
 
 (defun %value-to-label (value obj)
-    (car (rassoc value (options obj) :test #'equal)))
+   (car (rassoc value (options obj) :test #'equal)))
 
 ;;; This implements
 ;;; https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget_selection.py#L106
 (defun %values-to-labels (values obj)
-  (loop for v across values collect (%value-to-label v obj)))
+  (map 'vector (lambda (v) (%value-to-label v obj)) values))
 
 (defmethod initialize-instance :after ((%selection %selection) &key)
   (with-slots (value _options_labels _options_values _options_dict options) %selection
@@ -155,6 +150,11 @@
     (setf _options_values (map 'vector #'cdr options))
     (if (not value)
 	(setf value (aref _options_values 0))))) 
+(defmethod initialize-instance :after ((%selection select-multiple) &key)
+  (with-slots (value _options_values) %selection
+    (if (zerop (length value))
+	(vector-push-extend (aref _options_values 0) value))))
+
 
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
