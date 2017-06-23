@@ -72,4 +72,13 @@
     :layout (make-instance 'layout))
   (:metaclass traitlets:traitlet-class))
 
-
+(defclass labeled-widget (dom-widget)
+  (description :initarg :description :accessor description
+	       :type unicode
+	       :initform (unicode "")
+	       :metadata (:sync t
+				:json-name "description"
+				:help "Description of the control."))
+  (:default-initargs
+   :model-name (unicode "LabeledWidgetModel"))
+  (:metaclass traitlets:traitlet-class))
