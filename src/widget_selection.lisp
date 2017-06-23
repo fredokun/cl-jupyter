@@ -137,7 +137,7 @@
       (gethash 'k (slot-value object '_options_dict)))
 
  (defun %labels-to-values (k obj)
-   (loop for v in k collect (%label-to-value v obj)))
+   (loop for (o . v) in k collect (%label-to-value o obj)))
 
 (defun %value-to-label (value obj)
     (car (rassoc value (options obj) :test #'equal)))
@@ -145,7 +145,7 @@
 ;;; This implements
 ;;; https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget_selection.py#L106
 (defun %values-to-labels (values obj)
-  (loop for v in values collect (%value-to-label v obj)))
+  (loop for v across values collect (%value-to-label v obj)))
 
 (defmethod initialize-instance :after ((%selection %selection) &key)
   (with-slots (value _options_labels _options_values _options_dict options) %selection
