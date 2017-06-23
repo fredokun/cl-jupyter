@@ -1,18 +1,12 @@
 (in-package :cl-jupyter-widgets)
 
-(defclass %bool (dom-widget)
+(defclass %bool (labeled-widget value-widget core-widget)
   ((%value :initarg :value :accessor value
 	   :type boolean
 	   :initform :false
 	   :metadata (:sync t
 			    :json-name "value"
 			    :help "Bool value"))
-   (%description :initarg :description :accessor description
-		 :type unicode
-		 :initform (unicode "")
-		 :metadata (:sync t
-				  :json-name "description"
-				  :help "Description of the boolean (label)."))
    (%disabled :initarg :disabled :accessor disabled
 	      :type boolean
 	      :initform :false
