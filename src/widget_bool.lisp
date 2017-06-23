@@ -67,18 +67,3 @@
 
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
-#|
-(defclass toggle-button (%bool)
-  ()
-  (:default-initargs
-   :view-name (unicode "ToggleButtonView")
-    :model-name (unicode "ToggleButtonModel")
-    :tool-tip (unicode)
-    :icon (unicode ""))
-  (:metaclass traitlets:traitlet-class))
-   ;;;HELP ME :button-style
-    ;; button_style = CaselessStrEnum(
-   ; ;   values=['primary', 'success', 'info', 'warning', 'danger', ''], default_value='',
-      ;;  help="""Use a predefined styling for the button.""").tag(sync=True)
-
-|#
