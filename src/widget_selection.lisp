@@ -152,7 +152,9 @@
     (loop for (k . v) in options
 	 do (setf (gethash k _options_dict) v))
     (setf _options_labels (map 'vector #'car options))
-    (setf _options_values (map 'vector #'cdr options))))
+    (setf _options_values (map 'vector #'cdr options))
+    (if (not value)
+	(setf value (aref _options_values 0))))) 
 
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
