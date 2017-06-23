@@ -101,7 +101,8 @@
 	  :initform (make-instance 'SliderStyle)
 	  :metadata (:sync t
 			   :json-name "style"
-			  ;; WIDGETSERIALIZATION
+			   :from-json json-to-widget
+			   :to-json widget-to-json
    )))
   (:default-initargs
    :view-name (unicode "IntSliderView")
@@ -135,7 +136,8 @@
 	  :initform (make-instance 'SliderStyle)
 	  :metadata (:sync t
 			   :json-name "style"
-			  ;; WIDGETSERIALIZATION
+			   :from-json json-to-widget
+			   :to-json widget-to-json
    )))
   (:default-initargs
    :view-name (unicode "ProgressView")
