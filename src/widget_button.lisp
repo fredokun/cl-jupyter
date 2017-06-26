@@ -1,6 +1,23 @@
 (in-package :cl-jupyter-widgets)
 
-(defclass button (dom-widget)
+(defclass button-style (style core-widget)
+  ((button_color :initarg button_color :accessor button_color
+		 :type unicode
+		 :initform (unicode "black")
+		 :metadata (:sync t
+				  :json-name "button_color"))
+   (font_weight :initarg :font_weight :accessor font_weight
+		:type unicode
+		:initform (unicode "")
+		:metadata (:sync t
+				 :json-name "font_weight")))
+  (:default-initargs
+   :model-name (unicode "ButtonStyleModel"))
+  (:metaclass traitlets:traitlet-class))
+
+
+
+(defclass button (dom-widget core-widget)
  ((description :initarg :description :accessor description
 		:type unicode
 		:initform (unicode "")
@@ -31,16 +48,12 @@
 		 :metadata (:sync t
 				  :json-name "button_style"
 				  :help "Use a predefined styling for the button. Options include: \"primary\", \"success\", \"info\", \"warning\", \"danger\", and \"""\"."))
-  (background_color :initarg :background_color :accessor background_color
-		    :type boolean
-		    :initform :null
-		    :metadata (:sync t
-				     :json-name "background_color"))
-  (color :initarg :color :accessor color
-	 :type boolean
-	 :initform :null
+  (style :accessor style
+	 :initform (make-instance 'button-style)
 	 :metadata (:sync t
-			  :json-name "color"))
+			  :json-name "style"
+			  :to-json json-to-widget
+			  :from-json widget-to-json
   )
   (:default-initargs
    :model-module (unicode "jupyter-js-widgets")
