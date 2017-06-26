@@ -1,6 +1,6 @@
 (in-package :cl-jupyter-widgets)
 
-(defclass %int (dom-widget labeled-widget core-widget)
+(defclass %int (labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	   :type integer
 	   :initform 0
@@ -57,11 +57,11 @@
   (:metaclass traitlets:traitlet-class))
 
 (defclass slider-style (style core-widget)
-  (handle_color :initarg :handle_color :accessor handle_color
+  ((handle_color :initarg :handle_color :accessor handle_color
 		:type unicode
 		:initform (unicode "")
 		:metadata (:sync t
-				 :json-name "handle_color"))
+				 :json-name "handle_color")))
   (:default-initargs
    :model-name (unicode "SliderStyleModel"))
   (:metaclass traitlets:traitlet-class))
@@ -110,11 +110,11 @@
   (:metaclass traitlets:traitlet-class))
 
 (defclass progress-style (style core-widget)
-  (bar_color :initarg :bar_color :accessor bar_color
+  ((bar_color :initarg :bar_color :accessor bar_color
 	     :type unicode
 	     :initform (unicode "")
 	     :metadata (:sync t
-			      :json-name "bar_color"))
+			      :json-name "bar_color")))
   (:default-initargs
    :model-name (unicode "ProgressStyleModel"))
   (:metaclass traitlets:traitlet-class))
