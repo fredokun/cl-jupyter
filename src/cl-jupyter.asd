@@ -26,6 +26,9 @@
 		 (:file "widget_selection")
 		 (:file "widget_float")
 		 (:file "widget_button")
+		 (:file "widget_string")
+		 (:file "widget_box")
+		 (:file "widget_selectioncontainer")
 		 (:file "comm")
 ;;; cl-jupyter stuff
 		 (:file "utils")
