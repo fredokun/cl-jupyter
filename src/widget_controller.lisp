@@ -1,5 +1,6 @@
 (in-package :cl-jupyter-widgets)
 
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_controller.py#L17
 (defclass button(value-widget core-widget)
   ((value :initarg :value :reader value
 	  :type (float 0.0 1.0)
@@ -19,6 +20,7 @@
     )
   (:metaclass traitlets:traitlet-class))
 
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_controller.py#L29
 (defclass axis(value-widget core-widget)
   ((value :initargs :value :reader value
 	  :type (float -1.0 1.0)
@@ -33,6 +35,7 @@
     )
   (:metaclass traitlets:traitlet-class))
 
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_controller.py#L40
 (defclass controller (dom-widget core-widget)
   ((index :initargs :index :accessor index
 	  :type integer
