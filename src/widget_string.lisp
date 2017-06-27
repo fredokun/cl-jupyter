@@ -20,7 +20,7 @@ class _String(DOMWidget):
     _model_name = Unicode('StringModel').tag(sync=True)
 ||#
 
-(defclass %string (dom-widget)
+(defclass %string (labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	   :type unicode
 	   :initform (unicode "")

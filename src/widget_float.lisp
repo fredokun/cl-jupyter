@@ -17,7 +17,7 @@ super(_Float, self).__init__(**kwargs)
 
 ||#
 
-(defclass %float (dom-widget)
+(defclass %float (labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	   :type float
 	   :initform 0.0
