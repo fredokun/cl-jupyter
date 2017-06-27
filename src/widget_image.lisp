@@ -1,24 +1,12 @@
 (in-package :cl-jupyter-widgets)
 
 #||
-@register('Jupyter.Image')
-class Image(DOMWidget):
-    """Displays an image as a widget.
-    The `value` of this widget accepts a byte string.  The byte string is the
-    raw image data that you want the browser to display.  You can explicitly
-    define the format of the byte string using the `format` trait (which
-    defaults to "png").
-    """
-    _view_name = Unicode('ImageView').tag(sync=True)
-    _model_name = Unicode('ImageModel').tag(sync=True)
-    _model_module = Unicode('jupyter-js-widgets').tag(sync=True)
-    _view_module = Unicode('jupyter-js-widgets').tag(sync=True)
+using this, the value slot changes to a b64 string, but the b64value slot is still empty
 
-    # Define the custom state properties to sync with the front-end
-    image-format = Unicode('png').tag(sync=True)
-    width = CUnicode().tag(sync=True)
-    height = CUnicode().tag(sync=True)
-    _b64value = Unicode().tag(sync=True)
+(defparameter i (make-instance 'cl-jupyter-widgets::image :value 
+        (cl-base64:usb8-array-to-base64-string 
+         (cl-jupyter-widgets::read-file-into-byte-vector 
+          "/home/app/work/home/Development/widget-dev/images/icon.png"))))
 ||#
 
 (defun read-file-into-byte-vector (pathname)
@@ -27,13 +15,7 @@ class Image(DOMWidget):
       (read-sequence data s)
       data)))
 
-;this is not finished yet
-;need an around method for value
-;quickload is not working
-;need to add/compile cl-base64 into docker image
-
-
-(defclass image (dom-widget)
+(defclass image (dom-widget value-widget core-widget)
   ((image-format :initarg :format :accessor image-format
 	    :type unicode
 	    :initform (unicode "png")
@@ -58,7 +40,9 @@ class Image(DOMWidget):
 			       :json-name "_b64value"))
    (value :initarg :value :accessor value 
 	   :type bytes 
-	   :initform (bytes "")))
+	   :initform (bytes "")
+	   :metadata (:sync t
+			    :json-name "value")))
 
    (:default-initargs  
        :view-name (unicode "ImageView")
@@ -74,6 +58,3 @@ class Image(DOMWidget):
     def _value_changed(self, change):
         self._b64value = base64.b64encode(change['new'])
  ||#
-  
-
-
