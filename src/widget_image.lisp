@@ -7,6 +7,8 @@ using this, the value slot changes to a b64 string, but the b64value slot is sti
         (cl-base64:usb8-array-to-base64-string 
          (cl-jupyter-widgets::read-file-into-byte-vector 
           "/home/app/work/home/Development/widget-dev/images/icon.png"))))
+
+https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_image.py#L42
 ||#
 
 (defun read-file-into-byte-vector (pathname)
