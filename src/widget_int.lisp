@@ -1,5 +1,5 @@
 (in-package :cl-jupyter-widgets)
-
+;;;Python code: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets6/widgets/widget_int.py#L69
 (defclass %int (labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	   :type integer
@@ -91,7 +91,7 @@
 		    :metadata (:sync t
 				     :json-name "readout_format"
 				     :help "Format for the readout.")) 
-   (continuous-update :initarg :continuous-update :accessor continuous-update
+   (continuous_update :initarg :continuous_update :accessor continuous_update
 		       :type boolean
 		       :initform :true
 		       :metadata (:sync t
@@ -126,7 +126,7 @@
 		 :metadata (:sync t
 				  :json-name "orientation"
 				  :help "vertical or horizontal."))
-   (bar-style :initarg :bar-style :accessor bar-style
+   (bar_style :initarg :bar_style :accessor bar_style
 	       :type unicode
 	       :initform (unicode "")
 	       :metadata (:sync t

@@ -1,5 +1,5 @@
 (in-package :cl-jupyter-widgets)
-
+;;;Python code: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets6/widgets/widget_selectioncontainer.py#L16
 
 (defclass %selection-container (Box core-widget)
   ((_titles :accessor _titles

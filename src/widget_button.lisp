@@ -1,5 +1,5 @@
 (in-package :cl-jupyter-widgets)
-
+;;;Python code: drmeister/spy-ipykernel/blob/master/ipywidgets6/widgets/widget_button.py#L29
 (defclass button-style (style core-widget)
   ((button_color :initarg button_color :accessor button_color
 		 :type unicode
