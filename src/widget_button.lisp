@@ -3,7 +3,7 @@
 (defclass button-style (style core-widget)
   ((button_color :initarg button_color :accessor button_color
 		 :type unicode
-		 :initform (unicode "black")
+		 :initform (unicode "")
 		 :metadata (:sync t
 				  :json-name "button_color"))
    (font_weight :initarg :font_weight :accessor font_weight
@@ -52,8 +52,8 @@
 	 :initform (make-instance 'button-style)
 	 :metadata (:sync t
 			  :json-name "style"
-			  :to-json json-to-widget
-			  :from-json widget-to-json
+			;;  :to-json json-to-widget
+			  :from-json widget-to-json))
   )
   (:default-initargs
    :model-module (unicode "jupyter-js-widgets")

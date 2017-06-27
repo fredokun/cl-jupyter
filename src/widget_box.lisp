@@ -2,13 +2,14 @@
 
 (defclass Box (dom-widget core-widget)
   ((children :initarg :children :accessor children
-	      :type vector
+	     :type vector
+	     :initform (vector)
 	      :metadata (:sync t
 			       :json-name "children"
 			       :help "Child widgets in the container. Using tuple to force
                                      reassignment to update the list. When a proper 
                                      notifying-list trait exists, that is what should be used."
-			       :to-json json-to-widget
+			     ;  :to-json json-to-widget
 			       :from-json widget-to-json
 			       ))
    (box_style :initarg :box_style :accessor box_style

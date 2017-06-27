@@ -4,6 +4,7 @@
 (defclass %selection-container (Box core-widget)
   ((_titles :accessor _titles
 	    :type list
+	    :initform ()
 	    :metadata (:sync t
 			     :json-name "_titles"
 			     :help "titles of the pages"))
@@ -21,7 +22,11 @@
 
 
 (defun set-title (self index title)
-  (setf index (unicode index) (getf (_titles self)  index)  title))
+  (let* ((index (write-to-string index))
+	 (a (assoc index (_titles self) :test #'string=)))
+    (if a
+	(setf (cdr a) title)
+	(push (cons index title) (_titles self)))))
 ;;;self.send_state('_titles')?????
 ;;;https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget_selectioncontainer.py#L23
 ;;;I am trying to copy this functionality. I don't know what self.send_stat('_titles') is doing.Does the unicode function work properly with numbers?? Find out when we test it!

@@ -85,7 +85,7 @@
 	     :metadata (:sync t
 			      :json-name "readout"
 			      :help "Dispaly the current value of the slider next to it."))
-   (readout-format :initarg :readout-format :accessor readout-format
+   (readout_format :initarg :readout_format :accessor readout_format
 		    :type unicode
 		    :initform (unicode "d")
 		    :metadata (:sync t
@@ -98,7 +98,7 @@
 					:json-name "continuous_update"
 					:help "Update the value of the widget as the user is holding the slider."))
    (style :accessor style
-	  :initform (make-instance 'SliderStyle)
+	  :initform (make-instance 'slider-style)
 	  :metadata (:sync t
 			   :json-name "style"
 			   :from-json json-to-widget
@@ -133,7 +133,7 @@
 				:json-name "bar_style"
 				:help "Use a predefined styling for the progress bar. Options: \"success\", \"info\", \"warning\", and \"danger\". Default: \"\"."))
     (style :accessor style
-	  :initform (make-instance 'SliderStyle)
+	  :initform (make-instance 'slider-style)
 	  :metadata (:sync t
 			   :json-name "style"
 			   :from-json json-to-widget
@@ -202,11 +202,6 @@
 		   :initform (unicode "i")
 		   :metadata (:sync t
 				    :json-name "readout_format"))
-   (slider_color :initarg :slider_color :accessor slider_color
-		 :type unicode
-		 :initform (unicode "None")
-		 :metadata (:sync t
-				  :json-name "slider_color"))
    (continuous_update :initarg :continuous_update :accessor continuous_update
 		      :type boolean
 		      :initform :true

@@ -1,13 +1,13 @@
 (in-package :cl-jupyter-widgets)
 
 (defclass %bool (labeled-widget value-widget core-widget)
-  ((%value :initarg :value :accessor value
+  ((value :initarg :value :accessor value
 	   :type boolean
 	   :initform :false
 	   :metadata (:sync t
 			    :json-name "value"
 			    :help "Bool value"))
-   (%disabled :initarg :disabled :accessor disabled
+   (disabled :initarg :disabled :accessor disabled
 	      :type boolean
 	      :initform :false
 	      :metadata (:sync t
