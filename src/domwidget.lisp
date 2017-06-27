@@ -73,3 +73,28 @@
   (:metaclass traitlets:traitlet-class))
 
 
+
+
+
+(defclass labeled-widget (dom-widget)
+  ((description :initarg :description :accessor description
+	       :type unicode
+	       :initform (unicode "")
+	       :metadata (:sync t
+				:json-name "description"
+				:help "Description of the control.")))
+  (:default-initargs
+   :model-name (unicode "LabeledWidgetModel"))
+  (:metaclass traitlets:traitlet-class))
+
+(defclass value-widget (widget)
+  ()
+  (:metaclass traitlets:traitlet-class))
+
+(defclass core-widget (widget)
+  ()
+ ; (:default-initargs
+ ;  :model-module-version (unicode "")
+ ;  :view-module-version (unicode ""))
+  (:metaclass traitlets:traitlet-class))
+;;;HELP ME! model and view need to be (unicode __frontend_version__)!!!
