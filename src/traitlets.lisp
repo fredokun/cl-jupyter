@@ -1,6 +1,6 @@
 (defpackage #:traitlets
   (:use #:cl)
-  (:export #:traitlet-class)
+  (:export #:traitlet-class #:synced-object)
   (:export #:traitlet-metadata))
 
 (in-package #:traitlets)
@@ -55,3 +55,36 @@
 	  ;; Metadata are plists, so just append.
 	  (loop for dsd in direct-slot-definitions appending (metadata dsd)))
     result))
+
+;;; Abstract. All objects with :sync t should be a subclass of this, to get the slot.
+(defclass synced-object ()
+  ((%mutex :initform (mp:make-shared-mutex) :accessor mutex))
+  (:metaclass traitlet-class))
+
+(defmacro with-shared-lock (shared-mutex &body body)
+  (let ((smutex (gensym "SHARED-MUTEX")))
+    `(let ((,smutex ,shared-mutex))
+       (unwind-protect
+	    (progn (mp:shared-lock ,smutex)
+		   ,@body)
+	 (mp:shared-unlock ,smutex)))))
+
+(defmacro with-write-lock (shared-mutex &body body)
+  (let ((smutex (gensym "SHARED-MUTEX")))
+    `(let ((,smutex ,shared-mutex))
+       (unwind-protect
+	    (progn (mp:write-lock ,smutex)
+		   ,@body)
+	 (mp:write-unlock ,smutex)))))
+
+(defmethod clos:slot-value-using-class
+    (class (object synced-object) (slotd effective-traitlet))
+  (if (getf (metadata slotd) :sync)
+      (with-shared-lock (mutex object) (call-next-method))
+      (call-next-method)))
+
+(defmethod (setf clos:slot-value-using-class)
+    (new-value class (object synced-object) (slotd effective-traitlet))
+  (if (getf (metadata slotd) :sync)
+      (with-write-lock (mutex object) (call-next-method))
+      (call-next-method)))
