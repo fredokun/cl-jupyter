@@ -25,7 +25,7 @@ super(_Float, self).__init__(**kwargs)
 			    :json-name "value"
 			    :help "Float value"))
    (disabled :initarg :disabled :accessor disabled
-	      :type boolean
+	      :type bool
 	      :initform :false
 	      :metadata (:sync t
 			       :json-name "disabled"
@@ -183,13 +183,13 @@ class FloatSlider(_BoundedFloat):
 				  :json-name "orientation"
 				  :help "Vertical or horizontal"))
    (_range :initarg :range :accessor range
-	   :type boolean
+	   :type bool
 	   :initform :false
 	   :metadata (:sync t
 			    :json-name "_range"
 			    :help "Display a range selector"))
    (readout :initarg :readout :accessor readout
-	     :type boolean
+	     :type bool
 	     :initform :true
 	     :metadata (:sync t
 			      :json-name "readout"
@@ -206,7 +206,7 @@ class FloatSlider(_BoundedFloat):
 		  :metadata (:sync t
 				   :json-name "slider_color"))
    (continuous-update :initarg :continuous-update :accessor continuous-update
-		       :type boolean
+		       :type bool
 		       :initform :true
 		       :metadata (:sync t
 					:json-name "continuous_update"
@@ -371,13 +371,13 @@ continuous_update = Bool(True, help="Update the value of the widget as the user 
 				  :json-name "orientation"
 				  :help "Vertical or horizontal"))
    (_range :initarg :range :accessor range
-	   :type boolean
+	   :type bool
 	   :initform :true
 	   :metadata (:sync t
 			    :json-name "_range"
 			    :help "Display a range selector"))
    (readout :initarg :readout :accessor readout
-	     :type boolean
+	     :type bool
 	     :initform :true
 	     :metadata (:sync t
 			      :json-name "readout"
@@ -394,7 +394,7 @@ continuous_update = Bool(True, help="Update the value of the widget as the user 
 		  :metadata (:sync t
 				   :json-name "slider_color"))
    (continuous-update :initarg :continuous-update :accessor continuous-update
-		       :type boolean
+		       :type bool
 		       :initform :true
 		       :metadata (:sync t
 					:json-name "continuous_update"

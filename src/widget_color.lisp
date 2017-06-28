@@ -8,7 +8,7 @@
 			    :json-name "value"
 			    :help "Color"))
    (concise :initarg :concise :accessor concise
-	     :type boolean
+	     :type bool
 	     :initform :false
 	     :metadata (:sync t
 			      :json-name "concise"

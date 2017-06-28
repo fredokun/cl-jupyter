@@ -5,7 +5,7 @@
    (comm-id :initarg :comm-id :accessor comm-id
 	    :initform (format nil "~W" (uuid:make-v4-uuid))
 	    :documentation "Am I the primary or secondary Comm?")
-   (primary :initarg :primary :accessor primary :initform t :type boolean)
+   (primary :initarg :primary :accessor primary :initform t :type bool)
    (target-name :initarg :target-name :accessor target-name :initform "comm" :type string)
    (target-module :initarg :target-module 
 		  :accessor target-module
@@ -17,7 +17,7 @@
    (%close-data :initarg :close-data :accessor %close-data :documentation "data dict, if any, to be included in comm-close")
    (%msg-callback :initarg :msg-callback :accessor %msg-callback :initform nil)
    (%close-callback :initarg :close-callback :accessor %close-callback :initform nil)
-   (%closed :initarg :closed :accessor %closed :initform t :type boolean))
+   (%closed :initarg :closed :accessor %closed :initform t :type bool))
   )
 
 
