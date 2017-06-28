@@ -6,11 +6,15 @@
 ;;; Use widget-log to log messages to a file
 (defvar *widget-log* nil)
 (eval-when (:execute :load-toplevel)
-  (setf *widget-log* (cl:open "/home/app/logs/cl-jupyter.log"
-			      :direction :output
-			      :if-exists :append
-			      :if-does-not-exist :create))
-  (format *widget-log* "===================== new run =======================~%"))
+  (let ((log-file-name (cond
+			 ((probe-file "/home/app/logs/")
+			  "/home/app/logs/cl-jupyter.log")
+			 (t "/tmp/cl-jupyter.log"))))
+    (setf *widget-log* (cl:open log-file-name
+				:direction :output
+				:if-exists :append
+				:if-does-not-exist :create))
+    (format *widget-log* "===================== new run =======================~%")))
 
 (defun widget-log (fmt &rest args)
     (apply #'format *widget-log* fmt args)
