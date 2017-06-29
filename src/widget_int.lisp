@@ -7,7 +7,7 @@
 	   :metadata (:sync t
 			    :json-name "value"))
    (disabled :initarg :disabled :accessor disabled
-	      :type boolean
+	      :type bool
 	      :initform :false
 	      :metadata (:sync t
 			       :json-name "disabled"
@@ -74,13 +74,13 @@
 				  :json-name "orientation"
 				  :help "vertical or horizontal"))
    (_range :initarg :range :accessor range
-	   :type boolean
+	   :type bool
 	   :initform :false
 	   :metadata (:sync t
 			    :json-name "_range"
 			    :help "Display a range selector"))
    (readout :initarg :readout :accessor readout
-	    :type boolean
+	    :type bool
 	     :initform :true
 	     :metadata (:sync t
 			      :json-name "readout"
@@ -92,7 +92,7 @@
 				     :json-name "readout_format"
 				     :help "Format for the readout.")) 
    (continuous_update :initarg :continuous_update :accessor continuous_update
-		       :type boolean
+		       :type bool
 		       :initform :true
 		       :metadata (:sync t
 					:json-name "continuous_update"
@@ -186,13 +186,13 @@
 				 :json-name "orientation"
 				 :help "Vertical or horizontal"))
    (_range :initarg :range :accessor range
-	   :type boolean
+	   :type bool
 	   :initform :true
 	   :metadata (:sync t
 			    :json-name "_range"
 			    :help "Display a range selector"))
    (readout :initarg :readout :accessor readout
-	    :type boolean
+	    :type bool
 	    :initform :true
 	    :metadata (:sync t
 			     :json-name "readout"
@@ -203,7 +203,7 @@
 		   :metadata (:sync t
 				    :json-name "readout_format"))
    (continuous_update :initarg :continuous_update :accessor continuous_update
-		      :type boolean
+		      :type bool
 		      :initform :true
 		      :metadata (:sync t
 				       :json-name "continuous_update"
@@ -223,7 +223,7 @@
 			       :json-name "interval"
 			       :help "Interval"))
    (_playing :initarg :playing :accessor playing
-	     :type boolean
+	     :type bool
 	     :initform :true
 	     :metadata (:sync t
 			      :json-name "_playing"

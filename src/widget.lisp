@@ -30,7 +30,7 @@
   (defparameter *widget-serialization*
     (list :from-json 'json-to-widget
 	  :to-json 'widget-to-json)))
-(deftype boolean () '(member :true :false :null))
+(deftype bool () '(member :true :false :null))
 (deftype unicode () '(simple-array character *))
 (deftype cunicode () '(simple-array character *))
 (deftype tuple () '(vector * *))
