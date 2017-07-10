@@ -15,7 +15,7 @@
 	     :type list
 	     :initform ())
    (disabled :initarg :disabled :accessor disabled
-	      :type boolean
+	      :type bool
 	      :initform :false
 	      :metadata (:sync t
 			       :json-name "disabled"
@@ -94,13 +94,13 @@
 				  :json-name "orientation"
 				  :help "vertical or horizontal"))
    (readout :initarg :readout :accessor readout
-	     :type boolean
+	     :type bool
 	     :initform :true
 	     :metadata (:sync t
 			      :json-name "readout"
 			      :help "Display the current selected label next to the slider."))
    (continuous_update :initarg :continuous_update :accessor continuous_update
-		       :type boolean
+		       :type bool
 		       :initform :true
 		       :metadata (:sync t
 					:json-name "continuous_update"
@@ -204,7 +204,7 @@ def _labels_to_values(k, obj):
 	     :type list
 	     :initform ())
    (disabled :initarg :disabled :accessor disabled
-	      :type boolean
+	      :type bool
 	      :initform :false
 	      :metadata (:sync t
 			       :json-name "disabled"
@@ -295,13 +295,13 @@ def _labels_to_values(k, obj):
 				  :json-name "orientation"
 				  :help "vertical or horizontal"))
    (readout :initarg :readout :accessor readout
-	     :type boolean
+	     :type bool
 	     :initform :true
 	     :metadata (:sync t
 			      :json-name "readout"
 			      :help "Display the current selected label next to the slider."))
    (continuous_update :initarg :continuous_update :accessor continuous_update
-		       :type boolean
+		       :type bool
 		       :initform :true
 		       :metadata (:sync t
 					:json-name "continuous_update"

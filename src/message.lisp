@@ -112,10 +112,11 @@ The deserialization of a message header from a JSon string is then trivial.
   ((header :initarg :header :accessor message-header)
    (parent-header :initarg :parent-header :initform nil :accessor message-parent-header)
    (metadata :initarg :metadata :initform nil :accessor message-metadata)
-   (content :initarg :content :initform nil :accessor message-content))
+   (content :initarg :content :initform nil :accessor message-content)
+   (buffers :initarg :buffers :initform nil :accessor message-buffers))
   (:documentation "Representation of IPython messages"))
 
-(defun make-message (parent_msg msg_type metadata content) 
+(defun make-message (parent_msg msg_type metadata content &optional buffers) 
   (let ((hdr (message-header parent_msg)))
     (make-instance 
      'message
@@ -128,9 +129,10 @@ The deserialization of a message header from a JSon string is then trivial.
               :version (header-version hdr))
      :parent-header hdr
      :metadata metadata
-     :content content)))
+     :content content
+     :buffers buffers)))
 
-(defun make-orphan-message (session-id msg-type metadata content) 
+(defun make-orphan-message (session-id msg-type metadata content buffers) 
   (make-instance 
    'message
    :header (make-instance 
@@ -142,7 +144,8 @@ The deserialization of a message header from a JSon string is then trivial.
             :version +KERNEL-PROTOCOL-VERSION+)
    :parent-header '()
    :metadata metadata
-   :content content))
+   :content content
+   :buffers buffers))
 
 (example-progn
  (defparameter *msg1* (make-instance 'message :header *header1*)))

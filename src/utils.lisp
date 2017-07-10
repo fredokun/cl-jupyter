@@ -61,6 +61,9 @@
       `(progn ,@body)
       (values)))
 
+(defparameter *log-enabled* nil)
+(defparameter *log-level* nil)
+(defparameter *log-out-stream* nil)
 (defmacro logg (level fmt &rest args)
   "Log the passed ARGS using the format string FMT and its
  arguments ARGS."

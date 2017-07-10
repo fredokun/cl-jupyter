@@ -7,7 +7,7 @@
 
 (fdefinition 'cl-jupyter-widgets::open)
 
-(get-keys *int*)
+(get-key-map *int*)
 (print (get-state *int*))
 
 (defclass foo ()

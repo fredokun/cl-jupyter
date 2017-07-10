@@ -11,7 +11,8 @@
 		 :ironclad
 		 :cl-base64)
     :serial t
-    :components ((:file "packages")
+    :components (
+		 (:file "packages")
 ;;; cl-jupyter-widgets stuff
 		 (:file "tools")
 		 (:file "manager")

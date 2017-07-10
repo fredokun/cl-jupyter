@@ -51,7 +51,7 @@
 			:allowed-caseless-values '("normal" "bold" "bolder" "lighter" "initial" "inherit" ""
 						   "100" "200" "300" "400" "500" "600" "700" "800" "900" )))
    (%visible :initarg :visible :accessor visible
-	     :type boolean
+	     :type bool
 	     :initform :true
 	     :metadata
 	     (:sync t

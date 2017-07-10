@@ -72,6 +72,7 @@ The history of evaluations is also saved by the evaluator.
 	    (serious-condition
 	     #'(lambda (err)
 		 (let ((*standard-output* cl-jupyter-widgets::*widget-log*))
+		   (format t "~a~%" err)
 		   (core::clasp-backtrace)))))
 	 (progn ,@body))
      (simple-condition (err)
