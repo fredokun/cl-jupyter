@@ -1,6 +1,6 @@
 (in-package :nglv)
 
-(defclass nglwidget (cl-jupyter:domwidget)
+(defclass nglwidget (cl-jupyter-widgets:domwidget)
   ((%image-data :initarg :image-data
 		:type unicode
 		:initform (unicode "")
@@ -144,6 +144,9 @@
    :view-name (unicode "NGLView")
    :view-module (unicode "nglview-js-widgets"))
   (:metaclass traitlets:traitlet-class))
+
+
+#||  Down to the bottom
     
 (defmethod initialize-instance ((instance nglview)  &rest initargs &key &allow-other-keys)
   (%add-repr-method-shortcut instance instance)
@@ -186,10 +189,11 @@
 
 
 
-
+#|
 (defmethod add_trajectory ((self NGLWidget) trajectory &rest kwargs &key &allow-other-keys)
   (let ((backends *BACKENDS*)
 	(package_name 
+	 |#
 
 (defmethod add_pdbid ((self NGLWidget pdbid))
   (error " I want something like thif but what is .format(pdbid)??(add_component self rcsb://{}.pdb.format(pdbid)"))
@@ -519,3 +523,4 @@
 	 (let ((view_att nil)))))
   (error "Help me!!!"))
 		
+||#
