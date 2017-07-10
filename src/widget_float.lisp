@@ -86,19 +86,11 @@
 			    :json-name "_range"
 			    :help "Display a range selector"))
    (readout :initarg :readout :accessor readout
-<<<<<<< HEAD
-	    :type boolean
-	    :initform :true
-	    :metadata (:sync t
-			     :json-name "readout"
-			     :help "Display the current value of the slider next to it"))
-=======
-	     :type bool
+	    :type bool
 	     :initform :true
 	     :metadata (:sync t
 			      :json-name "readout"
 			      :help "Display the current value of the slider next to it"))
->>>>>>> da1660cb200a992ef7e8b608f41e95bac722b9b2
    (readout-format :initarg :readout-format :accessor readout-format
 		   :type unicode
 		   :initform (unicode ".2f")
@@ -111,19 +103,11 @@
 		 :metadata (:sync t
 				  :json-name "slider_color"))
    (continuous-update :initarg :continuous-update :accessor continuous-update
-<<<<<<< HEAD
-		      :type boolean
-		      :initform :true
-		      :metadata (:sync t
-				       :json-name "continuous_update"
-				       :help "Update the value of the widget as the user is holding the slider"))
-=======
-		       :type bool
+		      :type bool
 		       :initform :true
 		       :metadata (:sync t
 					:json-name "continuous_update"
 					:help "Update the value of the widget as the user is holding the slider."))
->>>>>>> da1660cb200a992ef7e8b608f41e95bac722b9b2
    )
   (:default-initargs
    :view-name (unicode "FloatSliderView")

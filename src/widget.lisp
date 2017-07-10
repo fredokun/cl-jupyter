@@ -93,7 +93,7 @@
 				   :json-name "msg_throttle") )
    (%comm :initarg :comm :accessor comm :initform nil)
    (%key-map :initarg :key-map :accessor key-map) ; alist of (slot-name . json-name)
-   (%property-lock :initarg :property-lock :accessor property-lock)
+   (%property-lock :initarg :property-lock :accessor property-lock :initform nil)
    (%holding-sync :initarg :holding-sync :accessor holding-sync :initform nil)
    (%states-to-send :initarg :states-to-send :accessor states-to-send)
    (%display-callbacks :initarg :display-callbacks :accessor display-callbacks
