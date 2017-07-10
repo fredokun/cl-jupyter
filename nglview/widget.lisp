@@ -1,14 +1,14 @@
 (in-package :nglv)
 
-(defclass nglwidget (cl-jupyter-widgets:domwidget)
+(defclass nglwidget (cljw:domwidget)
   ((%image-data :initarg :image-data
-		:type unicode
-		:initform (unicode "")
+		:type cljw:unicode
+		:initform (cljw:unicode "")
 		:metadata (:sync t :json-name "_image_data"))
    (%selector :initarg :selector
 	      :accessor selector
-	      :type Unicode
-	      :initform (Unicode)
+	      :type cljw:Unicode
+	      :initform (cljw:Unicode)
 	      :metadata (:sync t :json-name "selector"))
    (%frame :initarg :frame
 	   :accessor frame
@@ -22,17 +22,17 @@
 	   :metadata (:sync t :json-name "count"))
    (%background :initarg :background
 		:accessor background
-		:type unicode
-		:initform (Unicode "white")
+		:type cljw:unicode
+		:initform (cljw:Unicode "white")
 		:metadata (:sync t :json-name "background"))
    (%loaded :initarg :loaded
 	    :accessor loaded
-	    :type bool
+	    :type cljw:bool
 	    :initform :false
 	    :metadata (:sync t :json-name "loaded"))
    (%picked :initarg :picked
 	    :accessor picked
-	    :type dict
+	    :type cljw:dict
 	    :initform nil
 	    :metadata (:sync t :json-name "picked"))
    (%orientation :initarg :orientation
@@ -53,21 +53,21 @@
 			  :metadata (:sync t :json-name "_init_structures_sync"))
    (%parameters :initarg :parameters
 		:accessor parameters
-		:type dict
-		:initform nil)
+		:type cljw:dict
+		:initform nil) ; not synchronized https://github.com/drmeister/spy-ipykernel/blob/master/nglview/widget.py#L124
    (%full-stage-parameters :initarg :full-stage-parameters
 			   :accessor full-stage-parameters
-			   :type dict
+			   :type cljw:dict
 			   :initform nil
 			   :metadata (:sync t :json-name "_full_stage_parameters"))
    ;; Not sync'd
    (%coordinates-dict :initarg :coordinates-dict
 		      :accessor coordinates-dict
-		      :type dict
+		      :type cljw:dict
 		      :initform nil)
    (%repr-dict :initarg :repr-dict
 	       :accessor repr-dict
-	       :type dict
+	       :type cljw:dict
 	       :initform nil)
    (%ngl-component-names :initarg :ngl-component-names
 			 :accessor ngl-component-names
@@ -75,27 +75,30 @@
 			 :initform nil)
    (%send-binary :initarg :send-binary
 		 :accessor send-binary
-		 :type bool
+		 :type cljw:bool
 		 :initform :true)
    (%init-gui :initarg :init-gui
 	      :accessor init-gui
-	      :type bool
+	      :type cljw:bool
 	      :initform :false)
    (%hold-image :initarg :hold-image
 		:accessor hold-image
-		:type bool
+		:type cljw:bool
 		:initform :false)
    (%ngl-msg :initarg :ngl-msg
 	     :accessor ngl-msg
-	     :type (or string (eql nil))
+	     :type (or string null)
 	     :initform nil)
    ;; internal variables
    (%gui :initarg :%gui :accessor %gui :initform nil)
    (%init-gui :initarg :gui :accessor gui :initform nil)  ;; WHY? does nglview does this
    (%theme :initarg :theme :accessor theme :initform "default")
-   (%widget-image :initarg :widget-image :accessor widget-image :initform (cl-jupyter-widgets:image))
+   (%widget-image :initarg :widget-image :accessor widget-image
+		  :initform (make-instance 'cl-jupyter-widgets:image))
    (%image-array :initarg :image-array :accessor image-array :initform nil)
-   (%event :initarg :event :accessor event :initform :threading.event.object)
+   ;;; FIXME:  I don't know how to translate the creation of a threading.Event() from python
+   ;;;         into Common Lisp
+;;   (%event :initarg :event :accessor event :initform :threading.event.object)
    (%ngl-displayed-callbacks-before-loaded :initarg :ngl-displayed-callbacks-before-loaded
 					   :accessor ngl-displayed-callbacks-before-loaded
 					   :initform nil)
@@ -103,10 +106,9 @@
 					   :accessor ngl-displayed-callbacks-after-loaded
 					   :initform nil)
    (%shape :initarg :shape :accessor shape
-	   :initform (make-instance nglv:shape))
-   (%handle-msg-thread :initarg :handle-msg-thread
-		       :accessor handle-msg-thread
-		       :initform :threading.thread)
+	   :initform (make-instance 'shape))
+   ;;; FIXME:  Would this be a Clasp mp:PROCESS??
+;;;   (%handle-msg-thread :initarg :handle-msg-thread :accessor handle-msg-thread :initform :threading.thread)
 #|
         self._handle_msg_thread = threading.Thread(target=self.on_msg,
                 args=(self._ngl_handle_msg,))
@@ -128,6 +130,8 @@
 				      (("type" . "ball+stick")
 				       ("params" . ( "sele" . "not protein and not nucleic")))))
    ;; keep track but making copy
+   ;;; FIXME - fix this nonsense below
+#||
    (%representations :initarg :representations :accessor representations)
         self._set_unsync_camera()
         self.selector = str(uuid.uuid4()).replace('-', '')
@@ -136,13 +140,11 @@
         self._place_proxy = PlaceProxy(child=None, selector=self.selector)
         self.player = TrajectoryPlayer(self)
         self._already_constructed = True
-
-		
-   
+||#
    )
   (:default-initargs
-   :view-name (unicode "NGLView")
-   :view-module (unicode "nglview-js-widgets"))
+   :view-name (cljw:unicode "NGLView")
+   :view-module (cljw:unicode "nglview-js-widgets"))
   (:metaclass traitlets:traitlet-class))
 
 
