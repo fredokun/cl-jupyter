@@ -17,7 +17,7 @@
 
 (defun kernel-start-hook (kernel)
   (widget-log "In kernel-start-hook kernel -> ~a~%" kernel)
-  (let ((comm-manager (make-instance 'comm-manager :kernel kernel)))
+  (let ((comm-manager (make-comm-manager kernel)))
     (setf (gethash kernel *kernel-comm-managers*) comm-manager)))
 
 (defun kernel-shutdown-hook (kernel)
@@ -28,59 +28,53 @@
 	(warn "The kernel ~a was shutdown but no comm-manager could be found for it" kernel))))
 
 
-(defun handle-comm-open (shell identities msg buffers)
+(defun handle-comm-open (shell identities msg)
   (widget-log "[Shell] handling 'comm_open' - parsing message~%")
   (cl-jupyter::send-status-update (cl-jupyter::kernel-iopub (cl-jupyter::shell-kernel shell)) msg "busy" :key (cl-jupyter::kernel-key shell))'
   (widget-log "[Shell] done sending busy~%")
   (unwind-protect
        (progn
 	 (widget-log "[Shell] Parsing message~%")
-	 (let ((content (myjson:parse-json-from-string (cl-jupyter::message-content msg))))
-	   (widget-log "  ==> msg = ~W~%" msg)
-	   (widget-log "  ==> comm_open Message content = ~W~%" content)
-	   (let* ((kernel (cl-jupyter::shell-kernel shell))
-		  (manager (gethash kernel *kernel-comm-managers*)))
-	     ;; Should I pass identities for ident??????
-	     ;; I have no idea what the stream is
-	     (comm-open manager :I-dont-know-what-to-pass-for-stream :i-dont-know-what-to-pass-for-ident content))))
-    (widget-log "    Unwounding after parse-json-from-string or comm-open~%"))
+	 (widget-log "  ==> msg = ~W~%" msg)
+	 (let* ((kernel (cl-jupyter::shell-kernel shell))
+		(manager (gethash kernel *kernel-comm-managers*)))
+	   ;; Should I pass identities for ident??????
+	   ;; I have no idea what the stream is
+	   (comm-open manager :I-dont-know-what-to-pass-for-stream :i-dont-know-what-to-pass-for-ident msg)))
+    (widget-log "    Unwound after parse-json-from-string or comm-open~%"))
   ;; status back to idle
   (cl-jupyter::send-status-update (cl-jupyter::kernel-iopub (cl-jupyter::shell-kernel shell)) msg "idle" :key (cl-jupyter::kernel-key shell)))
 
-(defun handle-comm-msg (shell identities msg buffers)
+(defun handle-comm-msg (shell identities msg)
   (widget-log "[Shell/handle-comm-msg] handling 'comm_msg' - parsing message~%")
   (cl-jupyter::send-status-update (cl-jupyter::kernel-iopub (cl-jupyter::shell-kernel shell)) msg "busy" :key (cl-jupyter::kernel-key shell))'
   (widget-log "[Shell/handle-comm-msg] done sending busy~%")
   (unwind-protect
        (progn
 	 (widget-log "[Shell/handle-comm-msg] Parsing message~%")
-	 (let ((content (myjson:parse-json-from-string (cl-jupyter::message-content msg))))
-	   (widget-log "  ==> msg = ~W~%" msg)
-	   (widget-log "  ==> comm_msg Message content = ~W~%" content)
-	   (let* ((kernel (cl-jupyter::shell-kernel shell))
-		  (manager (gethash kernel *kernel-comm-managers*)))
-	     ;; Should I pass identities for ident??????
-	     ;; I have no idea what the stream is
-	     (comm-msg manager :I-dont-know-what-to-pass-for-stream :i-dont-know-what-to-pass-for-ident content))))
+	 (widget-log "  ==> msg = ~W~%" msg)
+	 (let* ((kernel (cl-jupyter::shell-kernel shell))
+		(manager (gethash kernel *kernel-comm-managers*)))
+	   ;; Should I pass identities for ident??????
+	   ;; I have no idea what the stream is
+	   (comm-msg manager :I-dont-know-what-to-pass-for-stream :i-dont-know-what-to-pass-for-ident msg)))
     (widget-log "[Shell/handle-comm-msg]    Unwound stack after parse-json-from-string or comm-msg~%"))
   ;; status back to idle
   (cl-jupyter::send-status-update (cl-jupyter::kernel-iopub (cl-jupyter::shell-kernel shell)) msg "idle" :key (cl-jupyter::kernel-key shell)))
 
-(defun handle-comm-close (shell identities msg buffers)
+(defun handle-comm-close (shell identities msg)
   (widget-log "[Shell] handling 'comm_close' - parsing message~%")
   (cl-jupyter::send-status-update (cl-jupyter::kernel-iopub (cl-jupyter::shell-kernel shell)) msg "busy" :key (cl-jupyter::kernel-key shell))'
   (widget-log "[Shell] done sending busy~%")
   (unwind-protect
        (progn
 	 (widget-log "[Shell] Parsing message~%")
-	 (let ((content (myjson:parse-json-from-string (cl-jupyter::message-content msg))))
-	   (widget-log "  ==> msg = ~W~%" msg)
-	   (widget-log "  ==> comm_close Message content = ~W~%" content)
-	   (let* ((kernel (cl-jupyter::shell-kernel shell))
-		  (manager (gethash kernel *kernel-comm-managers*)))
-	     ;; Should I pass identities for ident??????
-	     ;; I have no idea what the stream is
-	     (comm-close manager :I-dont-know-what-to-pass-for-stream :i-dont-know-what-to-pass-for-ident content))))
+	 (widget-log "  ==> msg = ~W~%" msg)
+	 (let* ((kernel (cl-jupyter::shell-kernel shell))
+		(manager (gethash kernel *kernel-comm-managers*)))
+	   ;; Should I pass identities for ident??????
+	   ;; I have no idea what the stream is
+	   (comm-close manager :I-dont-know-what-to-pass-for-stream :i-dont-know-what-to-pass-for-ident msg)))
     (widget-log "    Unwinding after parse-json-from-string or comm-close~%"))
   ;; status back to idle
   (cl-jupyter::send-status-update (cl-jupyter::kernel-iopub (cl-jupyter::shell-kernel shell)) msg "idle" :key (cl-jupyter::kernel-key shell)))
@@ -119,7 +113,7 @@
 	(setf msg msg-or-type
 	      buffers (or buffers (car (assoc "buffers" msg-or-type :key #'string=)))
 	      msg-type (cl-jupyter::header-msg-type (cl-jupyter::message-header parent)))
-	(setf msg (cl-jupyter::make-message parent msg-or-type metadata content)
+	(setf msg (cl-jupyter::make-message parent msg-or-type metadata content nil)
 	      msg-type msg-or-type)
 	)
     (progn
@@ -247,11 +241,11 @@
      :key (cl-jupyter::kernel-key shell))))
 
 (defun send-comm-msg (content)
-  (let* ((msg (cl-jupyter::make-message cl-jupyter::*parent-msg* "comm_msg" nil content))
-	 (shell cl-jupyter::*shell*))
+  (let* ((msg (cl-jupyter::make-message cl-jupyter:*parent-msg* "comm_msg" nil content))
+	 (shell cl-jupyter:*shell*))
     #++(let ((json-str (encode-json-to-string content :indent 4)))
       (widget-log "Sending comm_msg~%")
-      (widget-log "parent-msg -> ~s~%" *parent-msg*)
+      (widget-log "parent-msg -> ~s~%" cl-jupyter:*parent-msg*)
       (widget-log "content:   ~s~%" content)
       (widget-log "json:  ---> ~%")
       (widget-log "~s~%" json-str))

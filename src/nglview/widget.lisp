@@ -27,7 +27,7 @@
 		:metadata (:sync t :json-name "background"))
    (%loaded :initarg :loaded
 	    :accessor loaded
-	    :type boolean
+	    :type bool
 	    :initform :false
 	    :metadata (:sync t :json-name "loaded"))
    (%picked :initarg :picked
@@ -75,15 +75,15 @@
 			 :initform nil)
    (%send-binary :initarg :send-binary
 		 :accessor send-binary
-		 :type boolean
+		 :type bool
 		 :initform :true)
    (%init-gui :initarg :init-gui
 	      :accessor init-gui
-	      :type boolean
+	      :type bool
 	      :initform :false)
    (%hold-image :initarg :hold-image
 		:accessor hold-image
-		:type boolean
+		:type bool
 		:initform :false)
    (%ngl-msg :initarg :ngl-msg
 	     :accessor ngl-msg

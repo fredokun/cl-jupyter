@@ -9,7 +9,7 @@
 			    :json-name "value"
 			    :help "Float value"))
    (disabled :initarg :disabled :accessor disabled
-	      :type boolean
+	      :type bool
 	      :initform :false
 	      :metadata (:sync t
 			       :json-name "disabled"
@@ -80,17 +80,17 @@
 				 :json-name "orientation"
 				 :help "Vertical or horizontal"))
    (_range :initarg :range :accessor range
-	   :type boolean
+	   :type bool
 	   :initform :false
 	   :metadata (:sync t
 			    :json-name "_range"
 			    :help "Display a range selector"))
    (readout :initarg :readout :accessor readout
-	    :type boolean
-	    :initform :true
-	    :metadata (:sync t
-			     :json-name "readout"
-			     :help "Display the current value of the slider next to it"))
+	     :type bool
+	     :initform :true
+	     :metadata (:sync t
+			      :json-name "readout"
+			      :help "Display the current value of the slider next to it"))
    (readout-format :initarg :readout-format :accessor readout-format
 		   :type unicode
 		   :initform (unicode ".2f")
@@ -103,11 +103,11 @@
 		 :metadata (:sync t
 				  :json-name "slider_color"))
    (continuous-update :initarg :continuous-update :accessor continuous-update
-		      :type boolean
-		      :initform :true
-		      :metadata (:sync t
-				       :json-name "continuous_update"
-				       :help "Update the value of the widget as the user is holding the slider"))
+		       :type bool
+		       :initform :true
+		       :metadata (:sync t
+					:json-name "continuous_update"
+					:help "Update the value of the widget as the user is holding the slider."))
    )
   (:default-initargs
    :view-name (unicode "FloatSliderView")
@@ -182,13 +182,13 @@
 				  :json-name "orientation"
 				  :help "Vertical or horizontal"))
    (_range :initarg :range :accessor range
-	   :type boolean
+	   :type bool
 	   :initform :true
 	   :metadata (:sync t
 			    :json-name "_range"
 			    :help "Display a range selector"))
    (readout :initarg :readout :accessor readout
-	     :type boolean
+	     :type bool
 	     :initform :true
 	     :metadata (:sync t
 			      :json-name "readout"
@@ -205,7 +205,7 @@
 		  :metadata (:sync t
 				   :json-name "slider_color"))
    (continuous-update :initarg :continuous-update :accessor continuous-update
-		       :type boolean
+		       :type bool
 		       :initform :true
 		       :metadata (:sync t
 					:json-name "continuous_update"

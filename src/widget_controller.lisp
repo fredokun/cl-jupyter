@@ -8,7 +8,7 @@
 			   :json-name "value"
 			   :help "Min: 0.0 Max: 1.0"))
    (pressed :initarg :pressed :reader pressed
-	    :type boolean
+	    :type bool
 	    :metadata (:sync t
 			     :json-name "pressed"))
    )
@@ -50,7 +50,7 @@
 	    :metadata (:sync t
 			     :json-name "mapping"))
    (connected :initargs :connected :reader connected
-	      :type boolean
+	      :type bool
 	      :metadata (:sync t
 			       :json-name "connected"))
    (timestamp :initargs :timestamp :reader timestamp

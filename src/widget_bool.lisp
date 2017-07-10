@@ -2,13 +2,13 @@
 
 (defclass %bool (labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
-	   :type boolean
+	   :type bool
 	   :initform :false
 	   :metadata (:sync t
 			    :json-name "value"
 			    :help "Bool value"))
    (disabled :initarg :disabled :accessor disabled
-	      :type boolean
+	      :type bool
 	      :initform :false
 	      :metadata (:sync t
 			       :json-name "disabled"

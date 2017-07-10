@@ -1,9 +1,7 @@
-(defpackage #:traitlets
-  (:use #:cl)
-  (:export #:traitlet-class)
-  (:export #:traitlet-metadata))
 
 (in-package #:traitlets)
+
+(cl-jupyter-widgets:widget-log "Loading traitlets.lisp~%")
 
 (defclass traitlet (clos:slot-definition)
   ((metadata :initarg :metadata :accessor metadata :initform nil)))
@@ -55,3 +53,40 @@
 	  ;; Metadata are plists, so just append.
 	  (loop for dsd in direct-slot-definitions appending (metadata dsd)))
     result))
+
+;;; Abstract. All objects with :sync t should be a subclass of this, to get the slot.
+(defclass synced-object ()
+  ((%mutex :initform (mp:make-shared-mutex) :accessor mutex))
+  (:metaclass traitlet-class))
+
+(defmacro with-shared-lock (shared-mutex &body body)
+  (let ((smutex (gensym "SHARED-MUTEX")))
+    `(let ((,smutex ,shared-mutex))
+       (unwind-protect
+	    (progn (mp:shared-lock ,smutex)
+		   ,@body)
+	 (mp:shared-unlock ,smutex)))))
+
+(defmacro with-write-lock (shared-mutex &body body)
+  (let ((smutex (gensym "SHARED-MUTEX")))
+    `(let ((,smutex ,shared-mutex))
+       (unwind-protect
+	    (progn (mp:write-lock ,smutex)
+		   ,@body)
+	 (mp:write-unlock ,smutex)))))
+
+(defmethod clos:slot-value-using-class
+    ((class traitlets:traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (if (getf (metadata slotd) :sync)
+      (with-shared-lock (mutex object) (call-next-method))
+      (call-next-method)))
+
+(defmethod (setf clos:slot-value-using-class)
+    (new-value (class traitlets:traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (cljw:widget-log "*send-updates* -> ~a   setting value of slot -> ~s  to value -> ~s~%" cljw:*send-updates* slotd new-value)
+  (if (getf (metadata slotd) :sync)
+      (progn
+	(with-write-lock (mutex object) (call-next-method))
+	(let ((slot-name (clos:slot-definition-name slotd)))
+	  (cljw:notify-change object slot-name new-value)))
+      (call-next-method)))
