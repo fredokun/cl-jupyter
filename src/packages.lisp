@@ -83,7 +83,8 @@
 (defpackage #:traitlets
   (:use #:cl)
   (:export #:traitlet-class #:synced-object)
-  (:export #:traitlet-metadata))
+  (:export #:traitlet-metadata
+	   #:effective-traitlet))
 
 
 (in-package #:cl-jupyter)
