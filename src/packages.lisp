@@ -79,6 +79,13 @@
    #:widget
    #:domwidget
    #:int-slider
+   #:bool
+   #:dict
+   #:unicode
+   #:cunicode
+   #:tuple
+   #:color
+   #:instance
    ))
 
 
