@@ -1,9 +1,7 @@
-(defpackage #:traitlets
-  (:use #:cl)
-  (:export #:traitlet-class #:synced-object)
-  (:export #:traitlet-metadata))
 
 (in-package #:traitlets)
+
+(cl-jupyter-widgets:widget-log "Loading traitlets.lisp~%")
 
 (defclass traitlet (clos:slot-definition)
   ((metadata :initarg :metadata :accessor metadata :initform nil)))
@@ -78,13 +76,17 @@
 	 (mp:write-unlock ,smutex)))))
 
 (defmethod clos:slot-value-using-class
-    (class (object synced-object) (slotd effective-traitlet))
+    ((class traitlets:traitlet-class) (object synced-object) (slotd effective-traitlet))
   (if (getf (metadata slotd) :sync)
       (with-shared-lock (mutex object) (call-next-method))
       (call-next-method)))
 
 (defmethod (setf clos:slot-value-using-class)
-    (new-value class (object synced-object) (slotd effective-traitlet))
+    (new-value (class traitlets:traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (cljw:widget-log "*send-updates* -> ~a   setting value of slot -> ~s  to value -> ~s~%" cljw:*send-updates* slotd new-value)
   (if (getf (metadata slotd) :sync)
-      (with-write-lock (mutex object) (call-next-method))
+      (progn
+	(with-write-lock (mutex object) (call-next-method))
+	(let ((slot-name (clos:slot-definition-name slotd)))
+	  (cljw:notify-change object slot-name new-value)))
       (call-next-method)))

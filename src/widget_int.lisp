@@ -242,10 +242,4 @@
   (slot-value w slot-name))
 
 
-(defun get-keys (object)
-  (loop for slot-def in (clos:class-slots (class-of object))
-     when (eq (clos:slot-definition-allocation slot-def) :instance)
-     when (getf (traitlets::metadata slot-def) :sync)
-     collect (clos:slot-definition-name slot-def)))
-    
 

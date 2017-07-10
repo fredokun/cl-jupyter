@@ -21,12 +21,17 @@
   )
 
 
+#++
+(defmethod (setf comm-id) :around (value (x comm))
+  (widget-log "!!!!!! (setf comm-id) to ~a~%" value)
+  (call-next-method))
+
 ;;; This does what comm.py::__init__ does
 (defun comm.__init__ (&key target-name data metadata buffers)
   (let ((comm (if target-name
 		  (make-instance 'comm :target-name target-name)
 		  (make-instance 'comm))))
-    (widget-log "*kernel* --> ~s  (kernel comm) -> ~s~%" *kernel* (kernel comm))
+    (widget-log "comm.__init__  *kernel* --> ~s  (kernel comm) -> ~s~%" *kernel* (kernel comm))
     (when (kernel comm)
       (if (primary comm)
 	  (open comm :data data :metadata metadata :buffers buffers)
@@ -41,7 +46,8 @@
   (widget-log "msg-type -> ~a~%" msg-type)
   (widget-log "metadata -> ~a~%" metadata)
   (widget-log "(message-parent-header cl-jupyter::*parent-msg* -> ~a~%"
-	      (myjson::encode-json-to-string (cl-jupyter::message-parent-header cl-jupyter::*parent-msg*)))
+	      (and cl-jupyter:*parent-msg*
+		   (myjson::encode-json-to-string (cl-jupyter::message-parent-header cl-jupyter::*parent-msg*))))
   (widget-log "ident/topic -> ~a~%" (topic self))
   (widget-log "buffers -> ~a~%" buffers)
   (widget-log "++++++++++++++ contents >>>>>>>>>~%")
@@ -66,19 +72,22 @@
 
 (defmethod open ((self comm) &key (data (%open-data self)) metadata buffers)
   "Open the frontend-side version of this comm"
-  (let ((comm-manager (or (make-comm-manager (kernel self)) (error "Comms cannot be opened without a kernel and a comm-manager attached to that kernel."))))
+  (let ((comm-manager (or (gethash (kernel self) *kernel-comm-managers*)
+			  (error "Comms cannot be opened without a kernel and a comm-manager attached to that kernel."))))
+    (widget-log "comm::open  About to register with comm-manager comm: ~a~%" self)
     (register-comm comm-manager self)
     (or (slot-boundp self 'target-name) (error "The slot target-name is not bound in the comm ~a" self))
-    (unwind-protect
-	 (progn
-	   (%publish-msg self "comm_open"
-			 :target-name (target-name self)
-			 :target-module (target-module self)
-			 :data data
-			 :metadata metadata
-			 :buffers buffers)
-	   (setf (%closed self) nil))
-      (unregister-comm comm-manager self))))
+    (handler-case
+	(progn
+	  (%publish-msg self "comm_open"
+			:target-name (target-name self)
+			:target-module (target-module self)
+			:data data
+			:metadata metadata
+			:buffers buffers)
+	  (setf (%closed self) nil))
+      (error (err)
+	(unregister-comm comm-manager self)))))
 
 (defmethod close ((self comm) &key data metadata buffers)
   (when (%closed self) (return-from close))
@@ -86,10 +95,11 @@
   (unless (kernel self) (return-from close))
   (unless data (setf data (%close-data self)))
   (%publish-msg self "comm_close" :data data :metadata metadata :buffers buffers)
-  (unregister-comm (make-comm-manager (kernel self)) self))
+  (unregister-comm (gethash (kernel self) *kernel-comm-managers*) self))
 
 (defmethod send ((self comm) &key data metadata buffers)
   "Send a message to the frontend-side version of this comm"
+   (widget-log "comm.send  data -> ~a~%" data)
    (%publish-msg self "comm_msg" :data data :metadata metadata :buffers buffers))
 
 (defmethod on-close ((self comm) callback)
@@ -104,7 +114,7 @@
 (defmethod on-msg ((self comm) callback)
   "Register a callback for comm-msg
 
-   Will be called with the DATA of any comm-msg messages.
+   Will be called with the widget and the DATA of any comm-msg messages.
 
    Call (on-msg nil) to disable an existing callback."
   (check-type callback (or function null) "A function of one argument or NIL")
@@ -122,8 +132,11 @@
   (widget-log "comm-id -> ~a~%" (comm-id self))
   (widget-log "msg -> ~a~%" (as-python msg))
   (if (%msg-callback self)
-    (let ((shell (cl-jupyter::kernel-shell (kernel self))))
-      (when shell (trigger (events shell) "pre_execute"))
-      (funcall (%msg-callback self) msg)
-      (when shell (trigger (events shell) "post_execute")))
-    (widget-log "The comm msg_callback is unbound")))
+      (let ((shell (cl-jupyter::kernel-shell (kernel self))))
+	(widget-log "About to trigger pre_execute for shell: ~a~%" shell)
+	#+(or)(when shell (trigger (events shell) "pre_execute"))
+	(widget-log "About to funcall (%msg-callback self) -> ~a~%" (%msg-callback self))
+	(funcall (%msg-callback self) msg)
+	(widget-log "About to trigger post_execute~%")
+	#+(or)(when shell (trigger (events shell) "post_execute")))
+      (widget-log "The comm msg_callback is unbound")))

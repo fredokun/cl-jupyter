@@ -3,9 +3,17 @@
 
 (defvar *debug-cl-jupyter-widgets* t)
 
+(defun backtrace-to-stream (stream)
+  (let ((*standard-output* stream))
+    (core::clasp-backtrace)))
+
+
 ;;; Use widget-log to log messages to a file
 (defvar *widget-log* nil)
+
 (eval-when (:execute :load-toplevel)
+  (setf *debugger-hook*
+	#'(lambda (&rest args) (backtrace-to-stream *widget-log*)))
   (let ((log-file-name (cond
 			 ((probe-file "/home/app/logs/")
 			  "/home/app/logs/cl-jupyter.log")
@@ -16,6 +24,7 @@
 				:if-does-not-exist :create))
     (format *widget-log* "===================== new run =======================~%")))
 
+				     
 (defun widget-log (fmt &rest args)
     (apply #'format *widget-log* fmt args)
     (finish-output *widget-log*))
@@ -24,14 +33,65 @@
 (defmacro widget-log (fmt &rest args)
   nil)
 
+(export 'widget-log)
+
+(widget-log "Starting load   packages -> ~a~%" (list-all-packages))
+
+
+(defmacro with-error-handling (msg &body body)
+  `(handler-case
+       (handler-bind
+           ((simple-warning
+             #'(lambda (wrn)
+                 (format *error-output* "~&~a ~A: ~%" ,msg (class-name (class-of wrn)))
+                 (apply (function format) *error-output*
+                        (simple-condition-format-control   wrn)
+                        (simple-condition-format-arguments wrn))
+                 (format *error-output* "~&")
+                 (muffle-warning)))
+            (warning
+             #'(lambda (wrn)
+                 (format *error-output* "~&~a ~A: ~%  ~A~%"
+                         ,msg (class-name (class-of wrn)) wrn)
+                 (muffle-warning)))
+	    (serious-condition
+	     #'(lambda (err)
+		 (let ((*standard-output* cl-jupyter-widgets::*widget-log*))
+		   (format t "~&~a~%~a~%" ,msg err)
+		   (core::clasp-backtrace)))))
+	 (progn ,@body))
+     (simple-condition (err)
+       (format *error-output* "~&~A: ~%" (class-name (class-of err)))
+       (apply (function format) *error-output*
+              (simple-condition-format-control   err)
+              (simple-condition-format-arguments err))
+       (format *error-output* "~&"))
+     (serious-condition (err)
+       (format *error-output* "~&An error occurred of type: ~A: ~%  ~S~%"
+               (class-name (class-of err)) err))))
+
+
+
+
+
+
 
 
 (defun json-clean (json)
   json)
 
 
+(defun extract-message-content (msg)
+  (myjson:parse-json-from-string (cl-jupyter:message-content msg)))
 
 
+(defun assoc-value (key-string alist &optional (default nil default-p))
+  (let ((pair (assoc key-string alist :test #'string=)))
+    (if pair
+	(cdr pair)
+	(if default-p
+	    default
+	    (error "Could not find key ~a in dict ~a" key-string alist)))))
 
 (defparameter *python-indent* 0)
 
