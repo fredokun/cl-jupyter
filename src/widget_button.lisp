@@ -31,7 +31,7 @@
 			     :json-name "tooltip"
 			     :help "Tooltip caption of the button."))
   (disabled :initarg :disabled :accessor disabled
-	     :type boolean
+	     :type bool
 	     :initform :false
 	     :metadata (:sync t
 			      :json-name "disabled"

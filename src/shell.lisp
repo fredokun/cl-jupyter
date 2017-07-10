@@ -6,6 +6,9 @@
 
 |#
 
+(defvar *parent-msg* nil)
+(defvar *shell* nil)
+
 (defclass shell-channel ()
   ((kernel :initarg :kernel :reader shell-kernel)
    (socket :initarg :socket :initform nil :accessor shell-socket)))
@@ -30,29 +33,33 @@
     (format t "[Shell] loop started~%")
     (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
     (while active
-      (vbinds (identities sig msg buffers)  (message-recv (shell-socket shell))
+      (vbinds (identities sig msg)  (message-recv (shell-socket shell))
 	      (progn
-		(format t "Shell Received message:~%")
-		(format t "  | identities: ~A~%" identities)
-		(format t "  | signature: ~W~%" sig)
-		(format t "  | message: ~A~%" (encode-json-to-string (message-header msg)))
-		(format t "  | buffers: ~W~%" buffers))
+		(cljw:widget-log "Shell Received message:~%")
+		(cljw:widget-log "  | identities: ~A~%" identities)
+		(cljw:widget-log "  | signature: ~W~%" sig)
+		(cljw:widget-log "  | message: ~A~%" (encode-json-to-string (message-header msg)))
+		(cljw:widget-log "  | buffers: ~W~%" (message-buffers msg)))
 	      ;; TODO: check the signature (after that, sig can be forgotten)
-	      (let ((msg-type (header-msg-type (message-header msg))))
-		(cond ((equal msg-type "kernel_info_request")
-		       (handle-kernel-info-request shell identities msg buffers))
-		      ((equal msg-type "execute_request")
-		       (setf active (handle-execute-request shell identities msg buffers)))
-		      ((equal msg-type "comm_open")
-		       (when cl-jupyter-widgets:*handle-comm-open-hook*
-			 (funcall cl-jupyter-widgets:*handle-comm-open-hook* shell identities msg buffers)))
-		      ((equal msg-type "comm_msg")
-		       (when cl-jupyter-widgets:*handle-comm-msg-hook*
-			 (funcall cl-jupyter-widgets:*handle-comm-msg-hook* shell identities msg buffers)))
-		      ((equal msg-type "comm_close")
-		       (when cl-jupyter-widgets:*handle-comm-close-hook*
-			 (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg buffers)))
-		      (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))
+	      (let* ((msg-type (header-msg-type (message-header msg))))
+		(let ((*parent-msg* msg)
+		      (*shell* shell)
+		      (cl-jupyter-widgets:*kernel* (shell-kernel shell)))
+		  (cljw::widget-log "  |  *parent-msg* -> ~s~%" *parent-msg*)
+		  (cond ((equal msg-type "kernel_info_request")
+			 (handle-kernel-info-request shell identities msg))
+			((equal msg-type "execute_request")
+			 (setf active (handle-execute-request shell identities msg)))
+			((equal msg-type "comm_open")
+			 (when cl-jupyter-widgets:*handle-comm-open-hook*
+			   (funcall cl-jupyter-widgets:*handle-comm-open-hook* shell identities msg)))
+			((equal msg-type "comm_msg")
+			 (when cl-jupyter-widgets:*handle-comm-msg-hook*
+			   (funcall cl-jupyter-widgets:*handle-comm-msg-hook* shell identities msg)))
+			((equal msg-type "comm_close")
+			 (when cl-jupyter-widgets:*handle-comm-close-hook*
+			   (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg)))
+			(t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type)))))))))
 
 
 #|
@@ -114,7 +121,7 @@
 (defun kernel-key (shell)
   (kernel-config-key (kernel-config (shell-kernel shell))))
 
-(defun handle-kernel-info-request (shell identities msg buffers)
+(defun handle-kernel-info-request (shell identities msg)
   ;;(format t "[Shell] handling 'kernel-info-request'~%")
   ;; status to busy
   (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))
@@ -152,55 +159,52 @@
 
 |#
 
-(defvar *parent-msg* nil)
-(defvar *shell* nil)
-
-(defun handle-execute-request (shell identities msg buffers)
-  (format t "[Shell] handling 'execute_request'~%")
+(defun handle-execute-request (shell identities msg)
+  (cljw:widget-log "[Shell] handling 'execute_request'~%")
   (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))
   (let ((content (parse-json-from-string (message-content msg))))
-    (format t "  ==> Message content = ~W~%" content)
+    (cljw:widget-log "  ==> Message content = ~W~%" content)
     (let ((code (afetch "code" content :test #'equal)))
-      (format t "  ===>    Code to execute = ~W~%" code)
+      (cljw:widget-log "  ===>    Code to execute = ~W~%" code)
       (vbinds (execution-count results stdout stderr)
-	      (let ((*parent-msg* msg)
-		    (*shell* shell)
-		    (cl-jupyter-widgets:*kernel* (shell-kernel shell)))
+	      (progn
 		;;(format t "Set cl-jupyter-widgets:*kernel* -> ~a  (specialp 'cl-jupyter-widgets:*kernel*) -> ~a~%" cl-jupyter-widgets:*kernel* (core:specialp 'cl-jupyter-widgets:*kernel* ))
-		(format t "Set cl-jupyter-widgets:*kernel* -> ~a ~%" cl-jupyter-widgets:*kernel*)
+		(cljw:widget-log "Set cl-jupyter-widgets:*kernel* -> ~a ~%" cl-jupyter-widgets:*kernel*)
 		(evaluate-code (kernel-evaluator (shell-kernel shell)) code))
-	  (format t "Execution count = ~A~%" execution-count)
-	  (format t "results = ~A~%" results)
-	  (format t "STDOUT = ~A~%" stdout)
-	  (format t "STDERR = ~A~%" stderr)
-        ;; broadcast the code to connected frontends
-        (send-execute-code (kernel-iopub (shell-kernel shell)) msg execution-count code :key (kernel-key shell))
-	(when (and (consp results) (typep (car results) 'cl-jupyter-user::cl-jupyter-quit-obj))
-	  ;; ----- ** request for shutdown ** -----
-	  (let ((reply (make-message msg "execute_reply" nil
-				     `(("status" . "abort")
-				       ("execution_count" . ,execution-count)))))
-	    (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell)))
-	  (return-from handle-execute-request nil))
-	;; ----- ** normal request ** -----
-        ;; send the stdout
-        (when (and stdout (> (length stdout) 0))
-          (send-stream (kernel-iopub (shell-kernel shell)) msg "stdout" stdout :key (kernel-key shell)))
-        ;; send the stderr
-        (when (and stderr (> (length stderr) 0))
-          (send-stream (kernel-iopub (shell-kernel shell)) msg "stderr" stderr :key (kernel-key shell)))
-	;; send the first result
-	(send-execute-result (kernel-iopub (shell-kernel shell)) 
-			     msg execution-count (car results) :key (kernel-key shell))
-	;; status back to idle
-	(send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))
-	;; send reply (control)
-	(let ((reply (make-message msg "execute_reply" nil
-				   `(("status" . "ok")
-				     ("execution_count" . ,execution-count)
-				     ("payload" . ,(vector))))))
-	  (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))
-	  t)))))
+	      (cljw:widget-log "Execution count = ~A~%" execution-count)
+	      (cljw:widget-log "results = ~A~%" results)
+	      (cljw:widget-log "STDOUT = ~A~%" stdout)
+	      (cljw:widget-log "STDERR = ~A~%" stderr)
+	      ;; broadcast the code to connected frontends
+	      (send-execute-code (kernel-iopub (shell-kernel shell)) msg execution-count code :key (kernel-key shell))
+	      (when (and (consp results) (typep (car results) 'cl-jupyter-user::cl-jupyter-quit-obj))
+		;; ----- ** request for shutdown ** -----
+		(let ((reply (make-message msg "execute_reply" nil
+					   `(("status" . "abort")
+					     ("execution_count" . ,execution-count)))))
+		  (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell)))
+		(return-from handle-execute-request nil))
+	      ;; ----- ** normal request ** -----
+	      ;; send the stdout
+	      (when (and stdout (> (length stdout) 0))
+		(send-stream (kernel-iopub (shell-kernel shell)) msg "stdout" stdout :key (kernel-key shell)))
+	      ;; send the stderr
+	      (when (and stderr (> (length stderr) 0))
+		(send-stream (kernel-iopub (shell-kernel shell)) msg "stderr" stderr :key (kernel-key shell)))
+	      ;; send the first result
+	      (if (and (consp results) (typep (car results) 'cljw:widget))
+		  (cljw::widget-display (car results))
+		  (send-execute-result (kernel-iopub (shell-kernel shell)) 
+				       msg execution-count (car results) :key (kernel-key shell)))
+	      ;; status back to idle
+	      (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))
+	      ;; send reply (control)
+	      (let ((reply (make-message msg "execute_reply" nil
+					 `(("status" . "ok")
+					   ("execution_count" . ,execution-count)
+					   ("payload" . ,(vector))))))
+		(message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))
+		t)))))
 
 #|
      

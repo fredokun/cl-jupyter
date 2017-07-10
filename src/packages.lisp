@@ -37,6 +37,10 @@
    #:display-svg render-svg
    #:display-json render-json
    #:display-javascript render-javascript
+   #:message-content
+   #:message-buffers
+   #:*shell*
+   #:*parent-msg*
    #:kernel-start))
 
 (defpackage #:cl-jupyter-user
@@ -69,6 +73,17 @@
    #:*handle-comm-open-hook*
    #:*handle-comm-msg-hook*
    #:*handle-comm-close-hook*
+   #:*send-updates*
+   #:notify-change
+   #:widget-display
+   #:widget
    ))
+
+
+(defpackage #:traitlets
+  (:use #:cl)
+  (:export #:traitlet-class #:synced-object)
+  (:export #:traitlet-metadata))
+
 
 (in-package #:cl-jupyter)

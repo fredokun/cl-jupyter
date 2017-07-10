@@ -27,7 +27,7 @@
 
 (defclass proxy (dom-widget)
  ((child :initarg :child :accessor child
-	  :initform (make-instance dom-widget)
+	  :initform (make-instance 'dom-widget)
 	  :metadata (:sync t
 			   :json-name "child"
 			   :help "Child widget of the Proxy"

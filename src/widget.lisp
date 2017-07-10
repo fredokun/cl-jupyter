@@ -57,7 +57,7 @@
 
 
 
-(defclass widget ()
+(defclass widget (traitlets:synced-object)
   ((%widget-construction-callback
     :accessor widget-construction-callback
     :initform (make-instance 'callback-dispatcher))
@@ -92,9 +92,9 @@
 		  :metadata (:sync t
 				   :json-name "msg_throttle") )
    (%comm :initarg :comm :accessor comm :initform nil)
-   (%keys :initarg :keys :accessor keys)
+   (%key-map :initarg :key-map :accessor key-map) ; alist of (slot-name . json-name)
    (%property-lock :initarg :property-lock :accessor property-lock)
-   (%holding-sync :initarg :holding-sync :accessor holding-sync)
+   (%holding-sync :initarg :holding-sync :accessor holding-sync :initform nil)
    (%states-to-send :initarg :states-to-send :accessor states-to-send)
    (%display-callbacks :initarg :display-callbacks :accessor display-callbacks
 		       :initform (make-instance 'callback-dispatcher))
@@ -109,7 +109,7 @@
 ;;; observe('comm')
 (defmethod (setf comm) :after (comm (widg widget))
   (setf (model-id widg) (comm-id comm))
-  (on-msg comm #'%handle-msg)
+  (on-msg comm (lambda (msg) (funcall #'%handle-msg widg msg)))
   (setf (gethash (model-id widg) *widget.widgets*) widg))
 
 (defmethod model-id ((widg widget))
@@ -127,10 +127,24 @@
   (widget-log "call-widget-constructed widget -> ~a~%" w)
   (do-call (widget-construction-callback w) w))
 
+
+(defun get-key-map (object)
+  (loop for slot-def in (clos:class-slots (class-of object))
+     when (eq (clos:slot-definition-allocation slot-def) :instance)
+     when (getf (traitlets::metadata slot-def) :sync)
+     collect (cons (clos:slot-definition-name slot-def)
+		   (getf (traitlets::metadata slot-def) :json-name))))
+    
+
 (defmethod initialize-instance :around ((w widget) &rest initargs)
-  (let ((w (call-next-method)))
+  (widget-log "widget.lisp initialize-instance initargs: ~a~%" initargs)
+  (let* ((*send-updates* nil) ; suppress sending updates to browser when initializing
+	 (w (call-next-method)))
+    (setf (key-map w) (get-key-map w))
     (call-widget-constructed w)
     (widget-open w)))
+
+(defvar *print-widget-backtrace* nil)
 
 (defun widget-open (self)
   (multiple-value-bind (state buffer-keys buffers)
@@ -181,8 +195,98 @@ key : a key or a list of keys (optional)
       (let ((msg (list (cons "method" "update")
 		       (cons "state" state)
 		       (cons "buffers" buffer-keys))))
-	(widget-send* self msg :buffers buffers)))))
+	(widget-log "widget.send-state msg -> ~a~%" msg)
+	(%send self msg :buffers buffers)))))
 
+
+(defmethod widget-send (self content &key buffers)
+  "Send a custom msg to the widget model in the front-end.
+*Arguments
+content : alist - Content of the message to send
+buffers : list  - A list of binary buffers "
+  (%send self (list (cons "method" "custom")
+		    (cons "content" content))
+	 :buffers buffers))
+
+(defun widget-display (widget)
+  (if (ipython-display widget)
+      (funcall (ipython-display widget) widget)
+      (warn "ipython-display callback is nil for widget ~a" widget)))
+
+(defun ipython-display-callback (self &rest kwargs)
+  "This is called to display the widget"
+  (when (view-name self)
+    (%send self '(("method" . "display")))
+    (%handle-displayed self)))
+
+  
+(defmethod %handle-msg ((self widget) msg)
+  (widget-log "In %handle-msg~%")
+  (let* ((content (extract-message-content msg))
+	 (data    (assoc-value "data" content))
+	 (method  (assoc-value "method" data)))
+    (widget-log "      content -> ~s~%" content)
+    (cond
+      ((string= method "backbone")
+       (widget-log "method backbone  data -> ~S~%" data)
+       (if (member "sync_data" data :key #'car :test #'string=)
+	   (let ((buffer-keys (assoc-value "buffer_keys" data #())))
+	     (widget-log "found sync_data~%")
+	     ;; get binary buffers
+	     ;; push them into sync-data as (buffer-key . buffer-value) pairs
+	     (let ((sync-data (assoc-value "sync_data" data nil))
+		   (buffers (cl-jupyter:message-buffers msg)))
+	       (widget-log "sync-data -> ~a~%" sync-data)
+	       (widget-log "buffer-keys -> ~a~%" buffer-keys)
+	       (when sync-data
+		 (loop for buffer-key across buffer-keys
+		    for index from 0
+		    do (push (cons buffer-key (svref index buffers)) sync-data)))
+	       ;; At this point sync-data should contain (buffer-key . buffer ) pairs
+	       (widget-log "About to set-state with sync-data -> ~a~%" sync-data)
+	       (set-state self sync-data)))
+	   (widget-log "sync_data was not found in ~a" data)))
+      ((string= method "request_state")
+       (widget-log "method request_state~%")
+       (send-state self))
+      ((string= method "custom")
+       (widget-log "method custom~%")
+       (when (member "content" data :key #'car :test #'string=)
+	 (handle-custom-msg self
+			    (assoc-value "content" data)
+			    (assoc-value "buffers" msg))))
+      (t (widget-log "method unknown!!~%")
+	 (log-error "Unknown front-end to back-end widget msg with method ~a" method)))))
+
+(defun handle-custom-msg (widget content buffers)
+  (error "handle-custom-msg"))
+
+(defun slot-name-from-json-name (json-name widget-class)
+  (let ((slots (clos:class-slots widget-class)))
+    (loop for slot in slots
+       for slot-definition-name = (clos:slot-definition-name slot)
+       when (and slot-definition-name 
+		 (string= (traitlets:traitlet-metadata widget-class slot-definition-name :json-name)
+			  json-name))
+       return slot-definition-name)))
+
+(defmethod set-state ((widget widget) sync-data)
+  (widget-log "set-state  sync-data -> ~s~%" sync-data)
+  (unwind-protect
+       ;; Create an alist of (slot-name . value) from sync-data and put it in lock-property
+       (widget-log "calculating property-lock for sync-data -> ~s~%  key-map -> ~s" sync-data (key-map widget))
+       (let ((plock (mapcar (lambda (pair)
+			      (let ((found (rassoc (car pair) (key-map widget) :test #'string=)))
+				(widget-log "      Searching for ~s   found -> ~s~%" (car pair) found)
+				(or found (error "Could not find slot-name for ~s in ~s" (car pair) (key-map widget)))
+				(cons (car found) (cdr pair))))
+			    sync-data)))
+	 (widget-log "property-lock -> ~s ~%" plock)
+	 (setf (property-lock widget) plock)
+	 (loop for (key . value) in sync-data
+	    do (let ((slot-name (slot-name-from-json-name key (class-of widget))))
+		 (setf (slot-value widget slot-name) value))))
+    (setf (property-lock widget) nil)))
 
 (defun get-state (object &key key)
   "Gets the widget state, or a piece of it.
@@ -199,9 +303,9 @@ key : a key or a list of keys (optional)
             metadata for each field: {key: metadata}
         "
   (let ((keys (cond
-		((null key) (get-keys object))
-		((atom key) (list key))
-		((listp key) key)
+		((null key) (mapcar #'car (key-map object)))
+		((atom key) (check-type key symbol) (list key))
+		((listp key) (mapc (lambda (x) (check-type x symbol))) key)
 		(t (error "key must be a slot name, a list or NIL, key -> ~a" key))))
 	state)
     (loop for slot-name in keys
@@ -214,65 +318,33 @@ key : a key or a list of keys (optional)
 			 (string (clos:slot-definition-name slot-def)))
 		     (funcall to-json (widget-slot-value object slot-name) object)))))
 
-(defmethod widget-send (self content &key buffers)
-  "Send a custom msg to the widget model in the front-end.
-*Arguments
-content : alist - Content of the message to send
-buffers : list  - A list of binary buffers "
-  (%send self (list (cons "method" "custom")
-		    (cons "content" content))
-	 :buffers buffers))
 
-(defun disp (widget)
-  (if (ipython-display widget)
-      (funcall (ipython-display widget) widget)
-      (warn "ipython-display callback is nil for widget ~a" widget)))
+(defmethod %should-send-property ((widget widget) key value)
+  (check-type key symbol)
+  (widget-log "%should-send-property key -> ~s (property-lock widget) -> ~s~%" key (property-lock widget))
+  (let ((send (let* ((to-json (or (traitlets:traitlet-metadata (class-of widget) key :to-json)
+				  'widget-to-json))
+		     (lock-prop (assoc key (property-lock widget))))
+		(if (and lock-prop
+			 (equal (cdr lock-prop) (funcall to-json value widget)))
+		    nil
+		    (if (holding-sync widget)
+			(progn
+			  (push (states-to-send widget) key)
+			  nil)
+			t)))))
+    (widget-log "      send -> ~s~%" send)
+    send))
 
-(defun ipython-display-callback (self &rest kwargs)
-  "This is called to display the widget"
-  (when (view-name self)
-    (%send self '(("method" . "display")))
-    (%handle-displayed self)))
-
-(defun assoc-value (key-string alist &optional (default nil default-p))
-  (let ((pair (assoc key-string alist :test #'string=)))
-    (if pair
-	(car pair)
-	(if default-p
-	    default
-	    (error "Could not find key ~a in dict ~a" key-string alist)))))
-
-  
-(defmethod %handle-msg ((self widget) msg)
-  (let* ((content (assoc-value "content" msg))
-	 (data    (assoc-value "data" content))
-	 (method  (assoc-value "method" data)))
-    (cond
-      ((string= method "backbone")
-       (let ((sync-data (assoc-value "sync_data" data nil)))
-	 (if (member "sync_data" data :key #'car :test #'string=)
-	     ;; get binary buffers
-	     ;; push them into sync-data as (buffer-key . buffer-value) pairs
-	     (let ((sync-data (assoc-value "sync_data" data nil))
-		   (buffers (assoc-value "buffers" msg)))
-	       (when sync-data
-		 (loop for buffer-key in buffer-keys
-		    for index from 0
-		    do (push (cons buffer-key (svref index buffers)) sync-data)))
-	       ;; At this point sync-data should contain (buffer-key . buffer ) pairs
-	       (set-state self sync-data)))))
-      ((string= method "request_state")
-       (send-state self))
-      ((string= method "custom")
-       (when (member "content" data :key #'car :test #'string=)
-	 (handle-custom-msg self
-			    (assoc-value "content" data)
-			    (assoc-value "buffers" msg))))
-      (t (cl-jupyter::log-error "Unknown front-end to back-end widget msg with method ~a" method)))))
-
-(defmethod set-state ((self widget) sync-data)
-  (error "Handle setting state of widgets using lock-property"))
-
+;;; This is different from the Python version because we don't
+;;;   have the traitlet change[xxx] dictionary
+;;;   Accept the slot-name and new value
+(defmethod notify-change ((widget widget) slot-name &optional value)
+  (check-type slot-name symbol)
+  (when *send-updates*
+    (when (and (comm widget) (assoc slot-name (key-map widget)))
+      (when (%should-send-property widget slot-name value)
+	(send-state widget :key slot-name)))))
 
 #|
 
