@@ -77,6 +77,8 @@
    #:notify-change
    #:widget-display
    #:widget
+   #:domwidget
+   #:int-slider
    ))
 
 
