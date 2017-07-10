@@ -11,12 +11,15 @@ using this, the value slot changes to a b64 string, but the b64value slot is sti
 https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_image.py#L42
 ||#
 
+
 (defun read-file-into-byte-vector (pathname)
   (with-open-file (s pathname :element-type '(unsigned-byte 8))
     (let ((data (make-array (file-length s) :element-type '(unsigned-byte 8))))
       (read-sequence data s)
       data)))
 
+
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_image.py#L19
 (defclass image (dom-widget value-widget core-widget)
   ((image-format :initarg :format :accessor image-format
 	    :type unicode
@@ -24,13 +27,13 @@ https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_i
 	    :metadata (:sync t
 			     :json-name "format"))
    (width :initarg :width :accessor width
-	   :type 'cunicode 
+	   :type cunicode 
 	   :initform (unicode "")
 	   :metadata (:sync t
 			    :json-name "width"))
          
    (height :initarg :height :accessor height
-	    :type 'cunicode 
+	    :type cunicode 
 	    :initform (unicode "")
 	    :metadata (:sync t
 			     :json-name "height"))
@@ -53,6 +56,14 @@ https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_i
      :view-module (unicode "jupyter-js-widgets"))
    (:metaclass traitlets:traitlet-class))
 
+
+(defmethod (setf clos:slot-value-using-class) :after
+    (new-value (class traitlets:traitlet-class) (object image) (slotd traitlets:effective-traitlet))
+  (cljw:widget-log "Updating the ~s slot of ~s~%" slotd object)
+  (when (eq (clos:slot-definition-name slotd) 'value)
+    (let ((b64image (cl-base64:usb8-array-to-base64-string new-value)))
+      (cljw:widget-log "    Converting the image to: ~s~%" b64image)
+      (setf (b64value object) b64image))))
 
  #||value = Bytes()
 

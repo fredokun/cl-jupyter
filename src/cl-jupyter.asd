@@ -25,6 +25,7 @@
 		 (:file "widget_int")
 		 (:file "widget_bool")
 		 (:file "widget_color")
+		 (:file "widget_image")
 		 (:file "widget_selection")
 		 (:file "widget_float")
 		 (:file "widget_button")

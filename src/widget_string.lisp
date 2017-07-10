@@ -1,5 +1,6 @@
 (in-package :cl-jupyter-widgets)
 
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_string.py#L17
 (defclass %string (labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	   :type unicode
@@ -32,7 +33,9 @@
      :view-module (unicode "jupyter-js-widgets")
    )
    (:metaclass traitlets:traitlet-class))
-  
+
+
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_string.py#L41
 (defclass html(%string)
   ()
   (:default-initargs
@@ -42,6 +45,17 @@
   (:metaclass traitlets:traitlet-class))
 
 
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_string.py#L47
+(defclass html-math(%string)
+  ()
+  (:default-initargs
+   :view-name (unicode "HTMLMathView")
+    :model-name (unicode "HTMLMathModel")
+    )
+  (:metaclass traitlets:traitlet-class))
+
+
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_string.py#L54
 (defclass label(%string)
   ()
   (:default-initargs
@@ -50,6 +64,7 @@
     )
   (:metaclass traitlets:traitlet-class))
 
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_string.py#L65
 (defclass textarea(%string)
   ()
   (:default-initargs

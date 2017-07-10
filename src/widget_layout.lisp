@@ -1,6 +1,9 @@
 (in-package :cl-jupyter-widgets)
 
-(defclass layout (widget)
+
+;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_layout.py#L11
+;;should I put unicode for CaselessStrEnum?
+(defclass layout (core-widget)
   ((%align-content :initarg :align-content
 		   :accessor align-content
 		   :type 'cunicode
@@ -18,27 +21,27 @@
 		:metadata (:sync t
 				 :json-name "align_self"))
    (%bottom :initarg :bottom :accessor bottom
-	    :type 'cunicode
+	    :type unicode
 	    :initform (unicode "")
 	    :metadata (:sync t :json-name "bottom"))
    (%border :initarg :border :accessor border
-	    :type 'cunicode
+	    :type unicode
 	    :initform (unicode "")
 	    :metadata (:sync t :json-name "border"))
    (%display :initarg :display :accessor display
-	     :type 'cunicode
+	     :type unicode
 	     :initform (unicode "")
 	     :metadata (:sync t :json-name "display"))
    (%flex :initarg :flex :accessor flex
-	  :type 'cunicode
+	  :type unicode
 	  :initform (unicode "")
 	  :metadata (:sync t :json-name "flex"))
    (%flex-flow :initarg :flex-flow :accessor flex-flow
-	       :type 'cunicode
+	       :type unicode
 	       :initform (unicode "")
 	       :metadata (:sync t :json-name "flex_flow"))
    (%height :initarg :height :accessor height
-	    :type 'cunicode
+	    :type unicode
 	    :initform (unicode "")
 	    :metadata (:sync t :json-name "height"))
    (%justify-content :initarg :justify-content :accessor justify-content
@@ -46,27 +49,27 @@
 		     :initform (unicode "")
 		     :metadata (:sync t :json-name "justify_content"))
    (%left :initarg :left :accessor left
-	  :type 'cunicode
+	  :type unicode
 	  :initform (unicode "")
 	  :metadata (:sync t :json-name "left"))
    (%margin :initarg :margin :accessor margin
-	    :type 'cunicode
+	    :type unicode
 	    :initform (unicode "")
 	    :metadata (:sync t :json-name "margin"))
    (%max-height :initarg :max-height :accessor max-height
-		:type 'cunicode
+		:type unicode
 		:initform (unicode "")
 		:metadata (:sync t :json-name "max_height"))
    (%max-width :initarg :max-width :accessor max-width
-	       :type 'cunicode
+	       :type unicode
 	       :initform (unicode "")
 	       :metadata (:sync t :json-name "max_width"))
    (%min-height :initarg :min-height :accessor min-height
-		:type 'cunicode
+		:type unicode
 		:initform (unicode "")
 		:metadata (:sync t :json-name "min_height"))
    (%min-width :initarg :min-width :accessor min-width
-	       :type 'cunicode
+	       :type unicode
 	       :initform (unicode "")
 	       :metadata (:sync t :json-name "min_width"))
    (%overflow :initarg :overflow :accessor overflow
@@ -82,15 +85,15 @@
 		:initform (unicode "")
 		:metadata (:sync t :json-name "overflow_y"))
    (%padding :initarg :padding :accessor padding
-	     :type 'cunicode
+	     :type unicode
 	     :initform (unicode "")
 	     :metadata (:sync t :json-name "padding"))
    (%right :initarg :right :accessor right
-	   :type 'cunicode
+	   :type unicode
 	   :initform (unicode "")
 	   :metadata (:sync t :json-name "right"))
    (%top :initarg :top :accessor top
-	 :type 'cunicode
+	 :type unicode
 	 :initform (unicode "")
 	 :metadata (:sync t :json-name "top"))
    (%visibility :initarg :visibility :accessor visibility
@@ -98,7 +101,7 @@
 		:initform (unicode "")
 		:metadata (:sync t :json-name "visibility"))
    (%width :initarg :width :accessor width
-	   :type 'cunicode
+	   :type unicode
 	   :initform (unicode "")
 	   :metadata (:sync t :json-name "width"))
    )
