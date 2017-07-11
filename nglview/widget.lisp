@@ -235,7 +235,87 @@
 
 
 
+(defmethod on-loaded ((self nglwidget))
+  (setf (loaded self) t)
+  (%fire-callbacks self (ngl-displayed-callbacks-before-loaded-reversed self))
+  (values))
 
+(defmethod %fire-callbacks ((self nglwidget) callbacks)
+  (flet ((%call (event)
+	   (loop for callback in callbacks
+	      do
+		(callback self)
+		(if (string= (%method-name callback) "loadFile")
+		    (%wait-until-finished self)))))
+    (%run-on-another-thread self %call (event self)))
+  (values))
+
+
+
+
+(defmacro pop-from-alist (key alist)
+  (let ((k (gensym "KEY")) (a (gensym "ALIST"))
+	(pair (gensym "PAIR")))
+    `(let* ((,k ,key)
+	    (,a ,alist)
+	    (,pair (assoc ,k ,a)))
+       (when ,pair
+	 (prog1 (cdr ,pair)
+	 (setf ,alist (remove ,pair ,a)))))))
+(defmacro pop-from-hash-table (key table)
+  (let ((k (gensym "KEY")) (tab (gensym "TABLE")))
+    `(let ((,k ,key) (,tab ,table))
+       (prog1 (gethash ,k ,tab)
+	 (remhash ,k ,tab)))))
+
+(defmethod %ngl-handle-msg ((self nglwidget) widget msg buffers)
+  "store message sent from Javascript How? use view.on_msg(get_msg)"
+  (setf (%ngl-msg self) msg)
+  (let ((msg-type (cdr (assoc "type" (%ngl-msg self) :test #'string=))))
+    (cond ((string= msg-type "request_frame")
+	   (incf (frame self) (step (player self)))
+	   (if (> (frame self) (count self))
+	       (setf (frame self) 0)
+	       (if (< (frame self) 0)
+		   (setf (frame self) (- (count self) 1)))))
+	  ((string= msg-type "repr_parameters")
+	   (let* ((data-dict (cdr (assoc "data" (%ngl-msg self) :test #'string=)))
+		  (name (concatenate 'string (pop-from-alist "name" data-dict) "\n"))
+		  (selection (concatenate 'string (cdr (assoc "sele" data-dict :test #'string=)) "\n")))
+					;FIXME: how to implement json.dumps
+		    #| data_dict_json = json.dumps(data_dict).replace('true', 'True').replace('false', 'False')
+		   data_dict_json = data_dict_json.replace('null', '"null"')|#
+	     (if (widget_repr (player self))
+		 (error "FIXME")
+		 (error "FIXME"))))
+		  ;FIXME: widget_utils methods??
+	#| repr_name_text = widget_utils.get_widget_by_name(self.player.widget_repr, 'repr_name_text')
+                repr_selection = widget_utils.get_widget_by_name(self.player.widget_repr, 'repr_selection')
+                repr_name_text.value = name
+		  repr_selection.value = selection|#
+	  ((string= msg-type "request_loaded")
+	   (if (not (loaded self))
+	       (setf (loaded self) nil))
+	   (setf (loaded self) (cdr (assoc "data" msg :test #'string=))))
+	  ((string= msg-type "all_reprs_info")
+	   (setf (%repr-dict self) (cdr (assoc "data" (%ngl-msg self) :test #'string=))))
+	  ((string= msg-type "state_parameters")
+	   (setf %full-stage-parameters (cdr (assoc "data" msg :test #'string=))))
+	  ((string= msg-type "async_message")
+	   (if (string= (cdr (assoc "data" msg :test #'string=)) "ok")
+	       (error "FIXME"))))))
+					;;;FIXME: self._event.set()
+
+		
+
+(defmethod %request-repr-parameters ((self nglwidget) &key (component 0) (repr-index 0))
+  (%remote-call self
+		"requestReprParameters"
+		:target "Widget"
+		:args (list component repr-index))
+  (values))
+
+;FIXME
 (defmethod add_structure ((self NGLWidget) structure &rest kwargs &key &allow-other-keys)
   (if (not (typep structure 'Structure))
       (error "{} is not an instance of Structure"))
