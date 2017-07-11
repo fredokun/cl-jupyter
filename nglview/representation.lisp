@@ -1,6 +1,6 @@
 (in-package :nglv)
 
-(defclass RepresentationControl (Box)
+(defclass RepresentationControl (cljw:Box)
   ((parameters :initarg :parameters :accessor parameters
 	       :type list
 	       :initform ()
@@ -97,36 +97,36 @@
   (let ((c-string (concatenate 'string "c" (write-to-string (component-index self))))
 	(r-string (write-to-string (repr-index self))))
     (multiple-value-bind (name %repr-dict)
-	;; name, _repr_dict = self._get_name_and_repr_dict(c_string, r_string)
-	(assembly-list (list "default" "AU" "BU1" "UNITCELL" "SUPERCELL"))
-      (surface_types (list "vws" "sas" "ms" "ses"))
-      (flet ((func (&key (opacity (get %repr-dict "opacity" 1.))
-			 (assembly (get %repr-dict "assembly" "default"))
-			 (color-scheme (get %repr-dict "colorScheme" " "))
-			 (wireframe (get %repr-dict "wireframe" nil))
-			 (probe-radius (get %repr-dict "probeRadius" 1.4))
-			 (isolevel (get %repr-dict "isolevel" 2.))
-			 (smooth (get %repr-dict "smooth" 2.))
-			 (surface-type (get %repr-dict "surfaceType" "ms"))
-			 (box-size (get %repr-dict "boxSize" 10))
-			 (cutoff (get %repr-dict "cutoff" 0)))))
-	(let ((widget (make-instance 'cl-jupyter-widgets::interactive
-				     func
-				     :opacity '(0. 1. 0.1)
-				     :color-scheme *COLOR-SCHEMES*
-				     :assembly assembly-list
-				     :probe-radius '(0. 5. 0.1)
-				     :isolevel '(0. 10. 0.1)
-				     :smooth '(0 10 1)
-				     :surface-type surface-types
-				     :box-size '(0. 100 2)
-				     :cutoff '(0. 100 0.1)
-				     :continuous-update :false)))
+	(%get-name-and-repr-dict self c_string r_string)
+      (let ((assembly-list (list "default" "AU" "BU1" "UNITCELL" "SUPERCELL"))
+      (surface_types (list "vws" "sas" "ms" "ses")))
+	(flet ((func (&key (opacity (get %repr-dict "opacity" 1.))
+			   (assembly (get %repr-dict "assembly" "default"))
+			   (color-scheme (get %repr-dict "colorScheme" " "))
+			   (wireframe (get %repr-dict "wireframe" nil))
+			   (probe-radius (get %repr-dict "probeRadius" 1.4))
+			   (isolevel (get %repr-dict "isolevel" 2.))
+			   (smooth (get %repr-dict "smooth" 2.))
+			   (surface-type (get %repr-dict "surfaceType" "ms"))
+			   (box-size (get %repr-dict "boxSize" 10))
+			   (cutoff (get %repr-dict "cutoff" 0)))))
+	  (let ((widget (make-instance 'cl-jupyter-widgets::interactive
+				       func
+				       :opacity '(0. 1. 0.1)
+				       :color-scheme *COLOR-SCHEMES*
+				       :assembly assembly-list
+				       :probe-radius '(0. 5. 0.1)
+				       :isolevel '(0. 10. 0.1)
+				       :smooth '(0 10 1)
+				       :surface-type surface-types
+				       :box-size '(0. 100 2)
+				       :cutoff '(0. 100 0.1)
+				       :continuous-update :false)))
       ;;NOTE: INTERACTIVE IS NOT IMPLEMENTED IN COMMON LISP!!! (find it in python in ipywidgets6/widgets/interaction.py
-	  (loop for kid across (children widget)
-	     do
+	    (loop for kid across (children widget)
+	       do
 	       ;;I think I want to use unwind-protect here
-	       (error "finish implementing %make-widget in represenation.lisp"))
+		 (error "finish implementing %make-widget in represenation.lisp"))
 	  #|
  try:
                 setattr(kid, '_ngl_description', kid.description)
@@ -139,7 +139,7 @@
                 setattr(kid, '_ngl_type', 'basic')
             kid.observe(self._on_change_widget_child_value, 'value')
 	  |#
-	  widget)))))
+	    widget)))))
 
 (defmethod %get-name-and-repr-dict ((self RepresentationControl) c-string r-string)
   (flet ((read-dict (key dict)
