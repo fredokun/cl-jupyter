@@ -71,9 +71,10 @@ The history of evaluations is also saved by the evaluator.
                  (muffle-warning)))
 	    (serious-condition
 	     #'(lambda (err)
-		 (let ((*standard-output* cl-jupyter-widgets::*widget-log*))
-		   (format t "~a~%" err)
-		   (core::clasp-backtrace)))))
+		 (cljw:widget-log (with-output-to-string (*standard-output*)
+				    (format t "~a~%" err)))
+		 (cljw:widget-log (with-output-to-string (*standard-output*)
+				    (core::clasp-backtrace))))))
 	 (progn ,@body))
      (simple-condition (err)
        (format *error-output* "~&~A: ~%" (class-name (class-of err)))

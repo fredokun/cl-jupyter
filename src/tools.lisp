@@ -3,17 +3,20 @@
 
 (defvar *debug-cl-jupyter-widgets* t)
 
-(defun backtrace-to-stream (stream)
-  (let ((*standard-output* stream))
+(defun backtrace-as-string ()
+  (with-output-to-string (*standard-output*)
     (core::clasp-backtrace)))
 
 
 ;;; Use widget-log to log messages to a file
 (defvar *widget-log* nil)
+(defvar *widget-log-queue* nil)
 
 (eval-when (:execute :load-toplevel)
   (setf *debugger-hook*
-	#'(lambda (&rest args) (backtrace-to-stream *widget-log*)))
+	#'(lambda (condition &rest args) (widget-log "~a~%" condition) (widget-log (backtrace-to-string)))))
+
+(eval-when (:execute :load-toplevel)
   (let ((log-file-name (cond
 			 ((probe-file "/home/app/logs/")
 			  "/home/app/logs/cl-jupyter.log")
@@ -22,12 +25,21 @@
 				:direction :output
 				:if-exists :append
 				:if-does-not-exist :create))
+    (setf *widget-log-queue* (core:make-cxx-object 'mp:blocking-concurrent-queue))
+    (mp:push-default-special-binding '*widget-log-queue* *widget-log-queue*)
+    (mp:process-run-function
+     'widget-log
+     (lambda ()
+       (loop
+	  (let ((msg (mp:queue-wait-dequeue *widget-log-queue*)))
+	    (princ msg *widget-log*)
+	    (finish-output *widget-log*)))))
+    (defun widget-log (fmt &rest args)
+      (let ((msg (apply #'format nil fmt args)))
+	(mp:queue-enqueue *widget-log-queue* msg)))
     (format *widget-log* "===================== new run =======================~%")))
 
-				     
-(defun widget-log (fmt &rest args)
-    (apply #'format *widget-log* fmt args)
-    (finish-output *widget-log*))
+
 
 #+(or)
 (defmacro widget-log (fmt &rest args)
@@ -56,9 +68,9 @@
                  (muffle-warning)))
 	    (serious-condition
 	     #'(lambda (err)
-		 (let ((*standard-output* cl-jupyter-widgets::*widget-log*))
-		   (format t "~&~a~%~a~%" ,msg err)
-		   (core::clasp-backtrace)))))
+		 (widget-log (with-output-to-string (*standard-output*)
+			       (format t "~&~a~%~a~%" ,msg err)
+			       (core::clasp-backtrace))))))
 	 (progn ,@body))
      (simple-condition (err)
        (format *error-output* "~&~A: ~%" (class-name (class-of err)))

@@ -32,7 +32,7 @@
   (widget-log  "register-comm   comm-id -> ~a~%" (comm-id comm))
   (unless (comm-id comm)
     (widget-log "The comm-id for a comm in register-comm is NIL!!!!~%backtrace -> ~%")
-    (backtrace-to-stream *widget-log*))
+    (widget-log (backtrace-to-string)))
   (let ((comm-id (comm-id comm)))
     (setf (kernel comm) (kernel self))
     (setf (gethash comm-id (comms self)) comm)
