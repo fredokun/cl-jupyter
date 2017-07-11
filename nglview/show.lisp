@@ -8,31 +8,31 @@
     Examples - (defparameter w (nglv:show_pdbid \"3pqr\"))
                (cl-jupyter-widgets::disp w)???????"
   (let ((structure (make-instance 'PdbIdStructure :pdbid pdbid)))
-       (apply #'make-instance 'NGLWidget :structure structure kwargs)))
+       (apply #'make-instance 'nglwidget :structure structure kwargs)))
 
 (defun show-url (url &rest kwargs &key &allow-other-keys)
-  (let ((kwargs2 (copy-list kwargs)) (view (make-instance 'NGLWidget)))
+  (let ((kwargs2 (copy-list kwargs)) (view (make-instance 'nglwidget)))
     (apply #'add-component view url kwargs2)
     view))
 
 (defun show-text (text &rest kwargs &key &allow-other-keys)
   (let ((structure (make-instance 'TextStructure text)))
-    (apply #'make-instance 'NGLWidget :structure structure kwargs)))
+    (apply #'make-instance 'nglwidget :structure structure kwargs)))
 
 (defun show-ase (ase-atoms &rest kwargs &key &allow-other-keys)
   (let ((structure (make-instance 'ASEStructure ase-atoms)))
-    (apply #'make-instance 'NGLWidget :structure structure kwargs)))
+    (apply #'make-instance 'nglwidget :structure structure kwargs)))
 
 (defun show-structure-file (path &rest kwargs &key &allow-other-keys)
   (let ((structure (make-instance 'FileStructure path)))
-    (apply #'make-instance 'NGLWidget :structure structure kwargs)))
+    (apply #'make-instance 'nglwidget :structure structure kwargs)))
 
 (defun show-simpletraj (traj &rest kwargs &key &allow-other-keys)
-  (apply #'make-instance 'NGLWidget :traj traj kwargs))
+  (apply #'make-instance 'nglwidget :traj traj kwargs))
 
 (defun show-mdtraj (mdtraj-trajectory &rest kwargs &key &allow-other-keys)
   (let ((structure-trajectory (apply #'make-instance 'MDTrajTrajectory mdtraj-trajectory)))
-    (apply (make-instance 'NGLWidget :structure-trajectory structure-trajectory kwargs))))
+    (apply (make-instance 'nglwidget :structure-trajectory structure-trajectory kwargs))))
 
 (defun show-pytraj (pytraj-trajectory &rest kwargs &key &allow-other-keys)
   (let ((trajlist nil))
@@ -41,11 +41,11 @@
       (setf trajlist (list pytraj-trajectory)))
     (setf trajlist (loop for traj in trajlist
 		      collect (make-instance 'PyTrajTrajectory :traj traj)))
-    (apply #'make-instance 'NGLWidget :trajlist trajlist kwargs)))
+    (apply #'make-instance 'nglwidget :trajlist trajlist kwargs)))
 
 (defun show-parmed (parmed-structure &rest kwargs &key &allow-other-keys)
   (let ((structure-trajectory (make-instance 'ParmEdTrajectory :trajectory parmed-structure)))
-    (apply #'make-instance 'NGLWidget :structure structure-trajectory kwargs)))
+    (apply #'make-instance 'nglwidget :structure structure-trajectory kwargs)))
 
 (defun show-rdkit (rdkit-mol &rest kwargs &key &allow-other-keys)
   (error "show::show-rdkit error!!! Implement me!!!!"))
@@ -85,7 +85,7 @@ def show_rdkit(rdkit_mol, **kwargs):
         use_parmed = False
 
     if not use_parmed:
-        view = NGLWidget()
+        view = nglwidget()
         view.add_component(fh, ext='pdb', **kwargs)
         return view
     else:
@@ -100,16 +100,16 @@ def show_rdkit(rdkit_mol, **kwargs):
         # wait for: https://github.com/arose/ngl/issues/126
         # to be fixed in NGLView
         # parm_nv.params = dict(firstModelOnly=True)
-        return NGLWidget(parm_nv, **kwargs)
+        return nglwidget(parm_nv, **kwargs)
 |#
 
 (defun show-mdanalysis (atomgroup &rest kwargs &key &allow-other-keys)
   (let ((structure-trajectory (make-instance 'MDAnalysisTrajectory :atomgroup atomgroup)))
-    (apply #'make-instance 'NGLWidget :structure structure-trajectory kwargs)))
+    (apply #'make-instance 'nglwidget :structure structure-trajectory kwargs)))
 
 (defun show-htmd (mol &rest kwargs &key &allow-other-keys)
   (let ((structure-trajectory (make-instance 'HTMDTrajectory :mol mol)))
-    (apply #'make-instance 'NGLWidget :structure structure-trajectory kwargs)))
+    (apply #'make-instance 'nglwidget :structure structure-trajectory kwargs)))
 
 (defun demo (&rest kwargs &key &allow-other-keys)
   (show-structure-file datafiles.PDB kwargs))

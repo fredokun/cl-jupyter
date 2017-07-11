@@ -236,11 +236,25 @@
 
 
 
-#|
-   (defmethod add-trajectory ((self NGLWidget) trajectory &rest kwargs &key &allow-other-keys)
-(let ((backends *BACKENDS*)
-(package-name 
-|#
+(defmethod add_structure ((self NGLWidget) structure &rest kwargs &key &allow-other-keys)
+  (if (not (typep structure 'Structure))
+      (error "{} is not an instance of Structure"))
+  (if (or (loaded self) (_already_constructed self))
+      (apply #'_load_data self structure kwargs)
+      (progn
+	(append (_init_structures self) (list structure))
+	(let ((name (apply #'get_name py_utils structure kwargs)))
+	  (error "name can't be right! how do py_utils.get_name")
+	  (append (_ngl_component_names self) (list name)))))
+  (append (_ngl_component_ids) (list (id structure)))
+  (center_view self :component (- (length (_ngl_component_ids self)) 1))
+  (_update_component_auto_completion self))
+
+(defmethod add_trajectory ((self NGLWidget) trajectory &rest kwargs &key &allow-other-keys)
+  (let ((backends *BACKENDS*)
+	(package_name nil))
+    (error " I want package_name to be all the characters of trajector.__module__ up until the first period. I do notttt know how to do that")
+    ))
 
 (defmethod add-pdbid ((self NGLWidget) pdbid)
   (error " I want something like thif but what is .format(pdbid)??(add-component self rcsb://{}.pdb.format(pdbid)"))
