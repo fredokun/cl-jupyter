@@ -5,15 +5,15 @@
    (params :accessor params :initform nil)
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
 
-(defmethod get_structure_string((Structure Structure))
-  (error "Error in get_structure_string: Not Implemented Error!!! Python code not implemented"))
+(defmethod get-structure-string((Structure Structure))
+  (error "Error in get-structure-string: Not Implemented Error!!! Python code not implemented"))
 
 (defclass Trajectory ()
   ((id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))
    (shown :accessor shown :type bool :initform :true)))
 
-(defmethod get_coordinates ((Trajectory Trajectory) index)
-  (error "Error in get_coordinates: Not Implemented Error!!! Python code not implemented"))
+(defmethod get-coordinates ((Trajectory Trajectory) index)
+  (error "Error in get-coordinates: Not Implemented Error!!! Python code not implemented"))
 
-(defmethod n_frames ((Trajectory Trajectory))
-  (error "Error in n_frames: Not Implemented Error!!! Python code not implemented"))
+(defmethod n-frames ((Trajectory Trajectory))
+  (error "Error in n-frames: Not Implemented Error!!! Python code not implemented"))

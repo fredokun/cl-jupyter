@@ -8,5 +8,9 @@
     :serial t
     :components (
 		 (:file "packages")
+		 (:file "shape")
 		 (:file "widget")
+		 (:file "base_adaptor")
+		 (:file "adaptor")
+		 (:file "show")
 		 ))

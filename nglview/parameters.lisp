@@ -1,4 +1,4 @@
-(defparameter *REPRESENTATION_NAME_PAIRS* (list (("axes" . "axes")
+(defparameter *REPRESENTATION-NAME-PAIRS* (list (("axes" . "axes")
 						 ("point" . "point")
 						 ("line" . "line")
 						 ("rope" . "rope")

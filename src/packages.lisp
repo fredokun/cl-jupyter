@@ -77,8 +77,12 @@
    #:notify-change
    #:widget-display
    #:widget
+   #:widget-open
+   #:widget-send
+   #:widget-close
    #:domwidget
    #:int-slider
+   #:image
    #:bool
    #:dict
    #:unicode

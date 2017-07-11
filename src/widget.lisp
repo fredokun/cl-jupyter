@@ -36,7 +36,7 @@
 (deftype tuple () '(vector * *))
 (deftype color () T)
 (deftype instance () T)
-(deftype dict () list) ;; alist?
+(deftype dict () T) ;; alist?
 
 
 (defclass callback-dispatcher ()

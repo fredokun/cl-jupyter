@@ -1,10 +1,10 @@
 (in-package :nglv)
 
-(defclass register_backend ()
-  ((:package_name :initarg package_name :accessor package_name)))
+(defclass register-backend ()
+  ((:package-name :initarg package_name :accessor package_name)))
 
-(defmethod __call__ ((self register_backed) cls)
-  (setf (gethash (package_name self) *BACKENDS*) cls)
+(defmethod __call__ ((self register-backend) cls)
+  (setf (gethash (package-name self) *BACKENDS*) cls)
   cls)
 
 (defclass FileStructure(Structure)
@@ -19,13 +19,13 @@
     (setf fm (make-instance 'FileManager :path path))
     (setf ext (ext fm))))
 
-;;(defgeneric get_structure_string (Structure)
+;;(defgeneric get-structure-string (Structure)
 ;;  (:documentation "I think this works"))
-(defmethod get_structure_string ((self FileStructure))
-  (error "adaptor::get_structure_string error!! Implement me!"))
+(defmethod get-structure-string ((self FileStructure))
+  (error "adaptor::get-structure-string error!! Implement me!"))
   #|
-    def get_structure_string(self):
-        return self.fm.read(force_buffer=True)
+    def get-structure-string(self):
+        return self.fm.read(force-buffer=True)
 |#
 
 (defclass TextStructure (Structure)
@@ -34,21 +34,21 @@
    (path :accessor path :initform "")
    (params :initarg params :accessor params :type list :initform ())))
   
-(defmethod get_structure_string ((self TextStructure))
+(defmethod get-structure-string ((self TextStructure))
   (text self))
 
 (defclass RdkitStructure (Structure)
-  ((rdkit_mol :initarg :rdkit_mol :accessor rdkit_mol :initform nil)
+  ((rdkit-mol :initarg :rdkit-mol :accessor rdkit-mol :initform nil)
    (ext :initarg :ext :accessor ext
 	:initform "pdb")
    (path :accessor path :initform "")
    (params :accessor params :type list :initform ())))
 
-(defmethod get_structure_string ((self RdkitStructure))
-  (error "adaptor::get_structure_string Implement me!!!!"))
+(defmethod get-structure-string ((self RdkitStructure))
+  (error "adaptor::get-structure-string Implement me!!!!"))
 #|
  from rdkit import Chem
-        fh = StringIO(Chem.MolToPDBBlock(self._rdkit_mol))
+        fh = StringIO(Chem.MolToPDBBlock(self.-rdkit_mol))
         return fh.read()
 |#
 
@@ -57,56 +57,56 @@
    (ext :accessor ext :initform "cif")
    (params :accessor params :type list :initform ())))
 
-(defmethod get_structure_string ((self PdbIdStructure))
+(defmethod get-structure-string ((self PdbIdStructure))
   (let ((url (concatenate 'string "http://www.rcsb.org/pdb/files/" (pdbid self) ".cif")))
-    (error "adaptor::get_structure_string error! Implement me!")))
+    (error "adaptor::get-structure-string error! Implement me!")))
 #|
-    def get_structure_string(self):
+    def get-structure-string(self):
         url = "http://www.rcsb.org/pdb/files/" + self.pdbid + ".cif"
         return urlopen(url).read()
 |#
 
 (defclass ASEStructure (Structure)
-  ((ase_atoms :initarg :ase_atoms :accessor ase_atoms
+  ((ase-atoms :initarg :ase-atoms :accessor ase-atoms
 	      :initform nil)
    (path :accessor path
 	 :initform "")
    (params :initarg params :accessor params :type list :initform ())
    (ext :initarg :ext :accessor ext :initform "pdb")))
 
-(defmethod get_structure_string ((self ASEStructure))
-  (error "ASEStructure::get_structure_string help!!"))
+(defmethod get-structure-string ((self ASEStructure))
+  (error "ASEStructure::get-structure-string help!!"))
 #|
-  def get_structure_string(self):
+  def get-structure-string(self):
         with tempfolder():
-            self._ase_atoms.write('tmp.pdb')
+            self.-ase_atoms.write('tmp.pdb')
             return open('tmp.pdb').read()
 |#
 
 (defclass SimpletrajTrajectory (Trajectory Structure)
   ((path :initarg :path :accessor path :initform nil)
-   (structure_path :initarg :structure_path :accessor structure_path :initform path)
-   (traj_cache :accessor traj_cache :initform nil);HELP!!! Please help
+   (structure-path :initarg :structure-path :accessor structure-path :initform path)
+   (traj-cache :accessor traj-cache :initform nil);HELP!!! Please help
    (ext :accessor ext :initform nil) ;HELP!!! Please help me
    (params :accessor params :type list :initform nil)
    (trajectory :accessor trajectory :initform nil)
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
 
-(defmethod get_coordinates ((self SimpletrajTrajectory) index)
-  (error "Implement me!!! get_coordinates SimpletrajTrajectory!"))
+(defmethod get-coordinates ((self SimpletrajTrajectory) index)
+  (error "Implement me!!! get-coordinates SimpletrajTrajectory!"))
 #|
-    def get_coordinates(self, index):
+    def get-coordinates(self, index):
         traj = self.traj_cache.get(os.path.abspath(self.path))
         frame = traj.get_frame(index)
         return frame["coords"]
 |#
 
-(defmethod get_structure_string ((self SimpletrajTrajectory))
-  (error "help get_structure_string of simpletrajtrajectory"))
+(defmethod get-structure-string ((self SimpletrajTrajectory))
+  (error "help get-structure-string of simpletrajtrajectory"))
   ;;;return open(self._structure_path).read()
 
-(defmethod n_frames ((self SimpletrajTrajectory))
-  (error "n_frames simpletrajtrajectory needs some help"))
+(defmethod n-frames ((self SimpletrajTrajectory))
+  (error "n-frames simpletrajtrajectory needs some help"))
 ;;; traj = self.traj_cache.get(os.path.abspath(self.path))
 ;;; return traj.numframes
 
@@ -117,16 +117,16 @@
    (params :accessor params :type list :initform ())
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
 
-(defmethod get_coordinates ((self MDTrajTrajectory) index)
+(defmethod get-coordinates ((self MDTrajTrajectory) index)
   (* 10 (aref (xyz (trajectory self)) index)))
 
-(defmethod n_frames ((self MDTrajTrajectory))
-  (n_frames (trajectory self)))
+(defmethod n-frames ((self MDTrajTrajectory))
+  (n-frames (trajectory self)))
 
-(defmethod get_structure_string ((self MDTrajTrajectory))
-  (error "Help the get_structure_String MDTrajTrajectory"))
+(defmethod get-structure-string ((self MDTrajTrajectory))
+  (error "Help the get-structure-String MDTrajTrajectory"))
 #|
- def get_structure_string(self):
+ def get-structure-string(self):
         fd, fname = tempfile.mkstemp()
         self.trajectory[0].save_pdb(fname)
         pdb_string = os.fdopen(fd).read()
@@ -141,16 +141,16 @@
    (params :accessor params :type list :initform ())
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
 
-(defmethod get_coordinates ((self PyTrajTrajectory) index)
+(defmethod get-coordinates ((self PyTrajTrajectory) index)
   (xyz (aref (trajectory self) index)))
 
-(defmethod n_frames ((self PyTrajTrajectory))
-  (n_frames (trajectory self)))
+(defmethod n-frames ((self PyTrajTrajectory))
+  (n-frames (trajectory self)))
 
-(defmethod get_structure_string ((self PyTrajTrajectory))
-  (error "PyTrajTrajecotry get_structure_string error"))
+(defmethod get-structure-string ((self PyTrajTrajectory))
+  (error "PyTrajTrajectory get-structure-string error"))
 #|
-    def get_structure_string(self):
+    def get-structure-string(self):
         fd, fname = tempfile.mkstemp(suffix=".pdb")
         self.trajectory[:1].save(fname, format="pdb", overwrite=True)
         pdb_string = os.fdopen(fd).read()
@@ -159,13 +159,13 @@
 
 |#
 ;;;There's something fishy goin on here. Check python code listed below.
-(defclass ParmEdTrajectory (Trajecotry Structure)
+(defclass ParmEdTrajectory (Trajectory Structure)
   ((trajectory :initarg :trajectory :initform nil :accessor trajectory)
    (ext :accessor ext :initform "pdb")
    (params :accessor params :type list :initform ())
    (xyz :accessor xyz :initform nil)
-   (id :accessor id  (format nil "~W" (uuid:make-v4-uuid)))
-   (only_save_1st_model :accessor only_save_1st_model :type bool :initform :true)))
+   (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))
+   (only-save-1st-model :accessor only-save-1st-model :type bool :initform :true)))
 
 #|
 
@@ -190,7 +190,7 @@ class ParmEdTrajectory(Trajectory, Structure):
     def n_frames(self):
         return len(self._xyz)
 
-    def get_structure_string(self):
+    def get-structure-string(self):
         fd, fname = tempfile.mkstemp(suffix=".pdb")
         # only write 1st model
         if self.only_save_1st_model:
@@ -213,19 +213,18 @@ class ParmEdTrajectory(Trajectory, Structure):
    (params :accessor params :type list :initform ())
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
 
-(defmethod get_coordinates ((self MDAnalysisTrjaectory) index)
+(defmethod get-coordinates ((self MDAnalysisTrajectory) index)
   (aref (trajectory (universe (atomgroup self))) index)
-  (let xyz (positions (atoms (atomgroup self)))
-       xyz))
+  (positions (atoms (atomgroup self))))
 
-(defmethod n_frames ((self MDAnalysisTrajectory))
-  (n_frames (trajectory (universe (atomgroup self)))))
+(defmethod n-frames ((self MDAnalysisTrajectory))
+  (n-frames (trajectory (universe (atomgroup self)))))
 
-(defmethod get_structure_string ((self MDAnalysisTrajectory))
-  (error "help MDAnalysisTrajectory get_structure_string"))
+(defmethod get-structure-string ((self MDAnalysisTrajectory))
+  (error "help MDAnalysisTrajectory get-structure-string"))
 
 #|
-  def get_structure_string(self):
+  def get-structure-string(self):
         try:
             import MDAnalysis as mda
         except ImportError:
@@ -251,20 +250,20 @@ class ParmEdTrajectory(Trajectory, Structure):
    (params :accessor params :type list :initform ())
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
 
-(defmethod get_coordinates ((self HTMDTrajectory) index)
-  (error "help get_coordinates HTMDTrajectory"))
+(defmethod get-coordinates ((self HTMDTrajectory) index)
+  (error "help get-coordinates HTMDTrajectory"))
 #|
     def get_coordinates(self, index):
         return np.squeeze(self.mol.coords[:, :, index])
 |#
 
-(defmethod n_frames ((self HTMDTrajectory))
+(defmethod n-frames ((self HTMDTrajectory))
   (numFrames (mol self)))
 
-(defmethod get_structure ((self HTMDTrajectory))
-  (error "help get_structure of HTMDTrajectory"))
+(defmethod get-structure ((self HTMDTrajectory))
+  (error "help get-structure of HTMDTrajectory"))
 #|
-    def get_structure_string(self):
+    def get-structure-string(self):
         import tempfile
         fd, fname = tempfile.mkstemp(suffix='.pdb')
         self.mol.write(fname)

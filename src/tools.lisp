@@ -67,7 +67,7 @@
               (simple-condition-format-arguments err))
        (format *error-output* "~&"))
      (serious-condition (err)
-       (format *error-output* "~&An error occurred of type: ~A: ~%  ~S~%"
+       (format *error-output* "~&2An error occurred of type: ~A: ~%  ~S~%"
                (class-name (class-of err)) err))))
 
 

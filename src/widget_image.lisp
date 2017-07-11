@@ -45,7 +45,7 @@ https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_i
 			       :json-name "_b64value"))
    (value :initarg :value :accessor value 
 	   :type bytes 
-	   :initform (bytes "")
+	   :initform #()
 	   :metadata (:sync t
 			    :json-name "value")))
 

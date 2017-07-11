@@ -10,17 +10,17 @@
 	 :initform nil
 	 :metadata (:sync nil
 			  :json-name "name"))
-   (repr_index :initarg :repr_index :accessor repr_index
+   (repr-index :initarg :repr-index :accessor repr-index
 	       :type integer
 	       :initform 0
 	       :metadata (:sync nil
 				:json-name "repr_index"))
-   (component_index :initarg :component_index :accessor component_index
+   (component-index :initarg :component-index :accessor component-index
 		    :type integer
 		    :initform 0
 		    :metadata (:sync nil
 				     :json-name "component_index"))
-   (_disable_update_parameters :initarg :_disabled_update_parameters :accessor _disabled_update_parameters
+   (%disable-update-parameters :initarg :%disabled-update-parameters :accessor %disabled-update-parameters
 			       :type bool
 			       :initform :false
 			       :metadata (:sync nil
@@ -32,12 +32,12 @@
 	     :initform nil)))
 
 (defmethod initialize-instance :after ((self RepresentationControl))
-  (setf (children self) (children (_make_widget self))))
+  (setf (children self) (children (%make-widget self))))
 
 (defmethod _on_change_widget_child_value ((self RepresentationControl) change)
   (let ((owner (aref change "owner"))
 	(new (aref change "new")))
-    (error "Help Implement meeeeeeeee _on_Change_widget_child_value in representation.lisp")))
+    (error "Help Implement meeeeeeeee %on-Change-widget-child-value in representation.lisp")))
 #|
     def _on_change_widget_child_value(self, change):
         owner = change['owner']
@@ -45,42 +45,42 @@
         self.parameters = {py_utils._camelize(owner._ngl_description): new}
 |#
 
-(defmethod _on_parameters_changed ((self RepresentationControl) change)
-  (if (not (_disabled_update_parameters self))
+(defmethod %on-parameters-changed ((self RepresentationControl) change)
+  (if (not (%disabled-update-parameters self))
       (let ((parameters (aref change "new")))
-	(update_representation (_view self) :component (component_index self) :repr_index (repr_index self) &rest **parameters))))
+	(update-representation (%view self) :component (component-index self) :repr-index (repr-index self) &rest **parameters))))
 
-(defmethod _on_name_changed ((self RepresentationControl) change)
-  (let ((new_name (aref change "new")))
-    (if (string= new_name "surface")
+(defmethod %on-name-changed ((self RepresentationControl) change)
+  (let ((new-name (aref change "new")))
+    (if (string= new-name "surface")
 	(loop for kid in (children self)
 	   do
-	     (if (string= (_ngl_type kid) "surface")
+	     (if (string= (%ngl-type kid) "surface")
 		 (setf (display (layout kid)) "flex")))
 	(loop for kid in (children self)
 	   do
-	     (if (string= (_ngl_type kid) "surface")
+	     (if (string= (%ngl-type kid) "surface")
 		 (setf (display (layout kid)) "none"))))))
 
-(defmethod _on_repr_index_changed ((self RepresentationControl) change)
-  (let ((c_string (concatenate 'string "c" (write-to-string (component_index self))))
-	(r_string (write-to-string (aref change "new"))))
-    (_update self c_string r_string)))
+(defmethod %on-repr-index-changed ((self RepresentationControl) change)
+  (let ((c-string (concatenate 'string "c" (write-to-string (component-index self))))
+	(r-string (write-to-string (aref change "new"))))
+    (%update self c-string r-string)))
 
-(defmethod _on_component_index_changed ((self RepresentationControl) change)
-  (let ((c_string (concatenate 'string "c" (write-to-string (aref change "new"))))
-	(r_string (write-to-string (repr_index self))))
-    (_update self c_string r_string)))
+(defmethod %on-component-index-changed ((self RepresentationControl) change)
+  (let ((c-string (concatenate 'string "c" (write-to-string (aref change "new"))))
+	(r-string (write-to-string (repr-index self))))
+    (%update self c-string r-string)))
 
-(defmethod _update ((self RepresentationControl) c_string r_string)
-  (multiple-value-bind (name _repr_dict)
-      (_get_name_and_repr_dict self c_string r_string)
-    (setf (name self) name (_disable_update_parameters self) t)
+(defmethod %update ((self RepresentationControl) c-string r-string)
+  (multiple-value-bind (name %repr-dict)
+      (%get-name-and-repr-dict self c-string r-string)
+    (setf (name self) name (%disable-update-parameters self) t)
     (loop for kid across (children self)
        do
-	 (setf desc (_camelize py_utils (_ngl_description kid))))
-    (error "Implement me!1 _update from representation.lisp")
-    (setf (_disable_update_parameters self) nil)))
+	 (setf desc (%camelize py-utils (%ngl-description kid))))
+    (error "Implement me!1 %update from representation.lisp")
+    (setf (%disable-update-parameters self) nil)))
 #|
     def _update(self, c_string, r_string):
         name, _repr_dict = self._get_name_and_repr_dict(c_string, r_string)
@@ -93,40 +93,40 @@
         self._disable_update_parameters = False
 |#
 
-(defmethod _make_widget ((self RepresentationControl))
-  (let ((c_string (concatenate 'string "c" (write-to-string (component_index self))))
-	(r_string (write-to-string (repr_index self))))
-    (multiple-value-bind (name _repr_dict)
+(defmethod %make-widget ((self RepresentationControl))
+  (let ((c-string (concatenate 'string "c" (write-to-string (component-index self))))
+	(r-string (write-to-string (repr-index self))))
+    (multiple-value-bind (name %repr-dict)
 	;; name, _repr_dict = self._get_name_and_repr_dict(c_string, r_string)
-	(assembly_list (list "default" "AU" "BU1" "UNITCELL" "SUPERCELL"))
+	(assembly-list (list "default" "AU" "BU1" "UNITCELL" "SUPERCELL"))
       (surface_types (list "vws" "sas" "ms" "ses"))
-      (flet ((func (&key (opacity (get _repr_dict "opacity" 1.))
-			 (assembly (get _repr_dict "assembly" "default"))
-			 (color_scheme (get _repr_dict "colorScheme" " "))
-			 (wireframe (get _repr_dict "wireframe" nil))
-			 (probe_radius (get _repr_dict "probeRadius" 1.4))
-			 (isolevel (get _repr_dict "isolevel" 2.))
-			 (smooth (get _repr_dict "smooth" 2.))
-			 (surface_type (get _repr_dict "surfaceType" "ms"))
-			 (box_size (get _repr_dict "boxSize" 10))
-			 (cutoff (get _repr_dict "cutoff" 0)))))
+      (flet ((func (&key (opacity (get %repr-dict "opacity" 1.))
+			 (assembly (get %repr-dict "assembly" "default"))
+			 (color-scheme (get %repr-dict "colorScheme" " "))
+			 (wireframe (get %repr-dict "wireframe" nil))
+			 (probe-radius (get %repr-dict "probeRadius" 1.4))
+			 (isolevel (get %repr-dict "isolevel" 2.))
+			 (smooth (get %repr-dict "smooth" 2.))
+			 (surface-type (get %repr-dict "surfaceType" "ms"))
+			 (box-size (get %repr-dict "boxSize" 10))
+			 (cutoff (get %repr-dict "cutoff" 0)))))
 	(let ((widget (make-instance 'cl-jupyter-widgets::interactive
 				     func
 				     :opacity '(0. 1. 0.1)
-				     :color_scheme *COLOR_SCHEMES*
-				     :assembly assembly_list
-				     :probe_radius '(0. 5. 0.1)
+				     :color-scheme *COLOR-SCHEMES*
+				     :assembly assembly-list
+				     :probe-radius '(0. 5. 0.1)
 				     :isolevel '(0. 10. 0.1)
 				     :smooth '(0 10 1)
-				     :surface_type surface_types
-				     :box_size '(0. 100 2)
+				     :surface-type surface-types
+				     :box-size '(0. 100 2)
 				     :cutoff '(0. 100 0.1)
-				     :continuous_update :false)))
+				     :continuous-update :false)))
       ;;NOTE: INTERACTIVE IS NOT IMPLEMENTED IN COMMON LISP!!! (find it in python in ipywidgets6/widgets/interaction.py
 	  (loop for kid across (children widget)
 	     do
 	       ;;I think I want to use unwind-protect here
-	       (error "finish implementing _make_widget in represenation.lisp"))
+	       (error "finish implementing %make-widget in represenation.lisp"))
 	  #|
  try:
                 setattr(kid, '_ngl_description', kid.description)
@@ -141,15 +141,15 @@
 	  |#
 	  widget)))))
 
-(defmethod _get_name_and_repr_dict ((self RepresentationControl) c_string r_string)
+(defmethod %get-name-and-repr-dict ((self RepresentationControl) c-string r-string)
   (flet ((read-dict (key dict)
 	   (multiple-value-bind (value present-p)
 	       (gethash key dict)
 	     (if present-p
 		 value
-		 (return-from _get_name_and_repr_dict
+		 (return-from %get-name-and-repr-dict
 		   (values "" (make-hash-table)))))))
-    (let* ((repr-dict (_repr_dict (_view self)))
-	   (inner (read-dict r_string (read-dict c_string _repr_dict))))
+    (let* ((repr-dict (%repr-dict (%view self)))
+	   (inner (read-dict r-string (read-dict c-string %repr-dict))))
       (values (read-dict "name" inner)
 	      (read-dict "parameters" inner)))))

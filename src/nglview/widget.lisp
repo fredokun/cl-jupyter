@@ -93,7 +93,7 @@
    (%gui :initarg :%gui :accessor %gui :initform nil)
    (%init-gui :initarg :gui :accessor gui :initform nil)  ;; WHY? does nglview does this
    (%theme :initarg :theme :accessor theme :initform "default")
-   (%widget-image :initarg :widget-image :accessor widget-image :initform (cl-jupyter-widgets:image))
+   (%widget-image :initarg :widget-image :accessor widget-image :initform (make-instance 'cl-jupyter-widgets:image))
    (%image-array :initarg :image-array :accessor image-array :initform nil)
    (%event :initarg :event :accessor event :initform :threading.event.object)
    (%ngl-displayed-callbacks-before-loaded :initarg :ngl-displayed-callbacks-before-loaded
