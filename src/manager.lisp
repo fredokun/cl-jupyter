@@ -29,10 +29,10 @@
   (remhash target-name (targets self)))
 
 (defmethod register-comm ((self comm-manager) comm)
-  (widget-log  "register-comm   comm-id -> ~a~%" (comm-id comm))
+  (widget-log "register-comm   comm-id -> ~a~%" (comm-id comm))
   (unless (comm-id comm)
     (widget-log "The comm-id for a comm in register-comm is NIL!!!!~%backtrace -> ~%")
-    (widget-log (backtrace-to-string)))
+    (widget-log "~a~%" (backtrace-as-string)))
   (let ((comm-id (comm-id comm)))
     (setf (kernel comm) (kernel self))
     (setf (gethash comm-id (comms self)) comm)

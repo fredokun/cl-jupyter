@@ -14,7 +14,9 @@
 
 (eval-when (:execute :load-toplevel)
   (setf *debugger-hook*
-	#'(lambda (condition &rest args) (widget-log "~a~%" condition) (widget-log (backtrace-to-string)))))
+	#'(lambda (condition &rest args)
+	    (widget-log "~a~%" condition)
+	    (widget-log "~a~%" (backtrace-as-string)))))
 
 (eval-when (:execute :load-toplevel)
   (let ((log-file-name (cond
@@ -68,9 +70,9 @@
                  (muffle-warning)))
 	    (serious-condition
 	     #'(lambda (err)
-		 (widget-log (with-output-to-string (*standard-output*)
-			       (format t "~&~a~%~a~%" ,msg err)
-			       (core::clasp-backtrace))))))
+		 (widget-log "~a~%" (with-output-to-string (*standard-output*)
+				      (format t "~&~a~%~a~%" ,msg err)
+				      (core::clasp-backtrace))))))
 	 (progn ,@body))
      (simple-condition (err)
        (format *error-output* "~&~A: ~%" (class-name (class-of err)))
@@ -164,3 +166,6 @@
 (defun as-python (msg)
   (with-output-to-string (sout)
     (print-as-python msg sout)))
+
+
+(defgeneric on-msg (target callback &key &allow-other-keys))

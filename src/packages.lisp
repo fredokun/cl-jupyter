@@ -90,6 +90,8 @@
    #:tuple
    #:color
    #:instance
+   #:on-msg
+   #:on-displayed
    ))
 
 

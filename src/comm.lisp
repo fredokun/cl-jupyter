@@ -111,7 +111,7 @@
    (check-type callback (or function null) "A function of one argument or NIL")
    (setf (%close-callback self) callback))
 
-(defmethod on-msg ((self comm) callback)
+(defmethod on-msg ((self comm) callback &key)
   "Register a callback for comm-msg
 
    Will be called with the widget and the DATA of any comm-msg messages.

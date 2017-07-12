@@ -28,8 +28,12 @@
 
 (defun send-status-starting (iopub session &key (key nil))
   (let ((status-msg (make-orphan-message session "status" nil
-					  `(("execution_state" . "starting")) nil)))
-    (message-send (iopub-socket iopub) status-msg :identities '("status") :key key)))
+					 `(("execution_state" . "starting")) nil)))
+    (cljw:widget-log "[iopub] Made orphan message: ~s~%" status-msg)
+    #+(or)(format t "[iopub] Made orphan message: ~s~%" status-msg)
+    (prog1
+	(message-send (iopub-socket iopub) status-msg :identities '("status") :key key)
+      (cljw:widget-log "[iopub] Leaving send-status-starting~%"))))
 
 (defun send-status-update (iopub parent-msg status &key (key nil))
   (let ((status-content `((:execution--state . ,status))))
