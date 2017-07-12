@@ -1,18 +1,6 @@
 (in-package :nglv)
 
 
-(defun remote-call-thread-run (widget)
-  "Keep pulling callbacks out of the queue and evaluating them"
-  (loop
-       (multiple-value-bind (callback found)
-	   (mp:queue-wait-dequeue-timed (remote-call-thread-queue widget) 1000)
-	 (when found
-	   (funcall (car callback) widget)
-	 (when (string= (cdr callback) "loadFile")
-	   (%wait-until-finished widget))))))
-
-
-
 (defclass nglwidget (cljw::dom-widget)
   ((%image-data :initarg :image-data
 		:type cljw:unicode
@@ -57,17 +45,30 @@
 		 :type list
 		 :initform nil
 		 :metadata (:sync t :json-name "orientation"))
+   (%first-time-loaded :initarg :first-time-loaded
+		       :accessor first-time-loaded
+		       :type boolean
+		       :initform t)
    ;; hack to always display movie
    (%n-dragged-files :initarg :n-dragged-files
 		     :accessor n-dragged-files
 		     :type integer
 		     :initform 0
 		     :metadata (:sync t :json-name "_n_dragged_files"))
+   (%init-representations :initarg :init-representations
+			  :accessor init-representations
+			  :initform nil
+			  :metadata (:sync t :json-name "_init_representations"))
    (%init-structures-sync :initarg :init-structures-sync
 			  :accessor init-structures-sync
 			  :type list
 			  :initform nil
 			  :metadata (:sync t :json-name "_init_structures_sync"))
+   ;;TODO: remove %parameters?
+   (%parameters :initarg :parameters
+		:accessor parameters
+		:type cljw:dict
+		:initform nil) ;not synchronized
    (%full-stage-parameters :initarg :full-stage-parameters
 			   :accessor full-stage-parameters
 			   :type cljw:dict
@@ -92,40 +93,42 @@
 	       :accessor repr-dict
 	       :type cljw:dict
 	       :initform nil)
-   (%parameters :initarg :parameters
-		:accessor parameters
-		:type cljw:dict
-		:initform nil) ; not synchronized https://github.com/drmeister/spy-ipykernel/blob/master/nglview/widget.py#L124
+   (%ngl-componend-ids :initarg :ngl-component-ids
+		       :accessor ngl-component-ids
+		       :type list
+		       :initform nil)
    (%ngl-component-names :initarg :ngl-component-names
 			 :accessor ngl-component-names
 			 :type list
 			 :initform nil)
+   (%already-constructed :initarg :already-constructed
+			 :accessor already-constructed
+			 :type boolean
+			 :initform nil)
+   (%ngl-msg :initarg :ngl-msg
+	     :accessor ngl-msg
+	     :type (or string null)
+	     :initform nil)
    (%send-binary :initarg :send-binary
 		 :accessor send-binary
 		 :type cljw:bool
 		 :initform :true)
    (%init-gui :initarg :init-gui
 	      :accessor init-gui
-	      :type cljw:bool
-	      :initform :false)
+	      :type boolean
+	      :initform nil)
    (%hold-image :initarg :hold-image
 		:accessor hold-image
 		:type cljw:bool
 		:initform :false)
-   (%ngl-msg :initarg :ngl-msg
-	     :accessor ngl-msg
-	     :type (or string null)
-	     :initform nil)
    ;; internal variables
    (%gui :initarg :%gui :accessor %gui :initform nil)
    (%init-gui :initarg :gui :accessor gui :initform nil) ;; WHY? does nglview does this
    (%theme :initarg :theme :accessor theme :initform "default")
    (%widget-image :initarg :widget-image :accessor widget-image
-		  :initform (make-instance 'cl-jupyter-widgets:image))
+		  :initform (make-instance 'cl-jupyter-widgets:image :width 900))
    (%image-array :initarg :image-array :accessor image-array :initform nil)
-;;; FIXME:  I don't know how to translate the creation of a threading.Event() from python
-;;;         into Common Lisp
-   ;;   (%event :initarg :event :accessor event :initform :threading.event.object)
+   (%event :initarg :event :accessor event :initform (make-instance 'pythread:event))
    (%ngl-displayed-callbacks-before-loaded-reversed
     :initarg :ngl-displayed-callbacks-before-loaded-reversed
     :accessor ngl-displayed-callbacks-before-loaded-reversed
@@ -153,18 +156,9 @@
     :initarg :remote-call-thread-queue
     :accessor remote-call-thread-queue
     :initform (core:make-cxx-object 'mp:blocking-concurrent-queue))
-   (%structure :initarg :structure :accessor structure)
-   (%init-representations :initarg :init-representations
-			  :accessor init-representations
-			  :initform '((("type" ."cartoon")
-				       ("params" . ( "sele" . "polymer")))
-				      (("type" . "ball+stick")
-				       ("params" . ( "sele" . "hetero OR mol")))
-				      (("type" . "ball+stick")
-				       ("params" . ( "sele" . "not protein and not nucleic")))))
-   (%representations :initarg :representations :accessor representations
-		     :initform nil)
-
+   (%handle-msg-thread
+    :accessor handle-msg-thread
+    :initform nil)
    ;; keep track but making copy
    ;;; FIXME - fix this nonsense below
 #||
@@ -178,6 +172,9 @@
    ||#
    (%trajlist :initform nil
 	      :accessor %trajlist)
+   (%init-structures :initarg :init-structures
+		     :accessor init-structures
+		     :initform nil)
    )
   (:default-initargs
    :view-name (cljw:unicode "NGLView")
@@ -185,14 +182,62 @@
   (:metaclass traitlets:traitlet-class))
 
 
-(defmethod initialize-instance :around ((instance nglwidget)  &rest initargs &key &allow-other-keys)
-  (call-next-method)
-  ;;    (%add-repr-method-shortcut instance instance)
-  (when (representations instance)
-    (setf (%init-representations instance) (representations instance)))
-  (%set-unsync-camera instance)
-  (setf (remote-call-thread instance)
-	(mp:process-run-function 'remote-call-thread (lambda () (remote-call-thread-run instance))))
+(defun make-nglwidget (&rest kwargs-orig
+		       &key (structure nil structure-p)
+			 (representations nil representations-p)
+			 (parameters nil parameters-p)
+			 (gui nil gui-p)
+			 (theme "default" theme-p)
+		       &allow-other-keys)
+  (cljw:widget-log "make-nglwidget~%")
+  (let ((kwargs (copy-list kwargs-orig)))
+    (when structure-p (remf kwargs :structure))
+    (when representations-p (remf kwargs :representations))
+    (when parameters-p (remf kwargs :parameters))
+    (when gui-p (remf kwargs :gui))
+    (when theme-p (remf kwargs :theme))
+    (let ((widget (apply #'make-instance 'nglwidget kwargs)))
+      (when representations
+	(setf (%init-representations widget) representations))
+      (when gui-p (setf (init-gui widget) gui))
+      (when theme-p (setf (theme widget) theme))
+      (warn "What do we do about add_repr_method_shortcut")
+      (setf (handle-msg-thread widget)
+	    (mp:process-run-function
+	     'handle-msg-thread
+	     (lambda ()
+	       (cljw:on-msg widget #'%ngl-handle-msg)
+	       (loop
+		  ;; yield while respecting callbacks to ngl-handle-msg
+		  (mp:process-yield)))))
+      (when parameters-p (setf (parameters widget) parameters))
+      (cond
+	((typep structure 'Trajectory)
+	 (warn "Handle trajectory"))
+	((consp structure)
+	 (warn "Handle list of structures"))
+	(structure
+	 (add-structure widget structure)))
+      ;; call before setting representations
+      (%set-initial-structure widget (init-structures widget))
+      (when representations-p
+	(if representations
+	    (setf (init-representations widget) representations)
+	    (setf (init-representations widget)
+		  '((("type" ."cartoon")
+		     ("params" . ( "sele" . "polymer")))
+		    (("type" . "ball+stick")
+		     ("params" . ( "sele" . "hetero OR mol")))
+		    (("type" . "ball+stick")
+		     ("params" . ( "sele" . "not protein and not nucleic")))))))
+      (%set-unsync-camera widget)
+      (setf (selector widget) (remove #\- (format nil "~W" (uuid:make-v4-uuid))))
+      (%remote-call widget "setSelector" :target "Widget" :args (list (selector widget)))
+      (setf (selector widget) (format nil ".~a" (selector widget)))
+      (warn "How do I set %place-proxy with a PlaceProxy")
+      (warn "How do I set the player")
+      (setf (already-constructed widget) t)
+      widget)))
   #|
    if isinstance(structure, Trajectory):
    name = py_utils.get_name(structure, kwargs)
@@ -224,8 +269,55 @@
    }}
    ]
    |#
-  )
+  (defmethod %set-initial-structure ((widget nglwidget) structures)
+  "initialize structures for Widget
+        Parameters
+        ----------
+        structures : list
+            list of Structure or Trajectory
+  "
+  (let ((init-structures-sync (if (consp structures)
+				  structures
+				  (list structures))))
+    (when init-structures-sync
+      (mapc (lambda (structure)
+	      (setf (init-structures-sync widget)
+		    (list (cons "data" (get-structure-string structure))
+			  (cons "ext" (ext structure))
+			  (cons "params" (params structure))
+			  (cons "id" (id structure)))))
+	    init-structures-sync))))
 
+
+
+
+(defmethod %ngl-handle-msg ((widget nglwidget) msg)
+      (cljw:widget-log  "What do I do with received msg: ~s~%" msg)
+      (setf (ngl-msg widget) msg)
+      (warn "%ngl-handle-msg received a message ~s  - what do I do with it?" msg))
+
+(defmethod (setf clos:slot-value-using-class)
+    (new-value (class traitlets:traitlet-class) (object nglwidget) (slotd traitlets:effective-traitlet))
+  (call-next-method)
+  (let ((slot-name (clos:slot-definition-name slotd)))
+    (when (eq slot-name '%loaded)
+      (when new-value
+	(cljw:widget-log "%loaded is true - firing callbacks~%")
+	(%fire-callbacks object (reverse (ngl-displayed-callbacks-before-loaded-reversed object)))))))
+
+(defmethod %fire-callbacks ((widget nglwidget) callbacks)
+  (loop for callback in callbacks
+     do (progn
+	  (funcall (car callback) widget)
+	  (when (string= (cdr callback) "loadFile")
+	    (%wait-until-finished widget)))))
+    
+(defmethod %wait-until-finished ((widget nglwidget) &optional (timeout 0.0001))
+  (pythread:clear (event widget))
+  (loop
+     (sleep timeout)
+     (when (pythread:is-set (event widget))
+       (return-from %wait-until-finished))))
 
 
 
@@ -267,7 +359,7 @@
     `(let ((,k ,key) (,tab ,table))
        (prog1 (gethash ,k ,tab)
 	 (remhash ,k ,tab)))))
-
+#|
 (defmethod %ngl-handle-msg ((self nglwidget) widget msg buffers)
   "store message sent from Javascript How? use view.on_msg(get_msg)"
   (setf (%ngl-msg self) msg)
@@ -314,26 +406,25 @@
 		:target "Widget"
 		:args (list component repr-index))
   (values))
-
-;FIXME
-(defmethod add_structure ((self NGLWidget) structure &rest kwargs &key &allow-other-keys)
+|#
+(defmethod add-structure ((self NGLWidget) structure &rest kwargs &key &allow-other-keys)
   (if (not (typep structure 'Structure))
-      (error "{} is not an instance of Structure"))
-  (if (or (loaded self) (_already_constructed self))
-      (apply #'_load_data self structure kwargs)
+      (error "~s is not an instance of Structure" structure))
+  (if (or (loaded self) (already-constructed self))
+      (apply #'%load-data self structure kwargs)
       (progn
-	(append (_init_structures self) (list structure))
-	(let ((name (apply #'get_name py_utils structure kwargs)))
-	  (error "name can't be right! how do py_utils.get_name")
-	  (append (_ngl_component_names self) (list name)))))
-  (append (_ngl_component_ids) (list (id structure)))
-  (center_view self :component (- (length (_ngl_component_ids self)) 1))
-  (_update_component_auto_completion self))
+	(setf (init-structures self) (append (init-structures self) (list structure)))
+	(let ((name (apply #'get-name structure kwargs)))
+	  (setf (ngl-component-names self) (append (ngl-component-names self) (list name))))))
+  (setf (ngl-component-ids self) (append (ngl-component-ids self) (list (id structure))))
+  (center-view self :component (- (length (ngl-component-ids self)) 1))
+  (%update-component-auto-completion self))
 
-(defmethod add_trajectory ((self NGLWidget) trajectory &rest kwargs &key &allow-other-keys)
+
+(defmethod add-trajectory ((self NGLWidget) trajectory &rest kwargs &key &allow-other-keys)
   (let ((backends *BACKENDS*)
-	(package_name nil))
-    (error " I want package_name to be all the characters of trajector.__module__ up until the first period. I do notttt know how to do that")
+	(package-name nil))
+    (error " I want package-name to be all the characters of trajector.--module-- up until the first period. I do not know how to do that")
     ))
 
 (defmethod add-pdbid ((self NGLWidget) pdbid)
@@ -459,7 +550,7 @@ kwargs=kwargs2)
     (push (cons "methodName" method-name) msg)
     (push (cons "args" args) msg)
     (push (cons "kwargs" kwargs) msg)
-    (let ((callback (cons (lambda () (cljw:widget-send self msg)) method-name)))
+    (let ((callback (cons (lambda (self) (cljw:widget-send self msg)) method-name)))
       (if (loaded self)
 	  (mp:queue-enqueue (remote-call-thread-queue self) callback)
 	  (push callback (ngl-displayed-callbacks-before-loaded-reversed self)))
@@ -580,7 +671,8 @@ delattr(self, name)
 |#
 
 (defmethod %update-component-auto-completion ((self NGLWidget))
-  (let ((trajids (loop for traj in (%trajlist self) collect (id traj)))
+  (warn "Do something for %update-component-auto-completion")
+ #+(or) (let ((trajids (loop for traj in (%trajlist self) collect (id traj)))
 	(index 0))
     (loop for cid in (%ngl-component-ids self)
        do
@@ -695,6 +787,7 @@ yield self[i]
 (defmethod cl-jupyter-widgets:widget-close ((widget nglwidget))
   (call-next-method)
   (mp:process-kill (remote-call-thread widget))
+  (mp:process-kill (handle-msg-thread-widget))
   ;;; FIXME: Kill handle-msg-thread 
   )
 
@@ -716,6 +809,21 @@ yield self[i]
         else:
             return self
 ||#
+
+(defmethod %update-component-auto-completions ((widget nglwidget))
+  (warn "What do I do in %update-component-auto-completions?"))
+
+
+(defmethod center-view ((widget nglwidget) &key (zoom t) (selection "*") (component 0))
+  "center view for given atom selection
+        Examples
+        --------
+        view.center_view(selection='1-4')
+  "
+  (%remote-call widget "centerView"
+		:target "compList"
+		:args (list zoom selection)
+		:kwargs (list (cons "component_index" component))))
 
 (defmethod %set-draggable ((self nglwidget) &key (yes t))
   (if yes
@@ -760,4 +868,3 @@ yield self[i]
   (%remote-call self "setColorByResidue"
 		:target "Widget"
 		:args (list colors component-index repr-index)))
-

@@ -59,7 +59,7 @@
 
 (defmethod get-structure-string ((self PdbIdStructure))
   (let ((url (concatenate 'string "http://www.rcsb.org/pdb/files/" (pdbid self) ".cif")))
-    (error "adaptor::get-structure-string error! Implement me!")))
+    (warn "how do we get URLs to work?!")))
 #|
     def get-structure-string(self):
         url = "http://www.rcsb.org/pdb/files/" + self.pdbid + ".cif"

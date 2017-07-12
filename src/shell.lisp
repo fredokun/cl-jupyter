@@ -32,8 +32,11 @@
   (let ((active t))
     (format t "[Shell] loop started~%")
     (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
+    (format t "[Shell] entering main loop~%")
     (while active
+      (format t "[Shell] top of main loop~%")
       (vbinds (identities sig msg)  (message-recv (shell-socket shell))
+	      (cljw:widget-log "[Shell] Received message ~s~%" msg)
 	      (progn
 		(cljw:widget-log "Shell Received message:~%")
 		(cljw:widget-log "  | identities: ~A~%" identities)
@@ -215,4 +218,3 @@
 (defclass message-content ()
   ()
   (:documentation "The base class of message contents."))
-

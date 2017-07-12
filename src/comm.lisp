@@ -104,18 +104,14 @@
 
 (defmethod on-close ((self comm) callback)
   "Register a callback for comm-close
-
    Will be called with the DATA of the close message.
-
    Call (on-close nil) to disable an existing callback."
    (check-type callback (or function null) "A function of one argument or NIL")
    (setf (%close-callback self) callback))
 
-(defmethod on-msg ((self comm) callback)
+(defmethod on-msg ((self comm) callback &key)
   "Register a callback for comm-msg
-
    Will be called with the widget and the DATA of any comm-msg messages.
-
    Call (on-msg nil) to disable an existing callback."
   (check-type callback (or function null) "A function of one argument or NIL")
   (widget-log "Got on-msg with callback: ~a~%" callback)

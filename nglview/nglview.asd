@@ -8,7 +8,9 @@
     :serial t
     :components (
 		 (:file "packages")
+		 (:file "utils")
 		 (:file "shape")
+		 (:file "pythread")
 		 (:file "widget")
 		 (:file "base_adaptor")
 		 (:file "adaptor")

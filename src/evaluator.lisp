@@ -71,10 +71,10 @@ The history of evaluations is also saved by the evaluator.
                  (muffle-warning)))
 	    (serious-condition
 	     #'(lambda (err)
-		 (cljw:widget-log (with-output-to-string (*standard-output*)
-				    (format t "~a~%" err)))
-		 (cljw:widget-log (with-output-to-string (*standard-output*)
-				    (core::clasp-backtrace))))))
+		 (cljw:widget-log "~a~%" (with-output-to-string (*standard-output*)
+					   (format t "~a~%" err)))
+		 (cljw:widget-log "~a~%" (with-output-to-string (*standard-output*)
+					   (core::clasp-backtrace))))))
 	 (progn ,@body))
      (simple-condition (err)
        (format *error-output* "~&~A: ~%" (class-name (class-of err)))
@@ -146,4 +146,3 @@ The history of evaluations is also saved by the evaluator.
                                    (evaluator-history-in evaluator)))
              (vector-push-extend results (evaluator-history-out evaluator))
              (values execution-count results stdout-str stderr-str))))))))
-

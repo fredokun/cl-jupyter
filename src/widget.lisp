@@ -50,7 +50,7 @@
 	      (warn "Exception in callback ~a" cb))))
     value))
 
-(defmethod register-callback ((self callback-dispatcher) callback remove)
+(defmethod register-callback ((self callback-dispatcher) callback &key remove)
   (if (and remove (find callback (callbacks self)))
       (setf (callbacks self) (delete callback (callbacks self)))
       (push callback (callbacks self))))
@@ -291,12 +291,10 @@ buffers : list  - A list of binary buffers "
 
 (defun get-state (object &key key)
   "Gets the widget state, or a piece of it.
-
         Parameters
         ----------
         key : unicode or iterable (optional)
             A single property's name or iterable of property names to get.
-
         Returns
         -------
         state : dict of states
@@ -389,3 +387,26 @@ See: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/w
 Sends a message to the model in the front-end."
   (send (comm self) :data msg :buffers buffers))
 
+
+(defmethod on-msg ((self widget) callback &key remove)
+    "(Un)Register a custom msg receive callback.
+        Parameters
+        ----------
+        callback: callable
+            callback will be passed three arguments when a message arrives::
+                callback(widget, content, buffers)
+        remove: bool
+            True if the callback should be unregistered."
+  (register-callback (msg-callbacks self) callback :remove remove))
+
+(defmethod on-displayed ((self widget) callback &key remove)
+  "(Un)Register a widget displayed callback.
+        Parameters
+        ----------
+        callback: method handler
+            Must have a signature of::
+                callback(widget, **kwargs)
+            kwargs from display are passed through without modification.
+        remove: bool
+            True if the callback should be unregistered."
+  (register-callback (display-callbacks self) callback :remove remove))

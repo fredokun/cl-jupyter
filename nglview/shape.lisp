@@ -1,5 +1,7 @@
 (in-package :nglv)
 
+(cljw:widget-log "shape.lisp~%")
+
 (defclass shape ()
   ((view :initarg :view :accessor view :initform nil)
    (names :accessor names :type list :initform (list "mesh" "sphere" "ellipsoid" "cylinder" "cone" "arrow"))))

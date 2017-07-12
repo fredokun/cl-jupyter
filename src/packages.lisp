@@ -1,4 +1,3 @@
-
 (defpackage #:fredokun-utilities
   (:nicknames #:fredo-utils)
   (:use #:cl)
@@ -90,6 +89,8 @@
    #:tuple
    #:color
    #:instance
+   #:on-msg
+   #:on-displayed
    ))
 
 
