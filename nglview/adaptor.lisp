@@ -58,8 +58,19 @@
    (params :accessor params :type list :initform ())))
 
 (defmethod get-structure-string ((self PdbIdStructure))
-  (let ((url (concatenate 'string "http://www.rcsb.org/pdb/files/" (pdbid self) ".cif")))
-    (error "adaptor::get-structure-string error! Implement me!")))
+  (let ((url (concatenate 'string "http://files.rcsb.org/view/" (pdbid self) ".cif")))
+    (cljw:widget-log "About to get-structure-string from ~s~%" url)
+    (destructuring-bind (response header stream)
+	(trivial-http:http-get url)
+      (let ((contents (with-output-to-string (sout)
+			(trivial-http::copy-stream stream sout))))
+	(cljw:widget-log "Read url: ~s~%" url)
+	(cljw:widget-log "     response: ~a~%" response)
+	(cljw:widget-log "       header: ~s~%" header)
+	(cljw:widget-log "           ->~%~a~%" contents)
+	(close stream)
+	contents))))
+
 #|
     def get-structure-string(self):
         url = "http://www.rcsb.org/pdb/files/" + self.pdbid + ".cif"

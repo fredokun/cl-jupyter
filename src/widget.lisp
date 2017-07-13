@@ -56,7 +56,7 @@
       (push callback (callbacks self))))
 
 
-
+(defgeneric ipython-display-callback (widget &rest kwargs))
 
 (defclass widget (traitlets:synced-object)
   ((%widget-construction-callback
@@ -128,6 +128,8 @@
   (widget-log "call-widget-constructed widget -> ~a~%" w)
   (do-call (widget-construction-callback w) w))
 
+(defun keys (widget)
+  (mapcar #'car (key-map widget)))
 
 (defun get-key-map (object)
   (loop for slot-def in (clos:class-slots (class-of object))
@@ -214,7 +216,7 @@ buffers : list  - A list of binary buffers "
       (funcall (ipython-display widget) widget)
       (warn "ipython-display callback is nil for widget ~a" widget)))
 
-(defun ipython-display-callback (self &rest kwargs)
+(defmethod ipython-display-callback ((self widget) &rest kwargs)
   "This is called to display the widget"
   (when (view-name self)
     (%send self '(("method" . "display")))
@@ -237,30 +239,29 @@ buffers : list  - A list of binary buffers "
 	     ;; push them into sync-data as (buffer-key . buffer-value) pairs
 	     (let ((sync-data (assoc-value "sync_data" data nil))
 		   (buffers (cl-jupyter:message-buffers msg)))
-	       (widget-log "sync-data -> ~a~%" sync-data)
-	       (widget-log "buffer-keys -> ~a~%" buffer-keys)
 	       (when sync-data
 		 (loop for buffer-key across buffer-keys
 		    for index from 0
 		    do (push (cons buffer-key (svref index buffers)) sync-data)))
 	       ;; At this point sync-data should contain (buffer-key . buffer ) pairs
-	       (widget-log "About to set-state with sync-data -> ~a~%" sync-data)
 	       (set-state self sync-data)))
 	   (widget-log "sync_data was not found in ~a" data)))
       ((string= method "request_state")
        (widget-log "method request_state~%")
        (send-state self))
       ((string= method "custom")
-       (widget-log "method custom~%")
+       (widget-log "method custom   data -> ~s~%" data)
        (when (member "content" data :key #'car :test #'string=)
+	 (widget-log "About to call handle-custom-msg~%")
 	 (handle-custom-msg self
 			    (assoc-value "content" data)
-			    (assoc-value "buffers" msg))))
+			    (cl-jupyter:message-buffers msg))))
       (t (widget-log "method unknown!!~%")
 	 (log-error "Unknown front-end to back-end widget msg with method ~a" method)))))
 
 (defun handle-custom-msg (widget content buffers)
-  (error "handle-custom-msg"))
+  (widget-log "In handle-custom-msg   content -> ~s~%" content)
+  (do-call (msg-callbacks widget) widget content buffers))
 
 (defun slot-name-from-json-name (json-name widget-class)
   (let ((slots (clos:class-slots widget-class)))
@@ -275,7 +276,6 @@ buffers : list  - A list of binary buffers "
   (widget-log "set-state  sync-data -> ~s~%" sync-data)
   (unwind-protect
        ;; Create an alist of (slot-name . value) from sync-data and put it in lock-property
-       (widget-log "calculating property-lock for sync-data -> ~s~%  key-map -> ~s" sync-data (key-map widget))
        (let ((plock (mapcar (lambda (pair)
 			      (let ((found (rassoc (car pair) (key-map widget) :test #'string=)))
 				(widget-log "      Searching for ~s   found -> ~s~%" (car pair) found)

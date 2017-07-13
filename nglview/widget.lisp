@@ -209,6 +209,9 @@
 	       (loop
 		  ;; yield while respecting callbacks to ngl-handle-msg
 		  (mp:process-yield)))))
+      (setf (remote-call-thread widget)
+	    (mp:process-run-function 'remote-call-thread
+				     (lambda () (pythread:remote-call-thread-run widget))))
       (when parameters-p (setf (parameters widget) parameters))
       (cond
 	((typep structure 'Trajectory)
@@ -235,7 +238,8 @@
       (setf (selector widget) (format nil ".~a" (selector widget)))
       (warn "How do I set %place-proxy with a PlaceProxy")
       (warn "How do I set the player")
-      (setf (already-constructed widget) t))))
+      (setf (already-constructed widget) t)
+      widget)))
   #|
    if isinstance(structure, Trajectory):
    name = py_utils.get_name(structure, kwargs)
@@ -293,11 +297,20 @@
 
 
 
-(defmethod %ngl-handle-msg ((widget nglwidget) msg)
-      (cljw:widget-log  "What do I do with received msg: ~s~%" msg)
-      (setf (ngl-msg widget) msg)
-      (warn "%ngl-handle-msg received a message ~s  - what do I do with it?" msg))
-
+(defmethod %ngl-handle-msg ((widget nglwidget) content buffers)
+  (cljw:widget-log  "What do I do with received content: ~s~%" content)
+  (setf (ngl-msg widget) content)
+  (cljw:widget-log "Just set ngl-msg to content~%")
+  (let ((msg-type (cljw:assoc-value "type" content)))
+    (cljw:widget-log "    custom message msg-type -> ~s~%" msg-type)
+    (cond
+      ((string= msg-type "request_loaded")
+       (cljw:widget-log "      handling request_loaded~%")
+       (unless (loaded widget)
+	 (setf (loaded widget) nil))
+       (setf (loaded widget) (eq (cljw:assoc-value "data" content) :true)))
+      (t
+       (cljw:widget-log "Handle ~a custom message with content: ~s~%" msg-type content)))))
     
 
 (defmethod (setf clos:slot-value-using-class)
@@ -312,17 +325,20 @@
 (defmethod %fire-callbacks ((widget nglwidget) callbacks)
   (loop for callback in callbacks
      do (progn
+	  (cljw:widget-log "      fire-callbacks -> ~s / ~s~%" (cdr callback) (car callback))
 	  (funcall (car callback) widget)
 	  (when (string= (cdr callback) "loadFile")
-	    (%wait-until-finished widget)))))
+	    (cljw:widget-log "    Waiting until finished~%")
+	    (wait-until-finished widget))))
+  (cljw:widget-log "Done %fire-callbacks~%"))
 
 
-(defmethod %wait-until-finished ((widget nglwidget) &optional (timeout 0.0001))
+(defmethod wait-until-finished ((widget nglwidget) &optional (timeout 0.0001))
   (pythread:clear (event widget))
   (loop
      (sleep timeout)
      (when (pythread:is-set (event widget))
-       (return-from %wait-until-finished))))
+       (return-from wait-until-finished))))
 
 
 
@@ -334,6 +350,7 @@
 
 
 (defmethod add-structure ((self NGLWidget) structure &rest kwargs &key &allow-other-keys)
+  (cljw:widget-log "In add-structure  (loaded self) -> ~a   (already-constructed self) -> ~a~%" (loaded self) (already-constructed self))
   (if (not (typep structure 'Structure))
       (error "~s is not an instance of Structure" structure))
   (if (or (loaded self) (already-constructed self))
@@ -473,13 +490,23 @@
     (push (cons "target" target) msg)
     (push (cons "type" "call_method") msg)
     (push (cons "methodName" method-name) msg)
-    (push (cons "args" args) msg)
+    (push (cons "args" (coerce args 'vector)) msg)
     (push (cons "kwargs" kwargs) msg)
-    (let ((callback (cons (lambda () (cljw:widget-send self msg)) method-name)))
+    (let ((callback (cons (lambda (widget)
+			    (cljw:widget-log "%remote-call method-name -> ~s~%" method-name)
+			    (cljw:widget-log "     %remote-call widget -> ~s~%" widget)
+			    (cljw:widget-log "     %remote-call msg -> ~s~%" msg)
+			      (prog1
+				  (cljw:widget-send widget msg)
+				(cljw:widget-log "    Done %remote-call method-name -> ~s~%" method-name)))
+			  method-name)))
       (if (loaded self)
-	  (mp:queue-enqueue (remote-call-thread-queue self) callback)
+	  (progn
+	    (cljw:widget-log "enqueing remote-call ~a~%" callback)
+	    (pythread:remote-call-add self callback))
 	  (push callback (ngl-displayed-callbacks-before-loaded-reversed self)))
-      (push callback (ngl-displayed-callbacks-after-loaded-reversed self)))))
+      (push callback (ngl-displayed-callbacks-after-loaded-reversed self))))
+  t)
 
 (defmethod %get-traj-by-id ((self NGLWidget) itsid)
   (loop for traj in (%trajlist self)
@@ -738,7 +765,7 @@
   (warn "What do I do in %update-component-auto-completions?"))
 
 
-(defmethod center-view ((widget nglwidget) &key (zoom t) (selection "*") (component 0))
+(defmethod center-view ((widget nglwidget) &key (zoom :true) (selection "*") (component 0))
   "center view for given atom selection
 
         Examples
@@ -793,4 +820,62 @@
   (%remote-call self "setColorByResidue"
 		:target "Widget"
 		:args (list colors component-index repr-index)))
+
+
+
+(defmethod add-representation ((self nglwidget) repr-type &rest kwargs &key (selection "all"))
+  "Add structure representation (cartoon, licorice, ...) for given atom selection.
+
+        Parameters
+        ----------
+        repr_type : str
+            type of representation. Please see {ngl_url} for further info.
+        selection : str or 1D array (atom indices) or any iterator that returns integer, default 'all'
+            atom selection
+        **kwargs: additional arguments for representation
+
+        Example
+        -------
+        >>> import nglview as nv
+        >>> 
+        >>> t = (pt.datafiles.load_dpdp()[:].supej = pt.load(membrane_pdb)
+                trajrpose('@CA'))
+        >>> w = nv.show_pytraj(t)
+        >>> w.add_representation('cartoon', selection='protein', color='blue')
+        >>> w.add_representation('licorice', selection=[3, 8, 9, 11], color='red')
+        >>> w
+
+        Notes
+        -----
+        User can also use shortcut
+
+        >>> w.add_cartoon(selection) # w.add_representation('cartoon', selection)
+        "
+  (when (string= repr-type "surface")
+    (when (null (assoc "useWorker" kwargs :key #'car :test #'string=))
+      (push (cons "useWorker" :false) kwargs)))
+  ;; avoid space sensitivity
+  (setf repr-type (string-trim repr-type " "))
+  ;; overwrite selection
+  (setf selection (seq-to-string (string-trim selection " ")))
+  (let* ((kwargs2 (camelize-dict kwargs))
+	 (comp-assoc (assoc "component" kwargs2 :key #'car :test #'string=))
+	 (component (if comp-assoc
+			(progn
+			  (setf kwargs2 (delete comp-assoc kwargs2))
+			  (cdr comp-assoc))
+			0)))
+    #|for k, v in kwargs2.items():
+    try:
+    kwargs2[k] = v.strip()
+    except AttributeError:
+    # e.g.: opacity=0.4
+    kwargs2[k] = v
+    |#
+    (let ((params (append kwargs2 (list (cons "sele" selection)))))
+      (push (cons "component_index" component) params)
+      (%remote-call self "addRepresentation"
+		    :target "compList"
+		    :args (vector repr-type)
+		    :kwargs params))))
 

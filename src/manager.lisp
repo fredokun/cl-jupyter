@@ -85,6 +85,7 @@
 	 (comm-id (assoc-value "comm_id" content))
 	 (comm (get-comm self comm-id)))
     (widget-log "Message for comm_id ~a  -> comm: ~a~%" comm-id comm)
+    (widget-log "     *parent-msg* -> ~s~%" cl-jupyter:*parent-msg*)
     (unless comm (return-from comm-msg nil))
     (with-error-handling (format nil "In comm-msg with comm-id ~a" comm-id)
       (handle-msg comm msg))))

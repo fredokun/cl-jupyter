@@ -147,6 +147,15 @@ The deserialization of a message header from a JSon string is then trivial.
    :content content
    :buffers buffers))
 
+(defun make-custom-message (&key content buffers)
+  (make-instance
+   'message
+   :header nil
+   :parent-header nil
+   :metadata nil
+   :content content
+   :buffers buffers))
+
 (example-progn
  (defparameter *msg1* (make-instance 'message :header *header1*)))
 
@@ -179,7 +188,12 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
 (defvar +WIRE-IDS-MSG-DELIMITER+ "<IDS|MSG>")
 
 (defmethod wire-serialize ((msg message) &key (identities nil) (key nil))
+  (cljw:widget-log "  in wire-serialize~%")
   (with-slots (header parent-header metadata content) msg
+    (cljw:widget-log "header -> ~s~%" header)
+    (cljw:widget-log "parent-header -> ~s~%" parent-header)
+    (cljw:widget-log "metadata -> ~s~%" metadata)
+    (cljw:widget-log "content -> ~s~%" content)
     (let ((header-json (encode-json-to-string header))
           (parent-header-json (if parent-header
                                   (encode-json-to-string parent-header)
@@ -190,9 +204,11 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
           (content-json (if content
                             (encode-json-to-string content)
                             "{}")))
+      (cljw:widget-log "About to calculate signature~%")
       (let ((sig (if key
                      (message-signing key (list header-json parent-header-json metadata-json content-json))
                      "")))
+	(cljw:widget-log "About to do append~%")
         (append identities
                 (list +WIRE-IDS-MSG-DELIMITER+
                       sig
@@ -271,7 +287,6 @@ The wire-deserialization part follows.
 (defun message-send (socket msg &key (identities nil) (key nil))
   (let ((wire-parts (wire-serialize msg :identities identities :key key)))
     #+(or)(format t "~%[Send] wire parts: ~W~%" wire-parts)
-    (cl-jupyter-widgets::widget-log "wire-parts -> ~a~%" wire-parts)
     (dolist (part wire-parts)
       (pzmq:send socket part :sndmore t))
     (prog1

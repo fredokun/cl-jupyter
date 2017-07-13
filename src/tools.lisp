@@ -27,6 +27,7 @@
 				:direction :output
 				:if-exists :append
 				:if-does-not-exist :create))
+    (setf *trace-output* *widget-log*)
     (setf *widget-log-queue* (core:make-cxx-object 'mp:blocking-concurrent-queue))
     (mp:push-default-special-binding '*widget-log-queue* *widget-log-queue*)
     (mp:process-run-function
@@ -53,36 +54,41 @@
 
 
 (defmacro with-error-handling (msg &body body)
-  `(handler-case
-       (handler-bind
-           ((simple-warning
-             #'(lambda (wrn)
-                 (format *error-output* "~&~a ~A: ~%" ,msg (class-name (class-of wrn)))
-                 (apply (function format) *error-output*
-                        (simple-condition-format-control   wrn)
-                        (simple-condition-format-arguments wrn))
-                 (format *error-output* "~&")
-                 (muffle-warning)))
-            (warning
-             #'(lambda (wrn)
-                 (format *error-output* "~&~a ~A: ~%  ~A~%"
-                         ,msg (class-name (class-of wrn)) wrn)
-                 (muffle-warning)))
-	    (serious-condition
-	     #'(lambda (err)
-		 (widget-log "~a~%" (with-output-to-string (*standard-output*)
-				      (format t "~&~a~%~a~%" ,msg err)
-				      (core::clasp-backtrace))))))
-	 (progn ,@body))
-     (simple-condition (err)
-       (format *error-output* "~&~A: ~%" (class-name (class-of err)))
-       (apply (function format) *error-output*
-              (simple-condition-format-control   err)
-              (simple-condition-format-arguments err))
-       (format *error-output* "~&"))
-     (serious-condition (err)
-       (format *error-output* "~&2An error occurred of type: ~A: ~%  ~S~%"
-               (class-name (class-of err)) err))))
+  (let ((wrn (gensym))
+	(err (gensym)))
+    `(handler-case
+	 (handler-bind
+	     ((simple-warning
+	       #'(lambda (,wrn)
+		   (format *error-output* "~&~a ~A: ~%" ,msg (class-name (class-of ,wrn)))
+		   (apply (function format) *error-output*
+			  (simple-condition-format-control   ,wrn)
+			  (simple-condition-format-arguments ,wrn))
+		   (format *error-output* "~&")
+		   (muffle-warning)))
+	      (warning
+	       #'(lambda (,wrn)
+		   (format *error-output* "~&~a ~A: ~%  ~A~%"
+			   ,msg (class-name (class-of ,wrn)) ,wrn)
+		   (muffle-warning)))
+	      (serious-condition
+	       #'(lambda (,err)
+		   (format t "!!!!! A serious condition was encountered in with-error-handling - check log~%")
+		   (finish-output)
+		   (widget-log "~a~%" ,msg)
+		   (widget-log "An error occurred of type ~a~%" (class-name (class-of ,err)))
+;;		   (widget-log "~a~%" ,err)
+		   (widget-log "~a~%" (backtrace-as-string)))))
+	   (progn ,@body))
+       (simple-condition (,err)
+	 (format *error-output* "~&~A: ~%" (class-name (class-of ,err)))
+	 (apply (function format) *error-output*
+		(simple-condition-format-control   ,err)
+		(simple-condition-format-arguments ,err))
+	 (format *error-output* "~&"))
+       (serious-condition (,err)
+	 (format *error-output* "~&2An error occurred of type: ~A: ~%  ~S~%"
+		 (class-name (class-of ,err)) ,err)))))
 
 
 
@@ -100,6 +106,7 @@
 
 
 (defun assoc-value (key-string alist &optional (default nil default-p))
+  (or (listp alist) (error "alist must be a list"))
   (let ((pair (assoc key-string alist :test #'string=)))
     (if pair
 	(cdr pair)
@@ -152,7 +159,7 @@
        (loop for (key . value) in sorted-dict
 	  do (let ((value-as-string (with-output-to-string (sout)
 				      (print-as-python value sout))))
-	       (format stream "~vt~s : ~a,~%" *python-indent* key value-as-string))))
+	       (format stream "~vt~s: ~a,~%" *python-indent* key value-as-string))))
      (format stream "}~%"))
     (t 
      (format stream "[ ")

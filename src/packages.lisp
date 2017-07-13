@@ -37,6 +37,7 @@
    #:display-svg render-svg
    #:display-json render-json
    #:display-javascript render-javascript
+   #:message-header
    #:message-content
    #:message-buffers
    #:*shell*
@@ -92,6 +93,7 @@
    #:instance
    #:on-msg
    #:on-displayed
+   #:assoc-value
    ))
 
 

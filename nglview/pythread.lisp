@@ -7,12 +7,16 @@
   "Keep pulling callbacks out of the queue and evaluating them"
   (loop
        (multiple-value-bind (callback found)
-	   (mp:queue-wait-dequeue-timed (remote-call-thread-queue widget) 1000)
+	   (mp:queue-wait-dequeue-timed (nglv:remote-call-thread-queue widget) 1000)
 	 (when found
 	   (funcall (car callback) widget)
 	 (when (string= (cdr callback) "loadFile")
 	   (%wait-until-finished widget))))))
 
+
+(defun remote-call-add (widget callback)
+  #+(or)(mp:queue-enqueue (remote-call-thread-queue widget) callback)
+  (funcall (car callback) widget))
 
 (cljw:widget-log "defclass event  pythread.lisp~%")
 

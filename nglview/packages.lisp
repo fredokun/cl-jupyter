@@ -6,6 +6,8 @@
   (:export
    #:nglwidget
    #:shape
+   #:remote-call-thread-queue
+   #:wait-until-finished
    )
   )
 
@@ -13,6 +15,8 @@
   (:use #:cl)
   (:shadow #:set)
   (:export
+   #:remote-call-add
+   #:remote-call-thread-run
    #:event
    #:set
    #:clear

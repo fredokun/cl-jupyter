@@ -41,7 +41,7 @@
 (defmethod initialize-instance :after ((instance comm) &rest initargs)
   (unless (slot-boundp instance 'topic) (setf (topic instance) (format nil "comm-~s" (comm-id instance)))))
 
-(defmethod %publish-msg ((self comm) msg-type &key (data nil) (metadata nil) buffers target-name target-module)
+(defmethod %publish-msg ((self comm) msg-type &key (data nil) (metadata nil) buffers keys)
   (widget-log "Comm.%publish-msg (COMMON-LISP)  -+-+-+-+-+-+-+-+-+-+~%")
   (widget-log "msg-type -> ~a~%" msg-type)
   (widget-log "metadata -> ~a~%" metadata)
@@ -51,10 +51,9 @@
   (widget-log "ident/topic -> ~a~%" (topic self))
   (widget-log "buffers -> ~a~%" buffers)
   (widget-log "++++++++++++++ contents >>>>>>>>>~%")
-  (let ((cleaned-json (json-clean `(("data" . ,data)
-				    ("comm_id" . ,(comm-id self))
-				    ("target_name" . ,target-name)
-				    ("target_module" . ,target-module)))))
+  (let ((cleaned-json (json-clean (list* (cons "data" data)
+					 (cons "comm_id"  (comm-id self))
+					 keys))))
     (widget-log "   %publish-msg  cleaned-json -> ~a"
 		(with-output-to-string (sout)
 		  (print-as-python cleaned-json sout)))
@@ -84,7 +83,9 @@
 			:target-module (target-module self)
 			:data data
 			:metadata metadata
-			:buffers buffers)
+			:buffers buffers
+			:keys (list (cons "target_name" (target-name self))
+				    (cons "target_module" (target-module self))))
 	  (setf (%closed self) nil))
       (error (err)
 	(unregister-comm comm-manager self)))))
@@ -99,8 +100,10 @@
 
 (defmethod send ((self comm) &key data metadata buffers)
   "Send a message to the frontend-side version of this comm"
-   (widget-log "comm.send  data -> ~a~%" data)
-   (%publish-msg self "comm_msg" :data data :metadata metadata :buffers buffers))
+   (widget-log "comm.send  data -> ~s~%" data)
+   (prog1
+       (%publish-msg self "comm_msg" :data data :metadata metadata :buffers buffers)
+     (widget-log "comm.send DONE~%")))
 
 (defmethod on-close ((self comm) callback)
   "Register a callback for comm-close
@@ -118,7 +121,7 @@
 
    Call (on-msg nil) to disable an existing callback."
   (check-type callback (or function null) "A function of one argument or NIL")
-  (widget-log "Got on-msg with callback: ~a~%" callback)
+  (widget-log "Got comm::on-msg with callback: ~a~%" callback)
   (setf (%msg-callback self) callback))
 
 (defmethod handle-close ((self comm) msg)
@@ -133,10 +136,10 @@
   (widget-log "msg -> ~a~%" (as-python msg))
   (if (%msg-callback self)
       (let ((shell (cl-jupyter::kernel-shell (kernel self))))
-	(widget-log "About to trigger pre_execute for shell: ~a~%" shell)
+	(widget-log "About to trigger pre_execute skipping for now - for shell: ~a~%" shell)
 	#+(or)(when shell (trigger (events shell) "pre_execute"))
 	(widget-log "About to funcall (%msg-callback self) -> ~a~%" (%msg-callback self))
 	(funcall (%msg-callback self) msg)
-	(widget-log "About to trigger post_execute~%")
+	(widget-log "About to trigger post_execute - skipping for now~%")
 	#+(or)(when shell (trigger (events shell) "post_execute")))
       (widget-log "The comm msg_callback is unbound")))
