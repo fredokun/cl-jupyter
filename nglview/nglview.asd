@@ -15,4 +15,8 @@
 		 (:file "base_adaptor")
 		 (:file "adaptor")
 		 (:file "show")
+		 (:file "player")
+		 (:file "parameters")
+		 (:file "default")
+		 (:file "config")
 		 ))

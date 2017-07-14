@@ -3,20 +3,20 @@
 (defun strip (string)
   (string-trim #(#\Space #\Newline #\Return) string))
 
-(defclass TrajectoryPlayer (cl-jupyter::dom-widget)
-  ((step :initarg :step :accessor step
+(defclass TrajectoryPlayer (cljw::dom-widget)
+  ((%step :initarg :%step :accessor %step
 	 :type integer
 	 :initform 1 ;Original default is 0 but init makes it 1
 	 :metadata (:sync t
 			  :json-name "step"))
    (sync-frame :initarg :sync-frame :accessor sync-frame
-	       :type bool
-	       :initform :false ;Original default is true but init makes it false
+	       :type boolean
+	       :initform nil ;Original default is true but init makes it false
 	       :metadata (:sync t
 				:json-name "sync_frame"))
    (interpolate :initarg :interpolate :accessor interpolate
-		:type bool
-		:initform :false
+		:type boolean
+		:initform nil
 		:metadata (:sync nil
 				 :json-name "interpolate"))
    (delay :initarg :delay :accessor delay
@@ -40,14 +40,14 @@
 		     :metadata (:sync nil
 				      :json-name "_interpolation_t"))
    (%iterpolation-type :initarg :%iterpolation-type :accessor %iterpolation-type
-			:type unicode
-			:initform (unicode "linear");Original default is "" but init makes it "linear"
+			:type cljw:unicode
+			:initform (cljw:unicode "linear");Original default is "" but init makes it "linear"
 			:metadata (:sync nil
 					 :json-name "_iterpolation_type"
 					 :help "either linear or spline"))
    (spin :initarg :spin :accessor spin
-	 :type bool
-	 :initform :false
+	 :type boolean
+	 :initform nil
 	 :metadata (:sync nil
 			  :json-name "spin"))
    (%spin-x :initarg :%spin-x :accessor %spin-x
@@ -71,8 +71,8 @@
 		:metadata (:sync nil
 				 :json-name "_spin_speed"))
    (camera :initarg :camera :accessor camera
-	   :type unicode
-	   :initform (unicode "perspective")
+	   :type cljw:unicode
+	   :initform (cljw:unicode "perspective")
 	   :metadata (:sync nil
 			    :json-name "camera"
 			    :help "Options: perspective or orthographic"))
@@ -82,8 +82,8 @@
 		   :metadata (:sync nil
 				    :json-name "_render_params"))
    (%real-time-update :initarg :%real-time-update :accessor %real-time-update
-		      :type bool
-		      :initform :false
+		      :type boolean
+		      :initform nil
 		      :metadata (:sync nil
 				       :json-name "_real_time_update"))
    ;;gap in python code
@@ -143,7 +143,7 @@
 		   :initform nil
 		   :metadata (:sync nil
 				    :json-name "widget_repr_choices"))
-   (widget-repr-control-buttons :initarg :widget-repr-control-buttons :accessor widget-general
+   (widget-repr-control-buttons :initarg :widget-repr-control-buttons :accessor widget-repr-control-buttons
 		   :initform nil
 		   :metadata (:sync nil
 				    :json-name "widget_repr_control_buttons"))
@@ -181,7 +181,7 @@
 		 :type list
 		 :initform ()))
   (:metaclass traitlets:traitlet-class))
-   
+   #|
 (defmethod initialize-instance :after ((self TrajectoryPlayer) &key)
   (setf iparams '(:t (%interpolation-t self) :step 1 :type (%iterpolation-type))
 	%render-params '(:factor 4 :antialias t :trim nil :transparent nil))
@@ -1031,3 +1031,4 @@
   (setf (display (layout (widget-repr-choices self))) "flex"
 	(selected-index (widget-accordion-repr-parameters self)) 0)
   (values))
+|#

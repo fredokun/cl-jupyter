@@ -1,4 +1,3 @@
-
 (in-package #:cl-jupyter)
 
 #|
@@ -270,11 +269,13 @@ The wire-deserialization part follows.
 
 (defun message-send (socket msg &key (identities nil) (key nil))
   (let ((wire-parts (wire-serialize msg :identities identities :key key)))
-    #++(format t "~%[Send] wire parts: ~W~%" wire-parts)
+    #+(or)(format t "~%[Send] wire parts: ~W~%" wire-parts)
     (cl-jupyter-widgets::widget-log "wire-parts -> ~a~%" wire-parts)
     (dolist (part wire-parts)
       (pzmq:send socket part :sndmore t))
-    (pzmq:send socket nil)))
+    (prog1
+	(pzmq:send socket nil)
+      (cl-jupyter-widgets:widget-log "Leaving message-send~%"))))
 
 (defun recv-string (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
   "Receive a message part from a socket as a string."
@@ -299,9 +300,8 @@ The wire-deserialization part follows.
         (reverse (cons part parts)))))
 
 (defun message-recv (socket)
+  (cljw:widget-log "[Recv] About to zmq-recv-list socket~%")
   (let ((parts (zmq-recv-list socket)))
-    ;;(format t "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
+    (cljw:widget-log "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
+    #++(format t "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
     (wire-deserialize parts)))
-
-
-

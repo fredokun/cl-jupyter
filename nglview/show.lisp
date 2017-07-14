@@ -23,7 +23,7 @@
 
 (defun show-ase (ase-atoms &rest kwargs &key &allow-other-keys)
   (let ((structure (make-instance 'ASEStructure ase-atoms)))
-    (apply #'makenglwidget :structure structure kwargs)))
+    (apply #'make-nglwidget :structure structure kwargs)))
 
 (defun show-structure-file (path &rest kwargs &key &allow-other-keys)
   (let ((structure (make-instance 'FileStructure path)))
@@ -38,7 +38,7 @@
 
 (defun show-pytraj (pytraj-trajectory &rest kwargs &key &allow-other-keys)
   (let ((trajlist nil))
-    (if (or (typep pytraj-trajectory list) (typep pytraj-trajectory tuple))
+    (if (or (typep pytraj-trajectory 'list) (typep pytraj-trajectory 'tuple))
       (setf trajlist pytraj-trajectory)
       (setf trajlist (list pytraj-trajectory)))
     (setf trajlist (loop for traj in trajlist
@@ -113,8 +113,10 @@ def show_rdkit(rdkit_mol, **kwargs):
   (let ((structure-trajectory (make-instance 'HTMDTrajectory :mol mol)))
     (apply #'make-nglwidget :structure structure-trajectory kwargs)))
 
+#+(or)
 (defun demo (&rest kwargs &key &allow-other-keys)
   (show-structure-file datafiles.PDB kwargs))
+
 ;;I don't really know if this is correct but in the demo they just do demo() so there are no args so like do i need the *args part?? I'm thinkin no so let's wing it.
 #|
 def demo(*args, **kwargs):

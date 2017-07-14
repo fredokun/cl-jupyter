@@ -23,7 +23,21 @@
 	(t x)))
 
 (defun json-to-widget (x obj)
-  (error "Implement json-to-widget as in https://github.com/drmeister/widget-dev/blob/master/ipywidgets/widgets/widget.py#L33"))
+  (cond ((hash-table-p x)
+	 (loop for key being the hash-keys of x
+	    using (hash-value value)
+	    collect (cons key (json-to-widget  value obj))))
+	((listp x)
+	 (loop for (k . v) in x
+	    collect (cons k (widget-to-json v obj))))
+	((and (stringp x)
+	      (string= (subseq x 0 9) "IPY_MODEL_")
+	      (string= (gethash '(subseq x 10) *Widget.widgets*)))
+	 (gethash '(subseq x 10) *Widget.widgets))
+	((vectorp x)
+	 (map 'vector (lambda (x) (widget-to-json x obj)) x))
+	(t x))
+  (warn "Implement json-to-widget as in https://github.com/drmeister/widget-dev/blob/master/ipywidgets/widgets/widget.py#L33"))
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute)

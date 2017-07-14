@@ -212,11 +212,11 @@ class ParmEdTrajectory(Trajectory, Structure):
    (ext :accessor ext :initform "pdb")
    (params :accessor params :type list :initform ())
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
-
+#+(or)
 (defmethod get-coordinates ((self MDAnalysisTrajectory) index)
   (aref (trajectory (universe (atomgroup self))) index)
   (positions (atoms (atomgroup self))))
-
+#+(or)
 (defmethod n-frames ((self MDAnalysisTrajectory))
   (n-frames (trajectory (universe (atomgroup self)))))
 
@@ -258,7 +258,7 @@ class ParmEdTrajectory(Trajectory, Structure):
 |#
 
 (defmethod n-frames ((self HTMDTrajectory))
-  (numFrames (mol self)))
+  (n-frames (mol self)))
 
 (defmethod get-structure ((self HTMDTrajectory))
   (error "help get-structure of HTMDTrajectory"))

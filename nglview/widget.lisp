@@ -175,6 +175,8 @@
    (%init-structures :initarg :init-structures
 		     :accessor init-structures
 		     :initform nil)
+   (%place-proxy :initform nil :accessor %place-proxy)
+   (%player :initform nil :accessor player)
    )
   (:default-initargs
    :view-name (cljw:unicode "NGLView")
@@ -198,7 +200,7 @@
     (when theme-p (remf kwargs :theme))
     (let ((widget (apply #'make-instance 'nglwidget kwargs)))
       (when representations
-	(setf (%init-representations widget) representations))
+	(setf (init-representations widget) representations))
       (when gui-p (setf (init-gui widget) gui))
       (when theme-p (setf (theme widget) theme))
       (warn "What do we do about add_repr_method_shortcut")
@@ -234,7 +236,9 @@
       (setf (selector widget) (remove #\- (format nil "~W" (uuid:make-v4-uuid))))
       (%remote-call widget "setSelector" :target "Widget" :args (list (selector widget)))
       (setf (selector widget) (format nil ".~a" (selector widget)))
-      (warn "How do I set %place-proxy with a PlaceProxy")
+      (setf (%place-proxy widget) (make-instance 'cljw::place-proxy
+						 :child nil
+						 :selector (selector widget)))
       (setf (player widget) (make-instance 'TrajectoryPlayer :view widget))
       (setf (already-constructed widget) t)
       widget)))
@@ -331,7 +335,7 @@
   (setf (loaded self) t)
   (%fire-callbacks self (ngl-displayed-callbacks-before-loaded-reversed self))
   (values))
-
+#+(or)
 (defmethod %fire-callbacks ((self nglwidget) callbacks)
   (flet ((%call (event)
 	   (loop for callback in callbacks
@@ -407,6 +411,8 @@
 		:args (list component repr-index))
   (values))
 |#
+
+
 (defmethod add-structure ((self NGLWidget) structure &rest kwargs &key &allow-other-keys)
   (if (not (typep structure 'Structure))
       (error "~s is not an instance of Structure" structure))
@@ -417,7 +423,7 @@
 	(let ((name (apply #'get-name structure kwargs)))
 	  (setf (ngl-component-names self) (append (ngl-component-names self) (list name))))))
   (setf (ngl-component-ids self) (append (ngl-component-ids self) (list (id structure))))
-  (center-view self :component (- (length (ngl-component-ids self)) 1))
+  (auto-view self :component (- (length (ngl-component-ids self)) 1))
   (%update-component-auto-completion self))
 
 
@@ -429,15 +435,16 @@
 
 (defmethod add-pdbid ((self NGLWidget) pdbid)
   (error " I want something like thif but what is .format(pdbid)??(add-component self rcsb://{}.pdb.format(pdbid)"))
-
+#+(or)
 (defmethod add-component ((self NGLWidget) filename &rest kwargs &key &allow-other-keys)
   (apply #'%load-data self filename kwargs)
-  (append (%ngl-component-ids self) (list (uuid:make-v4-uuid)))
+  (append (ngl-component-ids self) (list (uuid:make-v4-uuid)))
   (%update-component-auto-completion self))
 
 (defmethod %load-data ((self NGLWidget) obj &rest kwargs &key &allow-other-keys)
-  (let ((kwargs2 (%camelize-dict kwargs)))
-    (error "Help %load-data in widget.lisp")))
+ ; (let ((kwargs2 (%camelize-dict kwargs)))
+  ;;  (error "Help %load-data in widget.lisp")))
+  (values))
 #|    def _load_data(self, obj, **kwargs):
 '''
 
@@ -502,9 +509,9 @@ kwargs=kwargs2)
       (loop for traj in (%trajlist self)
 	 do (if (equal (id traj) component-id)
 		(remove traj (%trajlist self) :test #'equal))))
-  (let ((component-index (aref (%ngl-component-ids self) component-id)))
-    (remove component-id (%ngl-component-ids self) :test #'equal)
-    (remove component-index (%ngl-component-names))
+  (let ((component-index (aref (ngl-component-ids self) component-id)))
+    (remove component-id (ngl-component-ids self) :test #'equal)
+    (remove component-index (ngl-component-names))
     (error "Should that have been pop not remove???")
     (%remote-call self
 		  "removeComponent"
@@ -570,7 +577,7 @@ kwargs=kwargs2)
 	(traj nil))
     (loop for index in indices
        do
-	 (setf comp-id (aref (%ngl-component-ids self) index))
+	 (setf comp-id (aref (ngl-component-ids self) index))
 	 (if t
 	     (progn
 	       (error "the above line is wrong. Should be 'if comp-id in traj-ids'")
@@ -599,7 +606,7 @@ kwargs=kwargs2)
 	(progn
 	  (setf indices% (loop for index in indices collect index)
 		indices% (remove-duplicates indices% :test #'equal))))
-    (loop for comp-id in (%ngl-component-ids self)
+    (loop for comp-id in (ngl-component-ids self)
        do
 	 (if t
 	     (progn
@@ -658,7 +665,7 @@ return display.Image(self._image_data)
 
 (defmethod %clear-component-auto-completion ((self NGLWidget))
   (let ((index 0))
-    (loop for id in (%ngl-component-ids self)
+    (loop for id in (ngl-component-ids self)
        do
 	 (let ((name (concatenate 'string "component_" (write-to-string index))))
 	   (incf index)
@@ -674,7 +681,7 @@ delattr(self, name)
   (warn "Do something for %update-component-auto-completion")
  #+(or) (let ((trajids (loop for traj in (%trajlist self) collect (id traj)))
 	(index 0))
-    (loop for cid in (%ngl-component-ids self)
+    (loop for cid in (ngl-component-ids self)
        do
 	 (let ((comp (make-instance 'ComponentViewer :%view self :%index index))
 	       (name (concatenate 'string "component_" (write-to-string index))))
@@ -694,10 +701,10 @@ if cid in trajids:
 traj_name = 'trajectory_' + str(trajids.index(cid))
 setattr(self, traj_name, comp)
 |#
-
+#+(or)
 (defmethod %-getitem-- ((self NGLWidget) index)
   "return ComponentViewer"
-  (let ((positive-index (get-positive-index py-utils index (length (%ngl-component-ids self)))))
+  (let ((positive-index (get-positive-index py-utils index (length (ngl-component-ids self)))))
     (make-instance 'ComponentViewer :%view self :%index positive-index))
   (error "Help! We don't have a py-utils thingy in %-getitem-- in widget.lisp"))
 
@@ -705,7 +712,7 @@ setattr(self, traj_name, comp)
 (defmethod %-iter-- ((self NGLWidget))
   "return ComponentViewer"
   (let ((index 0))
-    (loop for item in (%ngl-component-ids self))
+    (loop for item in (ngl-component-ids self))
     (error "Implementer %-iter-- in widget.lisp")))
 #|
 def __iter__(self):
@@ -714,7 +721,7 @@ def __iter__(self):
 for i, _ in enumerate(self._ngl_component_ids):
 yield self[i]
 |#	 
-
+#+(or)
 (defmethod detach ((self NGLWidget) &key (split nil))
   "detach player from its original container."
   (if (not (loaded self))
@@ -744,7 +751,7 @@ yield self[i]
 			   "n_frames")))
 
 (defmethod id ((self ComponentViewer))
-  (aref (%ngl-component-ids (%view self)) (%index self)))
+  (aref (ngl-component-ids (%view self)) (%index self)))
 
 (defmethod hide ((self ComponentViewer))
   "set invisibility for given components (by their indices)"
@@ -814,13 +821,13 @@ yield self[i]
   (warn "What do I do in %update-component-auto-completions?"))
 
 
-(defmethod center-view ((widget nglwidget) &key (zoom t) (selection "*") (component 0))
+(defmethod auto-view ((widget ngl-widget) &key (zoom t) (selection "*") (component 0))
   "center view for given atom selection
         Examples
         --------
         view.center_view(selection='1-4')
   "
-  (%remote-call widget "centerView"
+  (%remote-call widget "autoView"
 		:target "compList"
 		:args (list zoom selection)
 		:kwargs (list (cons "component_index" component))))
