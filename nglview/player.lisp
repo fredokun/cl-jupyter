@@ -184,7 +184,7 @@
    
 (defmethod initialize-instance :after ((self TrajectoryPlayer) &key)
   (setf iparams '(:t (%interpolation-t self) :step 1 :type (%iterpolation-type))
-	-render-params '(:factor 4 :antialias t :trim nil :transparent nil))
+	%render-params '(:factor 4 :antialias t :trim nil :transparent nil))
   (error "Help me! Fix widget_names and observe"))
 #|
  self._widget_names = [w for w in dir(self) if w.startswith('wiget_')]

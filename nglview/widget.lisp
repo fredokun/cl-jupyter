@@ -235,7 +235,7 @@
       (%remote-call widget "setSelector" :target "Widget" :args (list (selector widget)))
       (setf (selector widget) (format nil ".~a" (selector widget)))
       (warn "How do I set %place-proxy with a PlaceProxy")
-      (warn "How do I set the player")
+      (setf (player widget) (make-instance 'TrajectoryPlayer :view widget))
       (setf (already-constructed widget) t)
       widget)))
   #|

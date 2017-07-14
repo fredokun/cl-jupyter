@@ -41,6 +41,17 @@
     :view-name (unicode "ProxyView"))
   (:metaclass traitlets:traitlet-class))
 
+(defclass place-proxy (proxy)
+  ((selector :initarg :selector :accessor selector
+	     :type unicode
+	     :initform (unicode "")
+	     :metadata (:sync t
+			      :json-name "selector")))
+  (:default-initargs
+   :view-name (unicode "PlaceProxyView")
+    :model-name (unicode "PlaceProxyModel"))
+  (:metaclass traitlets:traitlet-class))
+
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
 
