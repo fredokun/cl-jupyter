@@ -104,6 +104,11 @@
           do (setf value (funcall vf instance value)))
     value))
 
+;;; Abstract. All objects with :sync t should be a subclass of this, to get the slot.
+(defclass synced-object ()
+  ((%mutex :initform (mp:make-shared-mutex) :accessor mutex))
+  (:metaclass traitlet-class))
+
 (defmethod (setf clos:slot-value-using-class) (val (class traitlet-class) self (slotd effective-traitlet))
   (if (slot-boundp slotd 'validator)
       (call-next-method
@@ -119,11 +124,6 @@
 (defmethod (setf clos:slot-value-using-class) :after
     (new-value (class traitlet-class) object (slotd effective-traitlet))
   (cljw:notify-change object (clos:slot-definition-name slotd) new-value))
-
-;;; Abstract. All objects with :sync t should be a subclass of this, to get the slot.
-(defclass synced-object ()
-  ((%mutex :initform (mp:make-shared-mutex) :accessor mutex))
-  (:metaclass traitlet-class))
 
 
 (defmacro with-shared-lock (shared-mutex &body body)
