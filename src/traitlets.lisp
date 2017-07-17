@@ -20,16 +20,16 @@
 (progn
   (defclass range ()
     ((%min :initarg :min :accessor minimum) (%max :initarg :max :accessor maximum)
-     (%vaue :accessor value :validator validate-range))
+     (%value :accessor value :validator validate-range))
     (:metaclass traitlet-class))
   (defun validate-range (instance val)
     (let ((min (minimum instance)) (max (maximum instance)))
       (cond ((< val min) min)
             ((> val max) max)
             (t val))))
-  (let ((instance (make-instance 'range :min 0 :max 17)))
+  (let ((instance (make-instance 'range :min 0 :max 10)))
     (setf (value instance) 17)
-    (value instance)) ; => 17
+    (value instance)) ; => 10
 )
 
 ;;; metadata, syncing, validation, and whatever else could be separate classes,
