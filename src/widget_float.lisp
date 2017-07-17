@@ -51,6 +51,16 @@
    )
   (:metaclass traitlets:traitlet-class))
 
+(defun clamp (x min max)
+  (cond ((< x min) min)
+	((> x max) max)
+	(t x)))
+
+(defmethod (setf clos:slot-value-using-class) :around
+    (new-value (class traitlets:traitlet-class) (object %bounded-float) slotd)
+  (if (eq (clos:slot-definition-name slotd) 'value)
+      (call-next-method (clamp new-value (min bf) (max bf)) class object slotd)
+      (call-next-method)))
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L67
 (defclass float-text(%float)
@@ -171,7 +181,11 @@
    )
   (:metaclass traitlets:traitlet-class))
 
-
+(defmethod (setf clos:slot-value-using-class) :around
+    (new-value (class traitlets:traitlet-class) (object %bounded-float) slotd)
+  (if (eq (clos:slot-definition-name slotd) 'value)
+      (call-next-method (clamp new-value (min bf) (max bf)) class object slotd)
+      (call-next-method)))
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L243
 (defclass float-range-slider(%bounded-float-range)
