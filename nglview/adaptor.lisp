@@ -7,26 +7,52 @@
   (setf (gethash (package-name self) *BACKENDS*) cls)
   cls)
 
-(defclass FileStructure(Structure)
+(defclass file-structure(Structure)
   ((path :initarg :path :accessor path :initform nil)
    (fm :accessor fm :initform nil)
    (ext :accessor ext :initform nil)
    (params :accessor params :type list ;plist
 	   :initform ())))
 
-(defmethod initialize-instance :after ((FileStructure FileStructure) &key)
-  (with-slots (path fm ext) FileStructure
-    (setf fm (make-instance 'FileManager :path path))
-    (setf ext (ext fm))))
+(defmethod initialize-instance :after ((file-structure file-structure) &key)
+  (with-slots (path fm ext) file-structure
+    (let ((pathname (pathname path)))
+      (unless ext
+	(setf ext (pathname-type pathname))))))
 
 ;;(defgeneric get-structure-string (Structure)
 ;;  (:documentation "I think this works"))
-(defmethod get-structure-string ((self FileStructure))
-  (error "adaptor::get-structure-string error!! Implement me!"))
+(defmethod get-structure-string ((self file-structure))
+  (with-open-file (stream (path self) :direction :input)
+    (let* ((entire-file (make-string (+ (file-length stream) 2)
+				     :initial-element #\newline)))
+      (read-sequence entire-file stream)
+      entire-file)))
   #|
     def get-structure-string(self):
         return self.fm.read(force-buffer=True)
 |#
+
+
+(defclass cando-structure (structure)
+  ((%matter :initarg :matter :accessor matter)))
+
+(defmethod ext ((self cando-structure))
+  "mol2")
+
+(defmethod get-structure-string ((self cando-structure))
+  (check-type self cando-structure)
+  (check-type (matter self) chem:aggregate)
+  (cljw:widget-log "Saving structure to /home/app/work/home/structure.mol2~%")
+  (cando:save-mol2 (matter self) "/home/app/work/home/structure.mol2" :use-sybyl-types t)
+  (with-open-file (stream "/tmp/structure.mol2" :direction :input)
+    (let* ((entire-file (make-string (+ (file-length stream) 2)
+				     :initial-element #\newline)))
+      (read-sequence entire-file stream)
+      (close stream)
+      entire-file)))
+
+
 
 (defclass TextStructure (Structure)
   ((text :initarg :text :accessor text :initform nil)
@@ -58,8 +84,19 @@
    (params :accessor params :type list :initform ())))
 
 (defmethod get-structure-string ((self PdbIdStructure))
-  (let ((url (concatenate 'string "http://www.rcsb.org/pdb/files/" (pdbid self) ".cif")))
-    (error "adaptor::get-structure-string error! Implement me!")))
+  (let ((url (concatenate 'string "http://files.rcsb.org/view/" (pdbid self) ".cif")))
+    (cljw:widget-log "About to get-structure-string from ~s~%" url)
+    (destructuring-bind (response header stream)
+	(trivial-http:http-get url)
+      (let ((contents (with-output-to-string (sout)
+			(trivial-http::copy-stream stream sout))))
+	(cljw:widget-log "Read url: ~s~%" url)
+	(cljw:widget-log "     response: ~a~%" response)
+	(cljw:widget-log "       header: ~s~%" header)
+	(cljw:widget-log "      contents are not show - may be too long~%")
+	(close stream)
+	contents))))
+
 #|
     def get-structure-string(self):
         url = "http://www.rcsb.org/pdb/files/" + self.pdbid + ".cif"

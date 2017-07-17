@@ -1,7 +1,5 @@
 (in-package #:cl-jupyter-widgets)
 
-(defvar *kernel* nil
-  "Set to this to the current kernel")
 (defvar *kernel-start-hook* nil
   "Set this to a function to invoke a callback whenever a kernel is started")
 (defvar *kernel-shutdown-hook* nil
@@ -92,7 +90,8 @@
 (defun session-send (session
 		     stream
 		     msg-or-type
-		     &key content parent ident buffers track header metadata)
+		     &key content parent ident (buffers #()) track header metadata)
+  (check-type buffers array)
   (progn
     (widget-log "---------------send-comm-message~%")
     (widget-log "         session  -> ~s~%" session)
@@ -100,7 +99,7 @@
     (widget-log "      msg-or-type -> ~s~%" msg-or-type)
     (widget-log "          content -> ~s~%" content)
     (widget-log "           parent -> ~s~%" parent)
-    (widget-log "           (message-header parent) -> ~s~%" (cl-jupyter::message-header parent))
+    (widget-log "           (message-header parent) -> ~s~%" (cl-jupyter:message-header parent))
     (widget-log "                  (header-msg-type (message-header parent)) -> ~s~%" (cl-jupyter::header-msg-type (cl-jupyter::message-header parent)))
     (widget-log "            ident -> ~s~%" ident)
     (widget-log "          buffers -> ~s~%" buffers)
@@ -111,9 +110,13 @@
 	msg msg-type)
     (if (typep msg-or-type '(or cl-jupyter::message list))
 	(setf msg msg-or-type
-	      buffers (or buffers (car (assoc "buffers" msg-or-type :key #'string=)))
-	      msg-type (cl-jupyter::header-msg-type (cl-jupyter::message-header parent)))
-	(setf msg (cl-jupyter::make-message parent msg-or-type metadata content nil)
+	      buffers (cond
+			(buffers buffers)
+			((typep msg-or-type cl-jupyter:message)
+			 (cl-jupyter:message-buffers msg-or-type))
+			(t (error "How do I get buffers out of the object ~s" msg-or-type)))
+	      msg-type (cl-jupyter::header-msg-type (cl-jupyter:message-header parent)))
+	(setf msg (cl-jupyter::make-message parent msg-or-type metadata content buffers)
 	      msg-type msg-or-type)
 	)
     (progn
@@ -122,8 +125,11 @@
 ;;; Check the PID  and compare to os.getpid - warn if sending message from fork and return
     ;; buffers = [] if buffers is None else buffers
     ;; ensure that buffers support memoryview buffer protocol
-    (let ((socket (cl-jupyter::iopub-socket stream)))
-      (cl-jupyter::message-send socket msg :identities (list msg-type) :key (cl-jupyter::kernel-key cl-jupyter::*shell*)))))
+    (prog1
+	(let ((socket (cl-jupyter::iopub-socket stream)))
+	  (widget-log "About to do message-send~%")
+	  (cl-jupyter::message-send socket msg :identities (list msg-type) :key (cl-jupyter::kernel-key cl-jupyter::*shell*)))
+      (widget-log "Done with message-send~%"))))
 
 
 #|

@@ -3,8 +3,41 @@
 
 (cl-jupyter-widgets:widget-log "Loading traitlets.lisp~%")
 
+;;;; Something like Python traitlets.
+;;;; Defines a metaclass traitlet-class that enables most features.
+;;;; Adds additional slot options:
+;;;; * :metadata has an arbitrary plist, retrievable by calling
+;;;;   METACLASS on the slotd, or more conveniently with TRAITLET-METADATA.
+;;;; * :validator has something coercable to a function.
+;;;;   When the value of the slot is set, the validator is called with
+;;;;   the instance and the new value as arguments, and whatever it returns
+;;;;   is what's actually put in the slot.
+;;;; An additional class synced-object, if inherited from, puts a read-write
+;;;; lock on slots with :sync <true> in their metadata.
+
+;;; Example use of validation:
+#+(or)
+(progn
+  (defclass range ()
+    ((%min :initarg :min :accessor minimum) (%max :initarg :max :accessor maximum)
+     (%value :accessor value :validator validate-range))
+    (:metaclass traitlet-class))
+  (defun validate-range (instance val)
+    (let ((min (minimum instance)) (max (maximum instance)))
+      (cond ((< val min) min)
+            ((> val max) max)
+            (t val))))
+  (let ((instance (make-instance 'range :min 0 :max 10)))
+    (setf (value instance) 17)
+    (value instance)) ; => 10
+)
+
+;;; metadata, syncing, validation, and whatever else could be separate classes,
+;;; but they're all pretty simple and we're basically just here to mimic traitlets.
+
 (defclass traitlet (clos:slot-definition)
-  ((metadata :initarg :metadata :accessor metadata :initform nil)))
+  ((validator :initarg :validator :accessor validator)
+   (metadata :initarg :metadata :accessor metadata :initform nil)))
 
 (defclass direct-traitlet (traitlet clos:standard-direct-slot-definition)
   ())
@@ -52,12 +85,46 @@
     (setf (metadata result)
 	  ;; Metadata are plists, so just append.
 	  (loop for dsd in direct-slot-definitions appending (metadata dsd)))
+    (let ((validatorfs (loop for dsd in direct-slot-definitions
+                             when (slot-boundp dsd 'validator)
+                               collect (validator dsd))))
+      (cond ((null validatorfs))
+            ((null (rest validatorfs))
+             (setf (validator result) (first validatorfs)))
+            (t
+             (setf (validator result)
+                   (make-multi-validator validatorfs)))))
     result))
+
+(defun make-multi-validator (validatorfs)
+  ;; let inside validate first.
+  ;; this isn't the most efficient way to do it, but who cares?
+  (lambda (instance value)
+    (loop for vf in validatorfs
+          do (setf value (funcall vf instance value)))
+    value))
+
+(defmethod (setf clos:slot-value-using-class) (val (class traitlet-class) self (slotd effective-traitlet))
+  (if (slot-boundp slotd 'validator)
+      (call-next-method
+       (funcall (coerce (validator slotd) 'function) self val)
+       class self slotd)
+      (call-next-method)))
+
+(defmethod (setf clos:slot-value-using-class) :before
+    (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (cljw:widget-log "*send-updates* -> ~a   setting value of slot -> ~s  to value -> ~s~%"
+                   cljw:*send-updates* slotd new-value))
+
+(defmethod (setf clos:slot-value-using-class) :after
+    (new-value (class traitlet-class) object (slotd effective-traitlet))
+  (cljw:notify-change object (clos:slot-definition-name slotd) new-value))
 
 ;;; Abstract. All objects with :sync t should be a subclass of this, to get the slot.
 (defclass synced-object ()
   ((%mutex :initform (mp:make-shared-mutex) :accessor mutex))
   (:metaclass traitlet-class))
+
 
 (defmacro with-shared-lock (shared-mutex &body body)
   (let ((smutex (gensym "SHARED-MUTEX")))
@@ -76,17 +143,13 @@
 	 (mp:write-unlock ,smutex)))))
 
 (defmethod clos:slot-value-using-class
-    ((class traitlets:traitlet-class) (object synced-object) (slotd effective-traitlet))
+    ((class traitlet-class) (object synced-object) (slotd effective-traitlet))
   (if (getf (metadata slotd) :sync)
       (with-shared-lock (mutex object) (call-next-method))
       (call-next-method)))
 
 (defmethod (setf clos:slot-value-using-class)
-    (new-value (class traitlets:traitlet-class) (object synced-object) (slotd effective-traitlet))
-  (cljw:widget-log "*send-updates* -> ~a   setting value of slot -> ~s  to value -> ~s~%" cljw:*send-updates* slotd new-value)
+    (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
   (if (getf (metadata slotd) :sync)
-      (progn
-	(with-write-lock (mutex object) (call-next-method))
-	(let ((slot-name (clos:slot-definition-name slotd)))
-	  (cljw:notify-change object slot-name new-value)))
+      (with-write-lock (mutex object) (call-next-method))
       (call-next-method)))

@@ -27,6 +27,7 @@
 				:direction :output
 				:if-exists :append
 				:if-does-not-exist :create))
+    (setf *trace-output* *widget-log*)
     (setf *widget-log-queue* (core:make-cxx-object 'mp:blocking-concurrent-queue))
     (mp:push-default-special-binding '*widget-log-queue* *widget-log-queue*)
     (mp:process-run-function
@@ -53,36 +54,41 @@
 
 
 (defmacro with-error-handling (msg &body body)
-  `(handler-case
-       (handler-bind
-           ((simple-warning
-             #'(lambda (wrn)
-                 (format *error-output* "~&~a ~A: ~%" ,msg (class-name (class-of wrn)))
-                 (apply (function format) *error-output*
-                        (simple-condition-format-control   wrn)
-                        (simple-condition-format-arguments wrn))
-                 (format *error-output* "~&")
-                 (muffle-warning)))
-            (warning
-             #'(lambda (wrn)
-                 (format *error-output* "~&~a ~A: ~%  ~A~%"
-                         ,msg (class-name (class-of wrn)) wrn)
-                 (muffle-warning)))
-	    (serious-condition
-	     #'(lambda (err)
-		 (widget-log "~a~%" (with-output-to-string (*standard-output*)
-				      (format t "~&~a~%~a~%" ,msg err)
-				      (core::clasp-backtrace))))))
-	 (progn ,@body))
-     (simple-condition (err)
-       (format *error-output* "~&~A: ~%" (class-name (class-of err)))
-       (apply (function format) *error-output*
-              (simple-condition-format-control   err)
-              (simple-condition-format-arguments err))
-       (format *error-output* "~&"))
-     (serious-condition (err)
-       (format *error-output* "~&2An error occurred of type: ~A: ~%  ~S~%"
-               (class-name (class-of err)) err))))
+  (let ((wrn (gensym))
+	(err (gensym)))
+    `(handler-case
+	 (handler-bind
+	     ((simple-warning
+	       #'(lambda (,wrn)
+		   (format *error-output* "~&~a ~A: ~%" ,msg (class-name (class-of ,wrn)))
+		   (apply (function format) *error-output*
+			  (simple-condition-format-control   ,wrn)
+			  (simple-condition-format-arguments ,wrn))
+		   (format *error-output* "~&")
+		   (muffle-warning)))
+	      (warning
+	       #'(lambda (,wrn)
+		   (format *error-output* "~&~a ~A: ~%  ~A~%"
+			   ,msg (class-name (class-of ,wrn)) ,wrn)
+		   (muffle-warning)))
+	      (serious-condition
+	       #'(lambda (,err)
+		   (format t "!!!!! A serious condition was encountered in with-error-handling - check log~%")
+		   (finish-output)
+		   (widget-log "~a~%" ,msg)
+		   (widget-log "An error occurred of type ~a~%" (class-name (class-of ,err)))
+;;		   (widget-log "~a~%" ,err)
+		   (widget-log "~a~%" (backtrace-as-string)))))
+	   (progn ,@body))
+       (simple-condition (,err)
+	 (format *error-output* "~&~A: ~%" (class-name (class-of ,err)))
+	 (apply (function format) *error-output*
+		(simple-condition-format-control   ,err)
+		(simple-condition-format-arguments ,err))
+	 (format *error-output* "~&"))
+       (serious-condition (,err)
+	 (format *error-output* "~&2An error occurred of type: ~A: ~%  ~S~%"
+		 (class-name (class-of ,err)) ,err)))))
 
 
 
@@ -100,6 +106,7 @@
 
 
 (defun assoc-value (key-string alist &optional (default nil default-p))
+  (or (listp alist) (error "alist must be a list"))
   (let ((pair (assoc key-string alist :test #'string=)))
     (if pair
 	(cdr pair)
@@ -109,59 +116,75 @@
 
 (defparameter *python-indent* 0)
 
-(defgeneric print-as-python (object stream))
+(defparameter *sort-encoded-json* nil)
+
+(defun print-as-python (object stream &key indent)
+  (let ((*sort-encoded-json* t))
+    (myjson::encode-json stream object :indent indent)))
+
+#+(or)
+(progn
+  (defgeneric print-as-python (object stream))
 
 
-(defmethod print-as-python :around (object stream)
-  (let ((indent (make-string *python-indent* :initial-element #\space)))
-    (format stream "~a" indent)
-    (let ((*python-indent* (+ *python-indent* 4)))
-      (call-next-method))))
+  (defmethod print-as-python :around (object stream)
+	     (let ((indent (make-string *python-indent* :initial-element #\space)))
+	       (format stream "~a" indent)
+	       (let ((*python-indent* (+ *python-indent* 4)))
+		 (call-next-method))))
 
-(defmethod print-as-python ((object t) stream)
-  (prin1 object stream))
+  (defmethod print-as-python ((object t) stream)
+    (prin1 object stream))
 
-(defmethod print-as-python ((object string) stream)
-  (prin1 object stream))
+  (defmethod print-as-python ((object string) stream)
+    (prin1 object stream))
 
-(defmethod print-as-python ((object symbol) stream)
-  (cond
-    ((eq object nil)
-     (princ "[]" stream))
-    ((eq object :null)
-     (princ "null" stream))
-    ((eq object :false)
-     (princ "false" stream))
-    ((eq object :true)
-     (princ "true" stream))
-    (t 
-     (let ((as-string (string-downcase (string object))))
-      (prin1 as-string stream)))))
+  (defmethod print-as-python ((object array) stream)
+    (format stream "[ ")
+    (loop for value across object
+       do (let ((value-as-string (with-output-to-string (sout)
+				   (print-as-python value sout))))
+	    (format stream "~a, " value-as-string)))
+    (format stream "]~%"))
+
+  (defmethod print-as-python ((object symbol) stream)
+    (cond
+      ((eq object nil)
+       (princ "[]" stream))
+      ((eq object :null)
+       (princ "null" stream))
+      ((eq object :false)
+       (princ "false" stream))
+      ((eq object :true)
+       (princ "true" stream))
+      (t 
+       (let ((as-string (string-downcase (string object))))
+	 (prin1 as-string stream)))))
 
 
-(defun looks-like-python-dict-p (object)
-  (and (listp object)
-       (every (lambda (x) (and (consp x) (stringp (car x)))) object )))
+  (defun looks-like-python-dict-p (object)
+    (and (listp object)
+	 (every (lambda (x) (and (consp x) (stringp (car x)))) object )))
 
-(defmethod print-as-python ((object list) stream)
-  (declare (optimize (debug 3)))
-  (cond
-    ((looks-like-python-dict-p object)
-     (format stream "{~%")
-     (let ((sorted-dict (sort (copy-list object) #'string<= :key #'car)))
-       (loop for (key . value) in sorted-dict
+  (defmethod print-as-python ((object list) stream)
+    (declare (optimize (debug 3)))
+    (cond
+      ((looks-like-python-dict-p object)
+       (format stream "{~%")
+       (let ((sorted-dict (sort (copy-list object) #'string<= :key #'car)))
+	 (loop for (key . value) in sorted-dict
+	    do (let ((value-as-string (with-output-to-string (sout)
+					(print-as-python value sout))))
+		 (format stream "~vt~s: ~a,~%" *python-indent* key value-as-string))))
+       (format stream "}~%"))
+      (t 
+       (format stream "[ ")
+       (loop for value in object
 	  do (let ((value-as-string (with-output-to-string (sout)
 				      (print-as-python value sout))))
-	       (format stream "~vt~s : ~a,~%" *python-indent* key value-as-string))))
-     (format stream "}~%"))
-    (t 
-     (format stream "[ ")
-     (loop for value in object
-	do (let ((value-as-string (with-output-to-string (sout)
-				    (print-as-python value sout))))
-	     (format stream "~a, " value-as-string)))
-     (format stream "]~%"))))
-
+	       (format stream "~a, " value-as-string)))
+       (format stream "]~%"))))
+  )
 
 (defun as-python (msg)
   (with-output-to-string (sout)

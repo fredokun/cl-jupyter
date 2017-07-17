@@ -11,6 +11,7 @@
 		 (:file "utils")
 		 (:file "shape")
 		 (:file "pythread")
+		 (:file "stage")
 		 (:file "widget")
 		 (:file "base_adaptor")
 		 (:file "adaptor")

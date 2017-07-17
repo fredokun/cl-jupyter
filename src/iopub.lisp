@@ -28,7 +28,7 @@
 
 (defun send-status-starting (iopub session &key (key nil))
   (let ((status-msg (make-orphan-message session "status" nil
-					 `(("execution_state" . "starting")) nil)))
+					 `(("execution_state" . "starting")) #())))
     (cljw:widget-log "[iopub] Made orphan message: ~s~%" status-msg)
     #+(or)(format t "[iopub] Made orphan message: ~s~%" status-msg)
     (prog1
