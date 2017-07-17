@@ -162,6 +162,7 @@
 	 :metadata (:sync t
 			  :json-name "step"
 			  :help "Minimum step that the value can take (ignored by some views)"))
+   (value :validator validate-range)
    (max :initarg :max :accessor max
 	:type integer
 	:initform 100
@@ -176,6 +177,12 @@
 			 :help "Min value"))
    )
   (:metaclass traitlets:traitlet-class))
+
+(defun validate-range (object val)
+  (let ((min (min object)) (max (max object)))
+    (cond ((< val min) min)
+	  ((> val max) max)
+	  (t val))))
 
 
 (defclass int-range-slider(bounded-int-range)
