@@ -1,7 +1,5 @@
 (in-package #:cl-jupyter-widgets)
 
-(defvar *kernel* nil
-  "Set to this to the current kernel")
 (defvar *kernel-start-hook* nil
   "Set this to a function to invoke a callback whenever a kernel is started")
 (defvar *kernel-shutdown-hook* nil
@@ -92,7 +90,8 @@
 (defun session-send (session
 		     stream
 		     msg-or-type
-		     &key content parent ident buffers track header metadata)
+		     &key content parent ident (buffers #()) track header metadata)
+  (check-type buffers array)
   (progn
     (widget-log "---------------send-comm-message~%")
     (widget-log "         session  -> ~s~%" session)
@@ -111,7 +110,11 @@
 	msg msg-type)
     (if (typep msg-or-type '(or cl-jupyter::message list))
 	(setf msg msg-or-type
-	      buffers (or buffers (car (cl-jupyter:message-buffers msg-or-type)))
+	      buffers (cond
+			(buffers buffers)
+			((typep msg-or-type cl-jupyter:message)
+			 (cl-jupyter:message-buffers msg-or-type))
+			(t (error "How do I get buffers out of the object ~s" msg-or-type)))
 	      msg-type (cl-jupyter::header-msg-type (cl-jupyter:message-header parent)))
 	(setf msg (cl-jupyter::make-message parent msg-or-type metadata content buffers)
 	      msg-type msg-or-type)

@@ -88,8 +88,8 @@ The history of evaluations is also saved by the evaluator.
 
 (defun evaluate-code (evaluator code)
   ;; (format t "[Evaluator] Code to evaluate: ~W~%" code)
-  (cl-jupyter-widgets::widget-log "[Evaluator] Code to evaluate: ~W  cl-jupyter-widgets::*kernel*->~a~%"
-				  code cl-jupyter-widgets:*kernel*)
+  (cl-jupyter-widgets::widget-log "[Evaluator] Code to evaluate: ~W  cl-jupyter::*kernel*->~a~%"
+				  code cl-jupyter:*kernel*)
   (let ((execution-count (+ (length (evaluator-history-in evaluator)) 1)))
     (let ((code-to-eval (handler-case
                          (read-from-string (format nil "(progn ~A~%)" code))
@@ -137,7 +137,7 @@ The history of evaluations is also saved by the evaluator.
                                          (** (take-history-out -2))
                                          (*** (take-history-out -3)))
 				     ;; put the evaluator in the environment
-				     (cl-jupyter-widgets::widget-log "In evaluator.lisp:133  cl-jupyter-widgets::*kernel* -> ~a~%" cl-jupyter-widgets::*kernel*)
+				     (cl-jupyter-widgets::widget-log "In evaluator.lisp:133  cl-jupyter:*kernel* -> ~a~%" cl-jupyter:*kernel*)
                                      (multiple-value-list (eval code-to-eval))))))))))
              ;;(format t "[Evaluator] : results = ~W~%" results)
              (cl-jupyter-widgets::widget-log "[Evaluator] : results = ~W~%" results)

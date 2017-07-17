@@ -116,59 +116,75 @@
 
 (defparameter *python-indent* 0)
 
-(defgeneric print-as-python (object stream))
+(defparameter *sort-encoded-json* nil)
+
+(defun print-as-python (object stream &key indent)
+  (let ((*sort-encoded-json* t))
+    (myjson::encode-json stream object :indent indent)))
+
+#+(or)
+(progn
+  (defgeneric print-as-python (object stream))
 
 
-(defmethod print-as-python :around (object stream)
-  (let ((indent (make-string *python-indent* :initial-element #\space)))
-    (format stream "~a" indent)
-    (let ((*python-indent* (+ *python-indent* 4)))
-      (call-next-method))))
+  (defmethod print-as-python :around (object stream)
+	     (let ((indent (make-string *python-indent* :initial-element #\space)))
+	       (format stream "~a" indent)
+	       (let ((*python-indent* (+ *python-indent* 4)))
+		 (call-next-method))))
 
-(defmethod print-as-python ((object t) stream)
-  (prin1 object stream))
+  (defmethod print-as-python ((object t) stream)
+    (prin1 object stream))
 
-(defmethod print-as-python ((object string) stream)
-  (prin1 object stream))
+  (defmethod print-as-python ((object string) stream)
+    (prin1 object stream))
 
-(defmethod print-as-python ((object symbol) stream)
-  (cond
-    ((eq object nil)
-     (princ "[]" stream))
-    ((eq object :null)
-     (princ "null" stream))
-    ((eq object :false)
-     (princ "false" stream))
-    ((eq object :true)
-     (princ "true" stream))
-    (t 
-     (let ((as-string (string-downcase (string object))))
-      (prin1 as-string stream)))))
+  (defmethod print-as-python ((object array) stream)
+    (format stream "[ ")
+    (loop for value across object
+       do (let ((value-as-string (with-output-to-string (sout)
+				   (print-as-python value sout))))
+	    (format stream "~a, " value-as-string)))
+    (format stream "]~%"))
+
+  (defmethod print-as-python ((object symbol) stream)
+    (cond
+      ((eq object nil)
+       (princ "[]" stream))
+      ((eq object :null)
+       (princ "null" stream))
+      ((eq object :false)
+       (princ "false" stream))
+      ((eq object :true)
+       (princ "true" stream))
+      (t 
+       (let ((as-string (string-downcase (string object))))
+	 (prin1 as-string stream)))))
 
 
-(defun looks-like-python-dict-p (object)
-  (and (listp object)
-       (every (lambda (x) (and (consp x) (stringp (car x)))) object )))
+  (defun looks-like-python-dict-p (object)
+    (and (listp object)
+	 (every (lambda (x) (and (consp x) (stringp (car x)))) object )))
 
-(defmethod print-as-python ((object list) stream)
-  (declare (optimize (debug 3)))
-  (cond
-    ((looks-like-python-dict-p object)
-     (format stream "{~%")
-     (let ((sorted-dict (sort (copy-list object) #'string<= :key #'car)))
-       (loop for (key . value) in sorted-dict
+  (defmethod print-as-python ((object list) stream)
+    (declare (optimize (debug 3)))
+    (cond
+      ((looks-like-python-dict-p object)
+       (format stream "{~%")
+       (let ((sorted-dict (sort (copy-list object) #'string<= :key #'car)))
+	 (loop for (key . value) in sorted-dict
+	    do (let ((value-as-string (with-output-to-string (sout)
+					(print-as-python value sout))))
+		 (format stream "~vt~s: ~a,~%" *python-indent* key value-as-string))))
+       (format stream "}~%"))
+      (t 
+       (format stream "[ ")
+       (loop for value in object
 	  do (let ((value-as-string (with-output-to-string (sout)
 				      (print-as-python value sout))))
-	       (format stream "~vt~s: ~a,~%" *python-indent* key value-as-string))))
-     (format stream "}~%"))
-    (t 
-     (format stream "[ ")
-     (loop for value in object
-	do (let ((value-as-string (with-output-to-string (sout)
-				    (print-as-python value sout))))
-	     (format stream "~a, " value-as-string)))
-     (format stream "]~%"))))
-
+	       (format stream "~a, " value-as-string)))
+       (format stream "]~%"))))
+  )
 
 (defun as-python (msg)
   (with-output-to-string (sout)

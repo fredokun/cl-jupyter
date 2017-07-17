@@ -45,9 +45,8 @@
 (defmethod do-call ((self callback-dispatcher) &rest args)
   (let (value)
     (loop for cb in (callbacks self)
-       do (handler-case (setf value (apply cb args))
-	    (error (err)
-	      (warn "Exception in callback ~a" cb))))
+       do (with-error-handling "In do-call"
+	    (setf value (apply cb args))))
     value))
 
 (defmethod register-callback ((self callback-dispatcher) callback &key remove)
@@ -155,7 +154,7 @@
     (widget-log "In widget-open~%")
     (widget-log "state -> ~a~%"
 		(with-output-to-string (sout)
-		  (print-as-python state sout)))
+		  (print-as-python state sout :indent 4)))
     (widget-log "buffer-keys -> ~s~%" buffer-keys)
     (widget-log "buffers -> ~s~%" buffers)
     (let ((kwargs (list :target-name "jupyter.widget"
@@ -176,7 +175,9 @@
   nil)
 
 (defun split-state-buffers (self state)
-  (let (buffer-keys buffers new-state)
+  (let (buffer-keys
+	(buffers #())
+	new-state)
     (loop for (key . value) in state
        do (if (binary-types-p value)
 	      (progn
@@ -198,15 +199,16 @@ key : a key or a list of keys (optional)
       (let ((msg (list (cons "method" "update")
 		       (cons "state" state)
 		       (cons "buffers" buffer-keys))))
-	(widget-log "widget.send-state msg -> ~a~%" msg)
+	(widget-log "widget.send-state~%")
 	(%send self msg :buffers buffers)))))
 
 
-(defmethod widget-send (self content &key buffers)
+(defmethod widget-send (self content &key (buffers #()))
   "Send a custom msg to the widget model in the front-end.
 *Arguments
 content : alist - Content of the message to send
 buffers : list  - A list of binary buffers "
+  (check-type buffers array)
   (%send self (list (cons "method" "custom")
 		    (cons "content" content))
 	 :buffers buffers))
@@ -260,7 +262,7 @@ buffers : list  - A list of binary buffers "
 	 (log-error "Unknown front-end to back-end widget msg with method ~a" method)))))
 
 (defun handle-custom-msg (widget content buffers)
-  (widget-log "In handle-custom-msg   content -> ~s~%" content)
+  (widget-log "In handle-custom-msg   content -> ~s  buffers -> ~s~%" content buffers)
   (do-call (msg-callbacks widget) widget content buffers))
 
 (defun slot-name-from-json-name (json-name widget-class)
@@ -383,10 +385,11 @@ buffers : list  - A list of binary buffers "
 (defmethod %handle-displayed ((self widget))
   (do-call (display-callbacks self) self))
     
-(defun %send (self msg &key buffers)
+(defun %send (self msg &key (buffers #()))
   "Sends a message to the widget model in the front-end.
 See: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget.py#L485
 Sends a message to the model in the front-end."
+  (check-type buffers array)
   (send (comm self) :data msg :buffers buffers))
 
 
