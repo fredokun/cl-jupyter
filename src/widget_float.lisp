@@ -151,7 +151,7 @@
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L180
 (defclass %float-range (%float)
   ((value :initarg :value :accessor value
-	  :validator validate-range
+	 ;; :validator validate-range
 	   :type vector
 	   :initform (vector 0.0 1.0)
 	   :metadata (:sync t
