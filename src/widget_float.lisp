@@ -3,6 +3,7 @@
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L19
 (defclass %float (labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
+	  :validator validate-range
 	   :type float
 	   :initform 0.0
 	   :metadata (:sync t
@@ -30,7 +31,8 @@
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L32
 (defclass %bounded-float(%float)
-  ((max :initarg :max :accessor max
+  (;(value :validator validate-range)
+   (max :initarg :max :accessor max
 	 :type float
 	 :initform 100.0
 	 :metadata (:sync t
@@ -51,16 +53,16 @@
    )
   (:metaclass traitlets:traitlet-class))
 
-(defun clamp (x min max)
-  (cond ((< x min) min)
-	((> x max) max)
-	(t x)))
+(defun validate-range (object val)
+  (if (and (slot-boundp object 'min) (slot-boundp object 'max))
+      (let ((min (min object)) (max (max object)))
+	(cond ((< val min) min)
+	      ((> val max) max)
+	      (t val)))
+      val))
 
-(defmethod (setf clos:slot-value-using-class) :around
-    (new-value (class traitlets:traitlet-class) (object %bounded-float) slotd)
-  (if (eq (clos:slot-definition-name slotd) 'value)
-      (call-next-method (clamp new-value (min bf) (max bf)) class object slotd)
-      (call-next-method)))
+;(defun validate-range-vector (object val)
+  
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L67
 (defclass float-text(%float)
@@ -149,8 +151,9 @@
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L180
 (defclass %float-range (%float)
   ((value :initarg :value :accessor value
-	   :type tuple
-	   :initform (tuple 0.0 1.0)
+	  :validator validate-range
+	   :type vector
+	   :initform (vector 0.0 1.0)
 	   :metadata (:sync t
 			    :json-name "value"
 			    :help "Tuple of (lower, upper) bounds"))
@@ -166,6 +169,7 @@
 	  :metadata (:sync t
 			   :json-name "step"
 			   :help "Minimum step that the value can take (ignored by some views)"))
+   ;(value :validator validate-range)
    (max :initarg :max :accessor max
 	 :type float
 	 :initform 100.0
@@ -181,11 +185,13 @@
    )
   (:metaclass traitlets:traitlet-class))
 
-(defmethod (setf clos:slot-value-using-class) :around
-    (new-value (class traitlets:traitlet-class) (object %bounded-float) slotd)
-  (if (eq (clos:slot-definition-name slotd) 'value)
-      (call-next-method (clamp new-value (min bf) (max bf)) class object slotd)
-      (call-next-method)))
+#||(defun validate-range (object val)
+  (if (and (slot-boundp object 'min) (slot-boundp object 'max))
+      (let ((min (min object)) (max (max object)))
+	(cond ((< val min) min)
+	      ((> val max) max)
+	      (t val)))
+      val))||#
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L243
 (defclass float-range-slider(%bounded-float-range)
