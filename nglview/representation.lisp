@@ -27,7 +27,7 @@
 						:json-name "_disable_update_parameters"))
    (view :initarg :view :accessor view
 	 :initform nil)
-   (children :accessor children
+   (children :initarg :children :accessor children
 	     :type vector
 	     :initform nil)))
 

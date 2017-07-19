@@ -1,6 +1,6 @@
 (in-package :nglv)
 
-(defclass BoxNGL (box)
+(defclass BoxNGL (cljw::box)
   ((%gui-style :initarg :%gui-style :accessor %gui-style
 	       :type unicode
 	       :initform (unicode "row")

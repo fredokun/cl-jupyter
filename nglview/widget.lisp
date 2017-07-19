@@ -330,24 +330,23 @@
 ;;;Starting from the bottom down below. SCROLL!
 
 
+(defmethod %refresh-render ((widget nglwidget))
+  (let ((current-frame (frame widget)))
+    (setf (frame widget) (expt 10 6)
+	  (frame widget) current-frame)))
+
+(defmethod sync-view ((widget nglwidget))
+  (%fire-callbacks widget (reverse (%ngl-displayed-callbacks-after-loaded-reversed widget)))
+	
 
 (defmethod on-loaded ((self nglwidget))
   (setf (loaded self) t)
   (%fire-callbacks self (ngl-displayed-callbacks-before-loaded-reversed self))
   (values))
-#+(or)
-(defmethod %fire-callbacks ((self nglwidget) callbacks)
-  (flet ((%call (event)
-	   (loop for callback in callbacks
-	      do
-		(callback self)
-		(if (string= (%method-name callback) "loadFile")
-		    (%wait-until-finished self)))))
-    (%run-on-another-thread self %call (event self)))
+
+(defmethod %set-place-proxy ((widget nglwidget) widget)
+  (setf (child (%place-proxy self)) widget)
   (values))
-
-
-
 
 (defmacro pop-from-alist (key alist)
   (let ((k (gensym "KEY")) (a (gensym "ALIST"))
@@ -404,12 +403,7 @@
 
 		
 
-(defmethod %request-repr-parameters ((self nglwidget) &key (component 0) (repr-index 0))
-  (%remote-call self
-		"requestReprParameters"
-		:target "Widget"
-		:args (list component repr-index))
-  (values))
+
 |#
 
 
@@ -442,8 +436,8 @@
   (%update-component-auto-completion self))
 
 (defmethod %load-data ((self NGLWidget) obj &rest kwargs &key &allow-other-keys)
- ; (let ((kwargs2 (%camelize-dict kwargs)))
-  ;;  (error "Help %load-data in widget.lisp")))
+  (let ((kwargs2 (%camelize-dict kwargs)))
+    (warn "Help %load-data in widget.lisp"))
   (values))
 #|    def _load_data(self, obj, **kwargs):
 '''
@@ -799,23 +793,17 @@ yield self[i]
   )
 
 
-
-#||
-    def display(self, gui=False, use_box=False):
-        if gui:
-            if use_box:
-                from nglview.widget_box import BoxNGL
-                box = BoxNGL([self, self.player._display()])
-                box._gui_style = 'row'
-                return box
-            else:
-                display(self)
-                display(self.player._display())
-                display(self._place_proxy)
-                return None
-        else:
-            return self
-||#
+(defmethod display ((widget nglwidget) &key (gui nil) (use-box nil))
+  (if gui
+      (if use-box
+	  (let ((box (apply #'make-instance 'BoxNGL widget (%display (player self)))))
+	    (setf (%gui-style box) "row")
+	    (return box))
+	  (display widget)
+	  (display (%display (player self)))
+	  (display (%place-proxy self))
+	  (values))
+      (return widget)))
 
 (defmethod %update-component-auto-completions ((widget nglwidget))
   (warn "What do I do in %update-component-auto-completions?"))
@@ -875,3 +863,190 @@ yield self[i]
   (%remote-call self "setColorByResidue"
 		:target "Widget"
 		:args (list colors component-index repr-index)))
+
+(defmethod color-by ((widget nglwidget) color-scheme &key (component 0))
+  (let ((repr-names (get-repr-names-from-dict (%repr-dict self) component))
+	(index 0))
+    (loop for _ in repr-names
+       do
+	 (update-representation widget
+				:component component
+				:repr-index index
+				:color-scheme color-scheme)
+	 (incf index)))
+  (values))
+
+
+(defmethod update-representation ((widget nglwidget) &optional (component 0)
+				  (repr-index 0) &rest parameters)
+  (let ((parameters (%camelize-dict parameters))
+	(kwargs (list (cons "component_index" component)
+		      (cons "repr_index" repr-index))))
+    (warn "How do we update kwargs")
+    (%remote-call "setParameters"
+		  :target "Representation"
+		  :kwargs kwargs)
+    (%remote-call "requestReprsInfo"
+		  :target "Widget")
+    (values)))
+
+
+(defmethod remove-representation ((widget nglwidget) &key (component 0) (repr-index 0))
+  (%remote-call widget
+		"removeRepresentation"
+		:target "Widget"
+		:args (list component repr-index)))
+
+(defmethod %remove-representations-by-name ((widget nglwidget) repr-name &key (component 0))
+  (%remote-call widget
+		"removeRepresentationsByName"
+		:target "Widget"
+		:args (list repr-name component))
+  (values))
+
+(defmethod %update-representations-by-name ((widget nglwidget) repr-name &optional (component 0) &rest kwargs)
+  (setf kwargs (%camelize-dict kwargs))
+  (%remote-call widget
+		"updateRepresentationsByName"
+		:target "Widget"
+		:args (list repr-name component)
+		:kwargs kwargs)
+  (values))
+
+(defmethod %display-repr ((widget nglwidget) &key (component 0) (repr-index 0) (name nil))
+  (let ((c (concatenate 'string "c" (write-to-string component)))
+	(r (write-to-string repr-index)))
+    (warn "Figure out how to use handler-case")
+    (setf name (aref (aref (aref %repr-dict c) r) "name"))
+    (make-instance 'RepresentationsControl :view widget
+		   :component-index component
+		   :repr-index repr-index
+		   :name name)))
+
+#|
+(defmethod clear ((widget nglwidget) #|uh oh|# &rest kwargs &key &allow-other-keys)
+  (clear-representations widget args kwargs))
+|#
+
+(defmethod clear-representations ((widget nglwidget) &key (component 0))
+  (%remote-call widget "clearRepresentations" :target "compList"
+		:kwargs (list (cons "component_index" component)))
+  (values))
+						       
+(defmethod render-image ((widget nglwidget) &key (frame nil) (factor 4) (antialias t) (trim nil) (transparent nil))
+  (when frame
+    (setf (frame widget) frame))
+  (let ((params (list (cons "factor" factor)
+		      (cons "antialias" antialias)
+		      (cons "trim" trim)
+		      (cons "transparent" transparent))))
+    (%remote-call widget
+		  "_exportImage"
+		  :target "Widget"
+		  :kwargs params))
+  (values))
+
+(defmethod download-image ((widget nglwidget) &key (filename "screenshot.png")
+						(factor 4)
+						(antialias t)
+						(trim nil)
+						(transparent nil))
+  (let ((params (list (cons "factor" factor)
+		      (cons "antialias" antialias)
+		      (cons "trim" trim)
+		      (cons "transparent" transparent))))
+    (%remote-call widget
+		  "_downloadImage"
+		  :target "Widget"
+		  :args (list filename)
+		  :kwargs params))
+  (values))
+
+(defmethod %request-repr-parameters ((self nglwidget) &key (component 0) (repr-index 0))
+  (%remote-call self
+		"requestReprParameters"
+		:target "Widget"
+		:args (list component repr-index))
+  (values))
+
+(defmethod %request-stage-parameters ((widget nglwidget))
+  (%remote-call widget
+		"requestUpdateStageParameters"
+		:target "Widget"))
+
+(defmethod set-representations ((widget nglwidget) representations &key (component 0))
+  (clear-representations widget :component component)
+  (let ((kwargs ""))
+    (loop for params in representations
+       do
+	 (if (typep params 'cljw:dict)
+	     (progn
+	       (setf kwargs (aref params "params"))
+	       (warn "What to do about update kwargs")
+	       (%remote-call widget
+			   "addRepresentations"
+			   :target "compList"
+			   :args (list (aref params "type"))
+			   :kwargs kwargs))
+	     (error "Params must be a dict"))))
+  (values))
+
+(defmethod representations-setter ((widget nglwidget) reps)
+  (dolist (ngl-component-ids widget)
+    (set-representations widget reps))
+  (values))
+
+(defmethod parameters-setter ((widget nglwidget) params)
+  (setf params (%camelize-dict params))
+  (warn "idk what i did in parameters-setter"))
+
+
+
+
+
+;;;Camelizes a plist
+(defun %camelize-dict (plist) "bar"
+  (let ((new-dict (%camelize-values  plist))
+	(temp-list ()))
+    (loop for (k . v) in new-dict
+       do
+	 (push (cons (%another-camelizer (%newer-camelizer k)) v) temp-list))
+    temp-list))
+
+;;;Turns a plist into an alist
+(defmethod %camelize-values (kwargs) "foo"
+  (let ((new-dict ())
+	(index 1))
+    (loop for value in kwargs by #'cddr
+       do
+	 (push (cons (symbol-name value) (nth index kwargs)) new-dict)
+	 (incf index 2))
+    new-dict))
+
+;;;Takes a string with underscores and turns that into a list of words.
+(defun %newer-camelizer (k) "baz"
+  (let ((temp-list ())
+	(index 0))
+  (loop for char across k
+     do
+       (when (char= char #\_)
+	 (push (subseq k index (position #\_ k :start index)) temp-list)
+	 (setf index (1+ (position #\_ k :start index)))))
+  (push (subseq k index) temp-list)
+  temp-list))
+
+;;;Takes a list of words and turns it into a camelized word.
+ (defun %another-camelizer (consBlock) "qux"
+	      (let ((temp-string "")
+		    (new-string "")
+		    (index (length consBlock)))
+		(loop for word in consBlock
+		   do
+		     (decf index)
+		     (if (not (= index 0))
+		       (setf temp-string (string-capitalize word))
+		       (setf temp-string (string-downcase word)))
+		     (setf new-string (concatenate 'string temp-string new-string)))   
+		new-string))
+
+		   

@@ -26,6 +26,7 @@
 	 :metadata (:sync t
 			  :json-name "step"
 			  :help "Minimum step to increment the value (ignored by some views)."))
+  (value :validator validate-int)
   (max :initarg :max :accessor max
 	:type integer
 	:initform 100
@@ -145,9 +146,10 @@
   (:metaclass traitlets:traitlet-class))
 
 
-(defclass int-range(%int)
+(defclass int-range(labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	  :type tuple
+	  :validator validate-int-range
 	  :initform (tuple 0 1)
 	  :metadata (:sync t
 			   :json-name "value"
@@ -162,7 +164,7 @@
 	 :metadata (:sync t
 			  :json-name "step"
 			  :help "Minimum step that the value can take (ignored by some views)"))
-   (value :validator validate-range)
+   (value :validator validate-int-range)
    (max :initarg :max :accessor max
 	:type integer
 	:initform 100
@@ -178,12 +180,29 @@
    )
   (:metaclass traitlets:traitlet-class))
 
-(defun validate-range (object val)
-  (let ((min (min object)) (max (max object)))
-    (cond ((< val min) min)
-	  ((> val max) max)
-	  (t val))))
+(defun validate-int (object val)
+  (if (and (slot-boundp object 'min) (slot-boundp object 'max))
+      (let ((min (min object)) (max (max object)))
+	(cond ((< val min) min)
+	      ((> val max) max)
+	      (t val)))
+      val))
 
+(defun validate-int-range (object val)
+  (flet ((enforce-min (val min) (if (< val min) min val))
+	 (enforce-max (val max) (if (> val max) max val)))
+	  (let ((low-val (cl:min (elt val 0) (elt val 1)))
+		(high-val (cl:max (elt val 0) (elt val 1))))
+	    ;; Now low-val <= high-val
+	    (if (and (slot-boundp object 'min) (slot-boundp object 'max))
+		(let ((min (min object))
+		      (max (max object)))
+		  (let ((low-val-min (enforce-min low-val min))
+			(high-val-min (enforce-min high-val min)))
+		    (let ((low-val-min-max (enforce-max low-val-min max))
+			  (high-val-min-max (enforce-max high-val-min max)))
+		      (vector low-val-min-max high-val-min-max))))
+		(vector low-val high-val)))))
 
 (defclass int-range-slider(bounded-int-range)
   ((orientation :initarg :orientation :accessor orientation
