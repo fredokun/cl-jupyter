@@ -31,7 +31,7 @@
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L32
 (defclass %bounded-float(%float)
-  (;(value :validator validate-range)
+  ((value :validator validate-range)
    (max :initarg :max :accessor max
 	 :type float
 	 :initform 100.0
@@ -169,7 +169,7 @@
 	  :metadata (:sync t
 			   :json-name "step"
 			   :help "Minimum step that the value can take (ignored by some views)"))
-   ;(value :validator validate-range)
+   (value :validator validate-range)
    (max :initarg :max :accessor max
 	 :type float
 	 :initform 100.0
