@@ -109,11 +109,14 @@
   ((%mutex :initform (mp:make-shared-mutex) :accessor mutex))
   (:metaclass traitlet-class))
 
+#++
 (defmethod (setf clos:slot-value-using-class) (val (class traitlet-class) self (slotd effective-traitlet))
   (if (slot-boundp slotd 'validator)
-      (call-next-method
-       (funcall (coerce (validator slotd) 'function) self val)
-       class self slotd)
+      (progn
+	(cljw:widget-log "About to call validator and then set the slot: ~s~%" slotd)
+	(call-next-method
+	 (funcall (coerce (validator slotd) 'function) self val)
+	 class self slotd))
       (call-next-method)))
 
 (defmethod (setf clos:slot-value-using-class) :before
@@ -144,12 +147,31 @@
 
 (defmethod clos:slot-value-using-class
     ((class traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (cljw:widget-log "Process: ~a READING slot -> ~s  (getf (metadata slotd) :sync) -> ~a~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
   (if (getf (metadata slotd) :sync)
-      (with-shared-lock (mutex object) (call-next-method))
+      (progn
+	(cljw:widget-log " About to with-shared-lock~%")
+	(with-shared-lock (mutex object) (call-next-method)))
+      (call-next-method)))
+
+#++(defmethod (setf clos:slot-value-using-class)
+    (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (cljw:widget-log "Process: ~a WRITING slot -> ~s (getf (metadata slotd) :sync) -> ~s~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
+  (if (getf (metadata slotd) :sync)
+      (progn
+	(cljw:widget-log " About to with-write-lock~%")
+	(with-write-lock (mutex object) (call-next-method)))
       (call-next-method)))
 
 (defmethod (setf clos:slot-value-using-class)
     (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (cljw:widget-log "Process: ~a WRITING slot -> ~s (getf (metadata slotd) :sync) -> ~s~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
   (if (getf (metadata slotd) :sync)
-      (with-write-lock (mutex object) (call-next-method))
+      (if (slot-boundp slotd 'validator)
+	  (progn
+	    (cljw:widget-log "About to call validator and then set the slot: ~s~%" slotd)
+	    (let ((validated-value (funcall (coerce (validator slotd) 'function) object new-value)))
+	      (with-write-lock (mutex object) (call-next-method validated-value class object slotd))
+	      validated-value))
+	  (call-next-method))
       (call-next-method)))
