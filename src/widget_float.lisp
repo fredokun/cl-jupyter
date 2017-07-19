@@ -3,7 +3,6 @@
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L19
 (defclass %float (labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
-	  :validator validate-range
 	   :type float
 	   :initform 0.0
 	   :metadata (:sync t
@@ -30,8 +29,8 @@
 
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L32
-(defclass %bounded-float(%float)
-  ((value :validator validate-range)
+(defclass %bounded-float (%float)
+  ((value :validator validate-float)
    (max :initarg :max :accessor max
 	 :type float
 	 :initform 100.0
@@ -53,7 +52,7 @@
    )
   (:metaclass traitlets:traitlet-class))
 
-(defun validate-range (object val)
+(defun validate-float (object val)
   (if (and (slot-boundp object 'min) (slot-boundp object 'max))
       (let ((min (min object)) (max (max object)))
 	(cond ((< val min) min)
@@ -149,15 +148,30 @@
 
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L180
-(defclass %float-range (%float)
+(defclass %float-range (labeled-widget value-widget core-widget)
   ((value :initarg :value :accessor value
-	 ;; :validator validate-range
-	   :type vector
-	   :initform (vector 0.0 1.0)
-	   :metadata (:sync t
-			    :json-name "value"
-			    :help "Tuple of (lower, upper) bounds"))
+	  :type vector
+	  :initform (vector 0.0 1.0)
+	  :metadata (:sync t
+			   :json-name "value"
+			   :help "Tuple of (lower, upper) bounds"))
+   (disabled :initarg :disabled :accessor disabled
+	     :type bool
+	     :initform :false
+	     :metadata (:sync t
+			      :json-name "disabled"
+			      :help "enable or disable user changes"))
+   (description :initarg :description :accessor description
+		:type unicode
+		:initform (unicode "")
+		:metadata (:sync t
+				 :json-name "description"
+				 :help "Description of the value this widget represents"))
    )
+  (:default-initargs
+   :model-module (unicode "jupyter-js-widgets")
+    :view-module (unicode "jupyter-js-widgets")
+    )
   (:metaclass traitlets:traitlet-class))
 
 
@@ -169,7 +183,7 @@
 	  :metadata (:sync t
 			   :json-name "step"
 			   :help "Minimum step that the value can take (ignored by some views)"))
-   (value :validator validate-range)
+   (value :validator validate-float-range)
    (max :initarg :max :accessor max
 	 :type float
 	 :initform 100.0
@@ -185,13 +199,21 @@
    )
   (:metaclass traitlets:traitlet-class))
 
-#||(defun validate-range (object val)
-  (if (and (slot-boundp object 'min) (slot-boundp object 'max))
-      (let ((min (min object)) (max (max object)))
-	(cond ((< val min) min)
-	      ((> val max) max)
-	      (t val)))
-      val))||#
+(defun validate-float-range (object val)
+  (flet ((enforce-min (val min) (if (< val min) min val))
+	 (enforce-max (val max) (if (> val max) max val)))
+	  (let ((low-val (cl:min (elt val 0) (elt val 1)))
+		(high-val (cl:max (elt val 0) (elt val 1))))
+	    ;; Now low-val <= high-val
+	    (if (and (slot-boundp object 'min) (slot-boundp object 'max))
+		(let ((min (min object))
+		      (max (max object)))
+		  (let ((low-val-min (enforce-min low-val min))
+			(high-val-min (enforce-min high-val min)))
+		    (let ((low-val-min-max (enforce-max low-val-min max))
+			  (high-val-min-max (enforce-max high-val-min max)))
+		      (vector low-val-min-max high-val-min-max))))
+		(vector low-val high-val)))))
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L243
 (defclass float-range-slider(%bounded-float-range)
