@@ -23,10 +23,14 @@
 
 (defun show-ase (ase-atoms &rest kwargs &key &allow-other-keys)
   (let ((structure (make-instance 'ASEStructure ase-atoms)))
-    (apply #'make-nglwidget :structure structure kwargs)))
+    (apply #'makenglwidget :structure structure kwargs)))
 
 (defun show-structure-file (path &rest kwargs &key &allow-other-keys)
-  (let ((structure (make-instance 'FileStructure path)))
+  (let ((structure (make-instance 'file-structure :path path)))
+    (apply #'make-nglwidget :structure structure kwargs)))
+
+(defun show-aggregate (aggregate &rest kwargs &key &allow-other-keys)
+  (let ((structure (make-instance 'cando-structure :matter aggregate)))
     (apply #'make-nglwidget :structure structure kwargs)))
 
 (defun show-simpletraj (traj &rest kwargs &key &allow-other-keys)

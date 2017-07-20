@@ -8,6 +8,8 @@
 
 (defvar *parent-msg* nil)
 (defvar *shell* nil)
+(defvar *kernel* nil)
+(defvar *default-special-bindings*)
 
 (defclass shell-channel ()
   ((kernel :initarg :kernel :reader shell-kernel)
@@ -47,22 +49,25 @@
 	      (let* ((msg-type (header-msg-type (message-header msg))))
 		(let ((*parent-msg* msg)
 		      (*shell* shell)
-		      (cl-jupyter-widgets:*kernel* (shell-kernel shell)))
-		  (cljw::widget-log "  |  *parent-msg* -> ~s~%" *parent-msg*)
-		  (cond ((equal msg-type "kernel_info_request")
-			 (handle-kernel-info-request shell identities msg))
-			((equal msg-type "execute_request")
-			 (setf active (handle-execute-request shell identities msg)))
-			((equal msg-type "comm_open")
-			 (when cl-jupyter-widgets:*handle-comm-open-hook*
-			   (funcall cl-jupyter-widgets:*handle-comm-open-hook* shell identities msg)))
-			((equal msg-type "comm_msg")
-			 (when cl-jupyter-widgets:*handle-comm-msg-hook*
-			   (funcall cl-jupyter-widgets:*handle-comm-msg-hook* shell identities msg)))
-			((equal msg-type "comm_close")
-			 (when cl-jupyter-widgets:*handle-comm-close-hook*
-			   (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg)))
-			(t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type)))))))))
+		      (*kernel* (shell-kernel shell)))
+		  (let ((*default-special-bindings* (list (cons '*parent-msg* *parent-msg*)
+							  (cons '*shell* *shell*)
+							  (cons '*kernel* *kernel*))))
+		    (cljw::widget-log "  |  *parent-msg* -> ~s~%" *parent-msg*)
+		    (cond ((equal msg-type "kernel_info_request")
+			   (handle-kernel-info-request shell identities msg))
+			  ((equal msg-type "execute_request")
+			   (setf active (handle-execute-request shell identities msg)))
+			  ((equal msg-type "comm_open")
+			   (when cl-jupyter-widgets:*handle-comm-open-hook*
+			     (funcall cl-jupyter-widgets:*handle-comm-open-hook* shell identities msg)))
+			  ((equal msg-type "comm_msg")
+			   (when cl-jupyter-widgets:*handle-comm-msg-hook*
+			     (funcall cl-jupyter-widgets:*handle-comm-msg-hook* shell identities msg)))
+			  ((equal msg-type "comm_close")
+			   (when cl-jupyter-widgets:*handle-comm-close-hook*
+			     (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg)))
+			  (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))))
 
 
 #|
@@ -151,7 +156,7 @@
   ;;   				  'content-kernel-info-reply
   ;;   				  :protocol-version #(4 1)
   ;;   				  :language-version #(1 2 7)  ;; XXX: impl. dependent but really cares ?
-    ;;   				  :language "common-lisp"))))
+   ;;   				  :language "common-lisp"))))
     (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))
     ;; status back to idle
     (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))))
@@ -172,7 +177,7 @@
       (vbinds (execution-count results stdout stderr)
 	      (progn
 		;;(format t "Set cl-jupyter-widgets:*kernel* -> ~a  (specialp 'cl-jupyter-widgets:*kernel*) -> ~a~%" cl-jupyter-widgets:*kernel* (core:specialp 'cl-jupyter-widgets:*kernel* ))
-		(cljw:widget-log "Set cl-jupyter-widgets:*kernel* -> ~a ~%" cl-jupyter-widgets:*kernel*)
+		(cljw:widget-log "Set cl-jupyter:*kernel* -> ~a ~%" cl-jupyter:*kernel*)
 		(evaluate-code (kernel-evaluator (shell-kernel shell)) code))
 	      (cljw:widget-log "Execution count = ~A~%" execution-count)
 	      (cljw:widget-log "results = ~A~%" results)

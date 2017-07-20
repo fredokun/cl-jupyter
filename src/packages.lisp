@@ -36,10 +36,14 @@
    #:display-svg render-svg
    #:display-json render-json
    #:display-javascript render-javascript
+   #:message-header
    #:message-content
    #:message-buffers
+   #:message
    #:*shell*
+   #:*kernel*
    #:*parent-msg*
+   #:*default-special-bindings*
    #:kernel-start))
 
 (defpackage #:cl-jupyter-user
@@ -66,7 +70,6 @@
   (:use #:cl)
   (:shadow #:open #:close #:step #:min #:max)
   (:export
-   #:*kernel*
    #:*kernel-start-hook*
    #:*kernel-shutdown-hook*
    #:*handle-comm-open-hook*
@@ -91,6 +94,10 @@
    #:instance
    #:on-msg
    #:on-displayed
+<<<<<<< HEAD
+=======
+   #:assoc-value
+>>>>>>> master
    ))
 
 

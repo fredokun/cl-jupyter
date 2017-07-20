@@ -1,7 +1,7 @@
 (in-package #:cl-jupyter-widgets)
 
 (defclass comm ()
-  ((kernel :initarg :kernel :accessor kernel :initform *kernel*)
+  ((kernel :initarg :kernel :accessor kernel :initform cl-jupyter:*kernel*)
    (comm-id :initarg :comm-id :accessor comm-id
 	    :initform (format nil "~W" (uuid:make-v4-uuid))
 	    :documentation "Am I the primary or secondary Comm?")
@@ -27,11 +27,12 @@
   (call-next-method))
 
 ;;; This does what comm.py::__init__ does
-(defun comm.__init__ (&key target-name data metadata buffers)
+(defun comm.__init__ (&key target-name data metadata (buffers #()))
+  (check-type buffers array)
   (let ((comm (if target-name
 		  (make-instance 'comm :target-name target-name)
 		  (make-instance 'comm))))
-    (widget-log "comm.__init__  *kernel* --> ~s  (kernel comm) -> ~s~%" *kernel* (kernel comm))
+    (widget-log "comm.__init__  *kernel* --> ~s  (kernel comm) -> ~s~%" cl-jupyter:*kernel* (kernel comm))
     (when (kernel comm)
       (if (primary comm)
 	  (open comm :data data :metadata metadata :buffers buffers)
@@ -41,23 +42,22 @@
 (defmethod initialize-instance :after ((instance comm) &rest initargs)
   (unless (slot-boundp instance 'topic) (setf (topic instance) (format nil "comm-~s" (comm-id instance)))))
 
-(defmethod %publish-msg ((self comm) msg-type &key (data nil) (metadata nil) buffers target-name target-module)
-  (widget-log "Comm.%publish-msg (COMMON-LISP)  -+-+-+-+-+-+-+-+-+-+~%")
+(defmethod %publish-msg ((self comm) msg-type &key (data nil) (metadata nil) (buffers #()) keys)
+  (check-type buffers array)
+  (widget-log "Comm._publish_msg (COMMON-LISP)  -+-+-+-+-+-+-+-+-+-+~%")
   (widget-log "msg-type -> ~a~%" msg-type)
   (widget-log "metadata -> ~a~%" metadata)
-  (widget-log "(message-parent-header cl-jupyter::*parent-msg* -> ~a~%"
+  (widget-log "(message-header cl-jupyter::*parent-msg* -> ~a~%"
 	      (and cl-jupyter:*parent-msg*
-		   (myjson::encode-json-to-string (cl-jupyter::message-parent-header cl-jupyter::*parent-msg*))))
+		   (myjson::encode-json-to-string (cl-jupyter::message-header cl-jupyter::*parent-msg*))))
   (widget-log "ident/topic -> ~a~%" (topic self))
   (widget-log "buffers -> ~a~%" buffers)
   (widget-log "++++++++++++++ contents >>>>>>>>>~%")
-  (let ((cleaned-json (json-clean `(("data" . ,data)
-				    ("comm_id" . ,(comm-id self))
-				    ("target_name" . ,target-name)
-				    ("target_module" . ,target-module)))))
-    (widget-log "   %publish-msg  cleaned-json -> ~a"
-		(with-output-to-string (sout)
-		  (print-as-python cleaned-json sout)))
+  (let ((cleaned-json (json-clean (list* (cons "data" data)
+					 (cons "comm_id"  (comm-id self))
+					 keys))))
+    (widget-log "~a" (with-output-to-string (sout)
+		       (print-as-python cleaned-json sout :indent 4)))
     (widget-log "   session -> ~a~%" (cl-jupyter::kernel-session (kernel self)))
     (session-send (cl-jupyter::kernel-session (kernel self))
 		  (cl-jupyter::kernel-iopub (kernel self))
@@ -70,8 +70,9 @@
     (widget-log "   real-msg -> CAN I GET A REAL MESSAGE FROM SESSION-SEND???~%")))
 
 
-(defmethod open ((self comm) &key (data (%open-data self)) metadata buffers)
+(defmethod open ((self comm) &key (data (%open-data self)) metadata (buffers #()))
   "Open the frontend-side version of this comm"
+  (check-type buffers array)
   (let ((comm-manager (or (gethash (kernel self) *kernel-comm-managers*)
 			  (error "Comms cannot be opened without a kernel and a comm-manager attached to that kernel."))))
     (widget-log "comm::open  About to register with comm-manager comm: ~a~%" self)
@@ -84,12 +85,15 @@
 			:target-module (target-module self)
 			:data data
 			:metadata metadata
-			:buffers buffers)
+			:buffers buffers
+			:keys (list (cons "target_name" (target-name self))
+				    (cons "target_module" (target-module self))))
 	  (setf (%closed self) nil))
       (error (err)
 	(unregister-comm comm-manager self)))))
 
-(defmethod close ((self comm) &key data metadata buffers)
+(defmethod close ((self comm) &key data metadata (buffers #()))
+  (check-type buffers array)
   (when (%closed self) (return-from close))
   (setf (%closed self) t)
   (unless (kernel self) (return-from close))
@@ -97,10 +101,13 @@
   (%publish-msg self "comm_close" :data data :metadata metadata :buffers buffers)
   (unregister-comm (gethash (kernel self) *kernel-comm-managers*) self))
 
-(defmethod send ((self comm) &key data metadata buffers)
+(defmethod send ((self comm) &key data metadata (buffers #()))
   "Send a message to the frontend-side version of this comm"
-   (widget-log "comm.send  data -> ~a~%" data)
-   (%publish-msg self "comm_msg" :data data :metadata metadata :buffers buffers))
+  (check-type buffers array)
+  (widget-log "comm.send  data -> ~s~%" data)
+  (prog1
+      (%publish-msg self "comm_msg" :data data :metadata metadata :buffers buffers)
+    (widget-log "comm.send DONE~%")))
 
 (defmethod on-close ((self comm) callback)
   "Register a callback for comm-close
@@ -114,7 +121,7 @@
    Will be called with the widget and the DATA of any comm-msg messages.
    Call (on-msg nil) to disable an existing callback."
   (check-type callback (or function null) "A function of one argument or NIL")
-  (widget-log "Got on-msg with callback: ~a~%" callback)
+  (widget-log "Got comm::on-msg with callback: ~a~%" callback)
   (setf (%msg-callback self) callback))
 
 (defmethod handle-close ((self comm) msg)
@@ -126,13 +133,13 @@
   "Handle a comm-msg message"
   (widget-log "Handling message =================================~%")
   (widget-log "comm-id -> ~a~%" (comm-id self))
-  (widget-log "msg -> ~a~%" (as-python msg))
+  (widget-log "msg -> ~a~%" msg);;(as-python msg))
   (if (%msg-callback self)
       (let ((shell (cl-jupyter::kernel-shell (kernel self))))
-	(widget-log "About to trigger pre_execute for shell: ~a~%" shell)
+	(widget-log "About to trigger pre_execute skipping for now - for shell: ~a~%" shell)
 	#+(or)(when shell (trigger (events shell) "pre_execute"))
 	(widget-log "About to funcall (%msg-callback self) -> ~a~%" (%msg-callback self))
 	(funcall (%msg-callback self) msg)
-	(widget-log "About to trigger post_execute~%")
+	(widget-log "About to trigger post_execute - skipping for now~%")
 	#+(or)(when shell (trigger (events shell) "post_execute")))
       (widget-log "The comm msg_callback is unbound")))

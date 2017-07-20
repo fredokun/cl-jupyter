@@ -416,9 +416,12 @@ with a new line")
 	     (json-write stream nil nil (format nil "blabla ~A" toto))))
 	   => "blabla (ME TOTO)")
 
+
 (defmethod encode-json (stream (thing cons) &key (indent nil) (first-line nil))
   (json-write stream (if first-line nil indent) (if indent t nil) "{")
   (let ((sepstr (if indent (format nil ",~%") ",")))
+    (when cl-jupyter-widgets::*sort-encoded-json*
+      (setf thing (sort (copy-list thing) #'string< :key #'car)))
     (loop 
        for (key . val) in thing
        for sep = "" then sepstr

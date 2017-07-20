@@ -112,10 +112,11 @@ The deserialization of a message header from a JSon string is then trivial.
    (parent-header :initarg :parent-header :initform nil :accessor message-parent-header)
    (metadata :initarg :metadata :initform nil :accessor message-metadata)
    (content :initarg :content :initform nil :accessor message-content)
-   (buffers :initarg :buffers :initform nil :accessor message-buffers))
+   (buffers :type array :initarg :buffers :initform #() :accessor message-buffers))
   (:documentation "Representation of IPython messages"))
 
-(defun make-message (parent_msg msg_type metadata content &optional buffers) 
+(defun make-message (parent_msg msg_type metadata content &optional (buffers #()))
+  (check-type buffers array)
   (let ((hdr (message-header parent_msg)))
     (make-instance 
      'message
@@ -131,7 +132,8 @@ The deserialization of a message header from a JSon string is then trivial.
      :content content
      :buffers buffers)))
 
-(defun make-orphan-message (session-id msg-type metadata content buffers) 
+(defun make-orphan-message (session-id msg-type metadata content buffers)
+  (check-type buffers array)
   (make-instance 
    'message
    :header (make-instance 
@@ -143,6 +145,16 @@ The deserialization of a message header from a JSon string is then trivial.
             :version +KERNEL-PROTOCOL-VERSION+)
    :parent-header '()
    :metadata metadata
+   :content content
+   :buffers buffers))
+
+(defun make-custom-message (&key content (buffers #()))
+  (check-type buffers array)
+  (make-instance
+   'message
+   :header nil
+   :parent-header nil
+   :metadata nil
    :content content
    :buffers buffers))
 
@@ -178,7 +190,12 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
 (defvar +WIRE-IDS-MSG-DELIMITER+ "<IDS|MSG>")
 
 (defmethod wire-serialize ((msg message) &key (identities nil) (key nil))
+  (cljw:widget-log "  in wire-serialize~%")
   (with-slots (header parent-header metadata content) msg
+    (cljw:widget-log "header -> ~s~%" header)
+    (cljw:widget-log "parent-header -> ~s~%" parent-header)
+    (cljw:widget-log "metadata -> ~s~%" metadata)
+    (cljw:widget-log "content -> ~s~%" content)
     (let ((header-json (encode-json-to-string header))
           (parent-header-json (if parent-header
                                   (encode-json-to-string parent-header)
@@ -189,9 +206,11 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
           (content-json (if content
                             (encode-json-to-string content)
                             "{}")))
+      (cljw:widget-log "About to calculate signature~%")
       (let ((sig (if key
                      (message-signing key (list header-json parent-header-json metadata-json content-json))
                      "")))
+	(cljw:widget-log "About to do append~%")
         (append identities
                 (list +WIRE-IDS-MSG-DELIMITER+
                       sig
@@ -270,7 +289,10 @@ The wire-deserialization part follows.
 (defun message-send (socket msg &key (identities nil) (key nil))
   (let ((wire-parts (wire-serialize msg :identities identities :key key)))
     #+(or)(format t "~%[Send] wire parts: ~W~%" wire-parts)
+<<<<<<< HEAD
     (cl-jupyter-widgets::widget-log "wire-parts -> ~a~%" wire-parts)
+=======
+>>>>>>> master
     (dolist (part wire-parts)
       (pzmq:send socket part :sndmore t))
     (prog1
