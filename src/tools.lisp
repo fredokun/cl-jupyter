@@ -53,38 +53,6 @@
 
 
 (defmacro with-error-handling (msg &body body)
-<<<<<<< HEAD
-  `(handler-case
-       (handler-bind
-           ((simple-warning
-             #'(lambda (wrn)
-                 (format *error-output* "~&~a ~A: ~%" ,msg (class-name (class-of wrn)))
-                 (apply (function format) *error-output*
-                        (simple-condition-format-control   wrn)
-                        (simple-condition-format-arguments wrn))
-                 (format *error-output* "~&")
-                 (muffle-warning)))
-            (warning
-             #'(lambda (wrn)
-                 (format *error-output* "~&~a ~A: ~%  ~A~%"
-                         ,msg (class-name (class-of wrn)) wrn)
-                 (muffle-warning)))
-	    (serious-condition
-	     #'(lambda (err)
-		 (widget-log "~a~%" (with-output-to-string (*standard-output*)
-				      (format t "~&~a~%~a~%" ,msg err)
-				      (core::clasp-backtrace))))))
-	 (progn ,@body))
-     (simple-condition (err)
-       (format *error-output* "~&~A: ~%" (class-name (class-of err)))
-       (apply (function format) *error-output*
-              (simple-condition-format-control   err)
-              (simple-condition-format-arguments err))
-       (format *error-output* "~&"))
-     (serious-condition (err)
-       (format *error-output* "~&2An error occurred of type: ~A: ~%  ~S~%"
-               (class-name (class-of err)) err))))
-=======
   (let ((wrn (gensym))
 	(err (gensym)))
     `(handler-case
@@ -120,7 +88,6 @@
        (serious-condition (,err)
 	 (format *error-output* "~&2An error occurred of type: ~A: ~%  ~S~%"
 		 (class-name (class-of ,err)) ,err)))))
->>>>>>> master
 
 
 

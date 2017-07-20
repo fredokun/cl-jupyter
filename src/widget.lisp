@@ -407,47 +407,27 @@ Sends a message to the model in the front-end."
 
 (defmethod on-msg ((self widget) callback &key remove)
     "(Un)Register a custom msg receive callback.
-<<<<<<< HEAD
-=======
 
->>>>>>> master
         Parameters
         ----------
         callback: callable
             callback will be passed three arguments when a message arrives::
-<<<<<<< HEAD
-                callback(widget, content, buffers)
-=======
 
                 callback(widget, content, buffers)
 
->>>>>>> master
         remove: bool
             True if the callback should be unregistered."
   (register-callback (msg-callbacks self) callback :remove remove))
 
 (defmethod on-displayed ((self widget) callback &key remove)
   "(Un)Register a widget displayed callback.
-<<<<<<< HEAD
-=======
-
->>>>>>> master
         Parameters
         ----------
         callback: method handler
             Must have a signature of::
-<<<<<<< HEAD
                 callback(widget, **kwargs)
-=======
-
-                callback(widget, **kwargs)
-
->>>>>>> master
             kwargs from display are passed through without modification.
         remove: bool
             True if the callback should be unregistered."
   (register-callback (display-callbacks self) callback :remove remove))
-<<<<<<< HEAD
-=======
 
->>>>>>> master
