@@ -564,7 +564,7 @@ kwargs=kwargs2)
 	   (return traj)))
   nil)
 
-#+(or)
+
 (defmethod hide ((self NGLWidget) indices)
   (let ((traj-ids (loop for traj in (%trajlist self) collect (id traj)))
 	(comp-id nil)
