@@ -54,6 +54,8 @@
 			  :json-name "style"
 			;;  :to-json json-to-widget
 			  :from-json widget-to-json))
+  (%click-handlers :initform (make-instance 'callback-dispatcher)
+		   :accessor click-handlers)
   )
   (:default-initargs
    :model-module (unicode "jupyter-js-widgets")
@@ -62,8 +64,25 @@
     :model-name (unicode "ButtonModel"))
  (:metaclass traitlets:traitlet-class))
 	    
-;;Still need an 'on_click' method (to register a callback to execute when the button is clicked) and a '_handle_button_msg' method (to handle a message from the front-end).
 
+(defmethod initialize-instance :after ((self button) &key)
+  (on-msg self #'%handle-button-msg))
+
+
+(defmethod on-click ((self button) callback &key (remove nil))
+  (register-callback (click-handlers self) callback :remove remove)
+  (values))
+
+(defmethod %handle-button-msg ((self button) content buffers)
+  "Handle a msg from the front-end.
+
+        Parameters
+        ----------
+        content: dict
+            Content of the msg."
+  (when (string= (cdr (assoc "event" content)) "click")
+    (click-handlers self))
+  (values))
 
 
 ;;Start Meister code copy

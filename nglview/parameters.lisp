@@ -1,4 +1,4 @@
-(defparameter *REPRESENTATION-NAME-PAIRS* (list (("axes" . "axes")
+(defparameter *REPRESENTATION-NAME-PAIRS* '(("axes" . "axes")
 						 ("point" . "point")
 						 ("line" . "line")
 						 ("rope" . "rope")
@@ -18,7 +18,7 @@
 						 ("helixorient" . "helixorient")
 						 ("simplified_base" . "base")
 						 ("spacefill" . "spacefill")
-						 ("ball_and_stick" . "ball+stick"))))
+						 ("ball_and_stick" . "ball+stick")))
 ;;;(defparameter *REPRESENTATION_NAMES*
 ;REPRESENTATION_NAMES = list(sorted(set([name for pairs in REPRESENTATION_NAME_PAIRS for name in pairs])))
 ;;;Representation_names needs to be an alist btw for _make_add_widget_repr in player.lisp

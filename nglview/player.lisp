@@ -181,7 +181,7 @@
 		 :type list
 		 :initform ()))
   (:metaclass traitlets:traitlet-class))
-   #|
+    
 (defmethod initialize-instance :after ((self TrajectoryPlayer) &key)
   (setf iparams '(:t (%interpolation-t self) :step 1 :type (%iterpolation-type))
 	%render-params '(:factor 4 :antialias t :trim nil :transparent nil))
@@ -217,20 +217,14 @@
     (setf (selected-index (widget-tab self)) old-index)))
 
 (defmethod smooth ((self TrajectoryPlayer))
-  (setf (interpolate self) :true))
+  (setf (interpolate self) t))
 
 (defmethod on-camera-changed ((self TrajectoryPlayer) change)
   (let ((camera-type (aref change "new")))
     (%remote-call (%view self) "setParameters" :target "Stage" :kwargs (list :cameraType camera-type))))
 
-(defmethod frame ((self TrajectoryPlayer))
-  (frame (%view self)))
-
-(defmethod frame ((self TrajectoryPlayer) value)
+(defmethod frame-setter ((self TrajectoryPlayer) value)
   (setf (frame (%view self)) value))
-
-(defmethod count ((self TrajectoryPlayer))
-  (count (%view self)))
 
 (defmethod update-sync-frame ((self TrajectoryPlayer) change)
   (let ((value (aref change "new")))
@@ -248,7 +242,7 @@
 	  (delay self) (get params "delay" (delay self))
 	  (step self) (get params "step" (step self)))))
 
-(defmethod %interpolation-t-chaned ((self TrajectoryPlayer) change)
+(defmethod %interpolation-t-changed ((self TrajectoryPlayer) change)
   (setf (aref (iparams self) "t") (aref change "new")))
 
 (defmethod on-spin-changed ((self TrajectoryPlayer) change)
@@ -303,19 +297,19 @@
     (center (%view self))))
     button)))
   ;;I need to figure out how to do @button.on_click to register this as the on_click method
-#|
+ #|
     def _make_button_center(self):
         button = Button(description=' Center', icon='fa-bullseye')
         @button.on_click
         def on_click(button):
             self._view.center()
         return button
-|#
+ |#
 
 (defmethod %make-button-theme ((self TrajectoryPlayer))
   (make-instance 'cl-jupyter-widgets::Button :description "Oceans16")
   (error "Help!!! Implement %make-button-theme from player.lisp"))
-#|
+ #|
     def _make_button_theme(self):
         button = Button(description='Oceans16')
         @button.on_click
@@ -325,12 +319,12 @@
             self._view._remote_call('cleanOutput',
                                     target='Widget')
         return button
-|#
+ |#
 
 (defmethod %make-button-reset-theme ((self TrajectoryPlayer) &optional (hide-toolbar nil))
   (error "Help! Implement me, %make-button-rest-theme from player.lisp"))
+ 
 #|
-
     def _make_button_reset_theme(self, hide_toolbar=False):
         from nglview import theme
 
@@ -345,13 +339,11 @@
             def on_click(button):
                 theme.reset()
         return button
-|#
+ |#
 
 (defmethod %make-button-clean-error-output ((self TrajectoryPlayer))
-  ((let ((button (make-instance 'cl-jupyter-widgets::button :description "Clear Error")))
-     (flet ((on-click (dummy)
-	      (clean_error_output js_utils)))
-       button))))
+  (let ((button (make-instance 'cl-jupyter-widgets::button :description "Clear Error")))
+     (error "poop error output button help me")))
 ;;;I need to figure out how to register this as the on_click method.
 
 (defmethod %make-widget-preference ((self TrajectoryPlayer) &optional (width "100%"))
@@ -405,19 +397,19 @@
 			  (typep child 'cl-jupyter-widgets::float-slider))
 		      (setf (width (layout child)) *DEFAULT-SLIDER-WIDTH*)))
 	     widget-sliders)))
-    (if (not (widget-preference self))
-	(let ((widget-sliders (make-widget-box))
-	      (reset-button (make-instance 'cl-jupyter-widgets::button :description "Reset"))
-	      ((children widget-sliders) (vector reset-button (children widget-sliders))))
-	  (error "Help me complete myself! def on-click (reset-button) somewhere in player.lisp"))
-	#| @reset_button.on_click
-            def on_click(reset_button):
-                self._view.parameters = self._view._original_stage_parameters
-                self._view._full_stage_parameters = self._view._original_stage_parameters
-                widget_sliders.children = [reset_button,] + list(make_widget_box().children)
-	|#
-	(setf (widget-preference self) (%relayout-master (widget-sliders :width width))))
-    (widget-prefence self)))
+    (when (not (widget-preference self))
+      (let* ((widget-sliders (make-widget-box))
+	     (reset-button (make-instance 'cl-jupyter-widgets::button :description "Reset")))
+	    (setf (children widget-sliders) (vector reset-button (children widget-sliders)))
+	(error "Help me complete myself! def on-click (reset-button) somewhere in player.lisp"))
+      #| @reset_button.on_click
+      def on_click(reset_button):
+      self._view.parameters = self._view._original_stage_parameters
+      self._view._full_stage_parameters = self._view._original_stage_parameters
+      widget_sliders.children = [reset_button,] + list(make_widget_box().children)|#
+	 
+      (setf (widget-preference self) (%relayout-master (widget-sliders :width width)))
+    (widget-prefence self))))
 
 
 	
@@ -439,7 +431,7 @@
 
 (defmethod %show-website ((self TrajectoryPlayer) &optional (ngl-base-url *NGL-BASE-URL*))
   (error "-show-website in player.lisp not implemented"))
-#|
+#| 
  buttons = [self._make_button_url(url.format(ngl_base_url), description) for url, description in
             [("'http://arose.github.io/nglview/latest/'", "nglview"),
              ("'{}/index.html'", "NGL"),
@@ -448,7 +440,7 @@
         ]
         self.widget_help = _make_autofit(HBox(buttons))
         return self.widget_help
-|#
+ |#
 
 (defmethod %make-button-qtconsole ((self TrajectoryPlayer))
   (let ((button (make-instance 'cl-jupyter-widgets::button :description "qtconsole" :tooltip "pop up qtconsole")))
@@ -490,7 +482,7 @@
 						     :tooltip "Pop up representation parameters control dialog")))
     (setf (%ngl-name button-center-selection) "button-center-selection")
   (error "Help %make-button-repr-control on click methods")))
-#|
+ #|
         @button_refresh.on_click
         def on_click_refresh(button):
             self._refresh(component_slider, repr_slider)
@@ -536,7 +528,7 @@
                                    button_hide, button_remove,
                                    button_repr_parameter_dialog]))
         return bbox
-|#
+ |#
 
 (defmethod %make-widget-repr ((self TrajectoryPlayer))
   (setf (widget-repr-name self) (make-instance 'cl-jupyter-widgets::text :value "" :description "representation")
@@ -583,7 +575,7 @@
 		 (values)))
 	    (observe checkbox-reprlist on-update-checkbox-reprlist :names "value")	  
 	  (error "-make-widget-repr not finished!!")))))))
-#|
+ #|
         def on_repr_name_text_value_changed(change):
             name = change['new'].strip()
             old = change['old'].strip()
@@ -664,7 +656,7 @@
                     self.widget_repr._saved_widgets.append(kid)
 
         return self.widget_repr
-|#
+ |#
 
 (defmethod %make-widget-repr-parameters ((self TrajectoryPlayer) component-slider repr-slider &optional (repr-name-text nil))
   (let ((name " "))
@@ -677,7 +669,7 @@
       (setf (%ngl-name widget) "repr_parameters_box")
       widget)))
       
-(defmethod _make_button_export_image ((self TrajectoryPlayer))
+(defmethod %make-button-export-image ((self TrajectoryPlayer))
   (let ((slider-factor (make-instance 'cl-jupyter-widgets::int-slider
 				      :value 4
 				      :min 1
@@ -738,7 +730,7 @@
 	       (form-items (%relayout vbox make-form-item-layout))
 	       (form (make-instance 'cl-jupyter-widgets::Box form-items :layout (%make-box-layout))))
 	  form)))))
- #|   
+     #|
         @button_movie_images.on_click
         def on_click_images(button_movie_images):
             for i in range(start_text.value, stop_text.value, step_text.value):
@@ -746,7 +738,7 @@
                 time.sleep(delay_text.value)
                 download_image(filename=filename_text.value + str(i))
                 time.sleep(delay_text.value)
-|#
+ |#
 	    
 (defmethod %make-resize-notebook-slider ((self TrajectoryPlayer))
   (let ((resize-notebook-slider (make-instance 'cl-jupyter-widgets::int-slider :min 300 :max 2000 :description "resize notebook")))
@@ -793,7 +785,7 @@
 
 (defmethod %make-repr-playground ((self TrajectoryPlayer))
   (error "-make-repr-playground in player.lisp needs your help"))
-  #|
+   #|
     def _make_repr_playground(self):
         vbox = VBox()
         children = []
@@ -838,21 +830,21 @@
         _make_autofit(vbox)
         self.widget_quick_repr = vbox
         return self.widget_quick_repr
-|#
+ |#
 
 (defmethod %make-repr-name-choices ((self TrajectoryPlayer) component-slider repr-slider)
   (let ((repr-choices (make-instance 'cl-jupyter-widgets::dropdown :options '((" " . "")))))
     (flet ((on-chose (change)
 	     (let ((repr-name (aref change "new"))
-		   (repr-index (index (options repr-choices)))
-		   ((value repr-slider) repr-index))
+		   (repr-index (index (options repr-choices))))
+	       (setf (value repr-slider) repr-index)
 	       (values))))
-      ((observe repr-choices) on-chose :names "value")
+      (observe repr-choices on-chose :names "value")
       (setf (width (layout repr-choices)) *DEFAULT-TEXT-WIDTH*
 	    (widget-repre-choices self) repr-choices)
       (widget-repr-choices self)))
   (error "I don't think we have an observe or index function defined.  %make-repr-name-choices in player.lisp"))
-#|
+ #|
     def _make_repr_name_choices(self, component_slider, repr_slider):
         repr_choices = Dropdown(options=[" ",])
 
@@ -866,11 +858,11 @@
 
         self.widget_repr_choices = repr_choices
         return self.widget_repr_choices
-|#
+ |#
 
 (defmethod %make-drag-widget ((self TrajectoryPlayer))
   (error "only YOU can prevent this error message in %make-drag-widget in player.lisp"))
-#|
+ #|
     def _make_drag_widget(self):
         button_drag = Button(description='widget drag: off', tooltip='dangerous')
         drag_nb = Button(description='notebook drag: off', tooltip='dangerous')
@@ -918,7 +910,7 @@
         drag_box = _make_autofit(drag_box)
         self.widget_drag = drag_box
         return drag_box
-|#
+ |#
 
 (defmethod %make-spin-box ((self TrajectoryPlayer))
   (let ((checkbox-spin (apply #'make-instance 'cl-jupyter-widgets::checkbox (%spin-x self) :description "spin"))
@@ -927,13 +919,13 @@
 	(spin-z-slide (apply #'make-instance 'cl-jupyter-widgets::int-slider (%spin-z self) :min -1 :max 1 :description "spin_z"))
 	(spin-speed-slide (apply #'make-instance 'cl-jupyter-widgets::float-slider (%spin-speed self) :min 0 :max 0.2 :step 0.001 :description "spin speed")))
     (error "Only YOU can implement the link traitlet")
-    #|
+     #|
         link((checkbox_spin, 'value'), (self, 'spin'))
         link((spin_x_slide, 'value'), (self, '_spin_x'))
         link((spin_y_slide, 'value'), (self, '_spin_y'))
         link((spin_z_slide, 'value'), (self, '_spin_z'))
         link((spin_speed_slide, 'value'), (self, '_spin_speed'))
-    |#
+     |#
 
     (let ((spin-box (make-instance 'cl-jupyter-widgets::vbox :children (vector checkbox-spin spin-x-slide spin-y-slide spin-z-slide spin-speed-slide))))
       (setf spin-box (%relayout-master spin-box :width "75%"))
@@ -978,12 +970,12 @@
 	(let ((background-color-picker (make-instance 'cl-jupyter-widgets::color-picker :value "white" :description "background"))
 	      (camera-type (make-instance 'cl-jupyter-widgets::dropdown :value (camera self) :options '(("perspective" . "orthographic")) :description "camera")))
 	  (error "Help me finish %make-general-box's implementation!")
-	  #|            link((step_slide, 'value'), (self, 'step'))
+	     #|          link((step_slide, 'value'), (self, 'step'))
             link((delay_text, 'value'), (self, 'delay'))
             link((toggle_button_interpolate, 'value'), (self, 'interpolate'))
             link((camera_type, 'value'), (self, 'camera'))
             link((background_color_picker, 'value'), (self._view, 'background'))
-	  |#
+	   |#
 	  (let* ((center-button (%make-button-center self))
 		(render-button (%show-download-image self))
 		(qtconsole-button (%make-button-qtconsole self))
@@ -995,8 +987,9 @@
 
 (defmethod %make-command-box ((self TrajectoryPlayer))
   (let ((widget-text-command (make-instance 'cl-jupyter-widgets::text)))
-  (error "only YOU can prevent this error from existing. %make-command-box player.lisp")))
-#|    def _make_command_box(self):
+    (error "only YOU can prevent this error from existing. %make-command-box player.lisp")))
+#|
+   def _make_command_box(self):
         widget_text_command = Text()
 
         @widget_text_command.on_submit
@@ -1005,8 +998,8 @@
             js_utils.execute(command)
             widget_text_command.value = ''
         return widget_text_command
-
 |#
+
 
 (defmethod %create-all-tabs ((self TrajectoryPlayer))
   (let ((tab (display self))
@@ -1031,4 +1024,4 @@
   (setf (display (layout (widget-repr-choices self))) "flex"
 	(selected-index (widget-accordion-repr-parameters self)) 0)
   (values))
-|#
+

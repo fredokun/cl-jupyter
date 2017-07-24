@@ -76,7 +76,92 @@ def get_name(obj, kwargs):
 	   do (princ x sout))))
     (t (error "Handle seq-to-string for ~a" seq))))
 
+(defun get-positive-index (index size)
+  (when (< index 0)
+    (incf index size)
+    (when (< index 0)
+      (error "Index is out of range")))
+  (when (>= index size)
+    (error "index is out of range"))
+  index)
 
+(defun click (button)
+  (%handle-button-msg button nil (list (cons "event" "click")) nil))
+
+(defun submit (widget-text)
+  (%handle-string-msg widget-text nil (list (cons "event" "submit")) nil))
+
+(defun %update-url (fun)
+  (warn "is updating the URL important?"))
+
+#|
+def _update_url(func):
+    from nglview.default import NGL_BASE_URL
+    func.__doc__ = func.__doc__.format(ngl_url=NGL_BASE_URL)
+    return func
+
+def encode_base64(arr, dtype='f4'):
+    arr = arr.astype(dtype)
+    return base64.b64encode(arr.data).decode('utf8')
+
+def decode_base64(data, shape, dtype='f4'):
+    import numpy as np
+    decoded_str = base64.b64decode(data)
+    return np.frombuffer(decoded_str, dtype=dtype).reshape(shape)
+
+def display_gif(fn):
+    from IPython import display
+    return display.HTML('<img src="{}">'.format(fn))
+
+@contextmanager
+def tempfolder():
+  """run everything in temp folder
+  """
+  my_temp = tempfile.mkdtemp()
+  cwd = os.getcwd()
+  os.chdir(my_temp)
+  yield
+  os.chdir(cwd)
+  rmtree(my_temp)
+
+
+def get_repr_names_from_dict(repr_dict, component):
+    """
+    
+    Parameters
+    ----------
+    """
+
+    try:
+        this_repr_dict = repr_dict['c' + str(component)]
+        return [this_repr_dict[str(key)]['name'] for key in sorted(this_repr_dict.keys())]
+    except KeyError:
+        return []
+
+
+def get_colors_from_b64(b64_image):
+    """
+
+    Examples
+    --------
+    >>> view.render_image()
+    >>> get_colors_from_b64(view._image_data)
+
+    Returns
+    -------
+    list of tuple 
+    """
+    # should install PIL
+    # py3
+
+    from PIL import Image
+    import io, base64
+
+    fp = io.BytesIO(base64.b64decode(b64_image))
+    image = Image.open(fp)
+
+    return image.getcolors(int(1E6))
+|#
 
 (defclass file-manager ()
   ((%src :initarg :src :accessor src)
@@ -179,4 +264,4 @@ def get_name(obj, kwargs):
   (and (stringp (src self))
        (or (string= (subseq (src self) 0 4) "http")
 	   (string= (subseq (src self) 0 7) "rcsb://"))))
->>>>>>> master
+

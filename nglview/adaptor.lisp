@@ -1,16 +1,17 @@
 (in-package :nglv)
 
 (defclass register-backend ()
-  ((:package-name :initarg package_name :accessor package_name)))
+  ((:package-name :initarg package_name :accessor package_name
+		  :initform nil)))
 
-(defmethod __call__ ((self register-backend) cls)
+(defmethod %-call-- ((self register-backend) cls)
   (setf (gethash (package-name self) *BACKENDS*) cls)
   cls)
 
 (defclass file-structure(Structure)
   ((path :initarg :path :accessor path :initform nil)
    (fm :accessor fm :initform nil)
-   (ext :accessor ext :initform nil)
+   (ext :initarg :ext :accessor ext :initform nil)
    (params :accessor params :type list ;plist
 	   :initform ())))
 
@@ -18,7 +19,8 @@
   (with-slots (path fm ext) file-structure
     (let ((pathname (pathname path)))
       (unless ext
-	(setf ext (pathname-type pathname))))))
+	(setf ext (pathname-type pathname))))
+    (setf fm (make-instance 'file-manager :src path))))
 
 ;;(defgeneric get-structure-string (Structure)
 ;;  (:documentation "I think this works"))
@@ -43,8 +45,8 @@
 (defmethod get-structure-string ((self cando-structure))
   (check-type self cando-structure)
   (check-type (matter self) chem:aggregate)
-  (cljw:widget-log "Saving structure to /home/app/work/home/structure.mol2~%")
-  (cando:save-mol2 (matter self) "/home/app/work/home/structure.mol2" :use-sybyl-types t)
+  (cljw:widget-log "Saving structure to /tmp/structure.mol2~%")
+  (cando:save-mol2 (matter self) "/tmp/structure.mol2" :use-sybyl-types t)
   (with-open-file (stream "/tmp/structure.mol2" :direction :input)
     (let* ((entire-file (make-string (+ (file-length stream) 2)
 				     :initial-element #\newline)))
