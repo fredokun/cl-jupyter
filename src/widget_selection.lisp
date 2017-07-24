@@ -53,7 +53,8 @@
 	  :type unicode
 	  :initform (unicode "")
 	  :metadata (:sync t
-			   :json-name "icons"))
+			   :json-name "icons"
+			   :help "Font-awesome icon. Styles we know about include: check, bullseye, camera, refresh, eye-slash, trash, eraser. Syntax: :icons (vector \"refresh\" \"check\" \"camera\"). This would give you three icons if you have three buttons."))
    (button_style :initarg :button_style :accessor button_style
 		 :type unicode
 		 :initform (unicode "")

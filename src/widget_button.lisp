@@ -41,7 +41,7 @@
 	 :initform (unicode "")
 	 :metadata (:sync t
 			  :json-name "icon"
-			  :help "Font-awesome icon."))
+			  :help "Font-awesome icon. Styles we know about include: check, bullseye, camera, refresh, eye-slash, trash, eraser."))
   (button_style :initarg :button_style :accessor button_style
 		 :type unicode
 		 :initform (unicode "")
