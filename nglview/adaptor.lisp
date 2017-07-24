@@ -1,5 +1,6 @@
 (in-package :nglv)
-
+;;;Register backend is something python does but we don't need
+#|
 (defclass register-backend ()
   ((:package-name :initarg package_name :accessor package_name
 		  :initform nil)))
@@ -7,7 +8,7 @@
 (defmethod %-call-- ((self register-backend) cls)
   (setf (gethash (package-name self) *BACKENDS*) cls)
   cls)
-
+|#
 (defclass file-structure(Structure)
   ((path :initarg :path :accessor path :initform nil)
    (fm :accessor fm :initform nil)
@@ -132,6 +133,10 @@
    (trajectory :accessor trajectory :initform nil)
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
 
+(defmethod initialize-instance :after ((self SimpletrajTrajectory) &key)
+  (setf (gethash "simpletraj" *BACKENDS*) 'SimpletrajTrajectory)
+  (values))
+
 (defmethod get-coordinates ((self SimpletrajTrajectory) index)
   (error "Implement me!!! get-coordinates SimpletrajTrajectory!"))
 #|
@@ -157,6 +162,10 @@
    (params :accessor params :type list :initform ())
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
 
+(defmethod initialize-instance :after ((self MDTrajTrajectory) &key)
+  (setf (gethash "mdtraj" *BACKENDS*) 'MDTrajTrajectory)
+  (values))
+
 (defmethod get-coordinates ((self MDTrajTrajectory) index)
   (* 10 (aref (xyz (trajectory self)) index)))
 
@@ -180,6 +189,10 @@
    (ext :accessor ext :initform "pdb")
    (params :accessor params :type list :initform ())
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
+
+(defmethod initialize-instance :after ((self PyTrajTrajectory) &key)
+  (setf (gethash "pytraj" *BACKENDS*) 'PyTrajTrajectory)
+  (values))
 
 (defmethod get-coordinates ((self PyTrajTrajectory) index)
   (xyz (aref (trajectory self) index)))
@@ -206,6 +219,10 @@
    (xyz :accessor xyz :initform nil)
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))
    (only-save-1st-model :accessor only-save-1st-model :type bool :initform :true)))
+
+(defmethod initialize-instance :after ((self ParmEdTrajectory) &key)
+  (setf (gethash "parmed" *BACKENDS*) 'ParmEdTrajectory)
+  (values))
 
 #|
 
@@ -252,6 +269,11 @@ class ParmEdTrajectory(Trajectory, Structure):
    (ext :accessor ext :initform "pdb")
    (params :accessor params :type list :initform ())
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
+
+(defmethod initialize-instance :after ((self MDAnalysisTrajectory) &key)
+  (setf (gethash "MDAnalysis" *BACKENDS*) 'MDAnalysisTrajectory)
+  (values))
+
 #+(or)
 (defmethod get-coordinates ((self MDAnalysisTrajectory) index)
   (aref (trajectory (universe (atomgroup self))) index)
@@ -289,6 +311,10 @@ class ParmEdTrajectory(Trajectory, Structure):
    (ext :accessor ext :initform "pdb")
    (params :accessor params :type list :initform ())
    (id :accessor id :initform (format nil "~W" (uuid:make-v4-uuid)))))
+
+(defmethod initialize-instance :after ((self HTMDTrajectory) &key)
+  (setf (gethash "htmd" *BACKENDS*) 'HTMDTrajectory)
+  (values))
 
 (defmethod get-coordinates ((self HTMDTrajectory) index)
   (error "help get-coordinates HTMDTrajectory"))
