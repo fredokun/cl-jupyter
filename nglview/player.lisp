@@ -17,159 +17,161 @@
    (interpolate :initarg :interpolate :accessor interpolate
 		:type bool
 		:initform :false
-		:metadata (:sync nil
+		:metadata (:sync t
 				 :json-name "interpolate"))
    (delay :initarg :delay :accessor delay
 	  :type float
-	  :initform 100 ;Original default is 0.0 but init makes it 100
+	  :initform 100.0 ;Original default is 0.0 but init makes it 100
 	  :metadata (:sync t
 			   :json-name "delay"))
    (parameters :initarg :parameters :accessor parameters
-	       :type list
-	       :initform ()
+	       :type cljw:dict
+	       :initform nil
 	       :metadata (:sync t
 				:json-name "parameters"))
    (iparams :initarg :iparams :accessor iparams
-	    :type list
-	    :initform ()
-	    :metadata (:sync nil
+	    :type cljw:dict
+	    :initform nil
+	    :metadata (:sync t
 			     :json-name "iparams"))
    (%interpolation-t :initarg :%interpolation-t :accessor %interpolation-t
 		     :type float
 		     :initform 0.5 ;Original default is nil but init makes it 0.5
-		     :metadata (:sync nil
+		     :metadata (:sync t
 				      :json-name "_interpolation_t"))
    (%iterpolation-type :initarg :%iterpolation-type :accessor %iterpolation-type
 			:type unicode
 			:initform (unicode "linear");Original default is "" but init makes it "linear"
-			:metadata (:sync nil
+			:metadata (:sync t
 					 :json-name "_iterpolation_type"
+					 :caseless-str-enum '("linear" "spline")
 					 :help "either linear or spline"))
    (spin :initarg :spin :accessor spin
 	 :type bool
 	 :initform :false
-	 :metadata (:sync nil
+	 :metadata (:sync t
 			  :json-name "spin"))
    (%spin-x :initarg :%spin-x :accessor %spin-x
 	    :type integer
 	    :initform 1
-	    :metadata (:sync nil
+	    :metadata (:sync t
 			     :json-name "_spin_x"))
    (%spin-y :initarg :%spin-y :accessor %spin-y
 	    :type integer
 	    :initform 0
-	    :metadata (:sync nil
+	    :metadata (:sync t
 			     :json-name "_spin_y"))
    (%spin-z :initarg :%spin-z :accessor %spin-z
 	    :type integer
 	    :initform 0
-	    :metadata (:sync nil
+	    :metadata (:sync t
 			     :json-name "_spin_z"))
    (%spin-speed :initarg :%spin-speed :accessor %spin-speed
 		:type float
 		:initform 0.005
-		:metadata (:sync nil
+		:metadata (:sync t
 				 :json-name "_spin_speed"))
    (camera :initarg :camera :accessor camera
 	   :type unicode
 	   :initform (unicode "perspective")
-	   :metadata (:sync nil
+	   :metadata (:sync t
 			    :json-name "camera"
+			    :caseless-str-enum '("perspective" "orthographic")
 			    :help "Options: perspective or orthographic"))
    (%render-params :initarg :%render-params :accessor %render-params
-		   :type list
-		   :initform ()
-		   :metadata (:sync nil
+		   :type cljw:dict
+		   :initform nil
+		   :metadata (:sync t
 				    :json-name "_render_params"))
    (%real-time-update :initarg :%real-time-update :accessor %real-time-update
 		      :type bool
 		      :initform :false
-		      :metadata (:sync nil
+		      :metadata (:sync t
 				       :json-name "_real_time_update"))
    ;;gap in python code
    (widget-tab :initarg :widget-tab :accessor widget-tab
 	       :initform nil
-	       :metadata (:sync nil
+	       :metadata (:sync t
 				:json-name "widget_tab"))
    (widget-repr :initarg :widget-repr :accessor widget-repr
 		:initform nil
-		:metadata (:sync nil
+		:metadata (:sync t
 				 :json-name "widget_repr"))
    (widget-repr-parameters :initarg :widget-repr-parameters :accessor widget-repr-parameters
 			   :initform nil
-			   :metadata (:sync nil
+			   :metadata (:sync t
 					   :json-name "widget_repr_parameters"))
    (widget-quick-repr :initarg :widget-quick-repr :accessor widget-quick-repr
 		      :initform nil
-		      :metadata (:sync nil
+		      :metadata (:sync t
 				       :json-name "widget_quick_repr"))
    (widget-general :initarg :widget-general :accessor widget-general
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_general"))
    (widget-picked :initarg :widget-picked :accessor widget-picked
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_picked"))
    (widget-preference :initarg :widget-preference :accessor widget-preference
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_preference"))
    (widget-extra :initarg :widget-extra :accessor widget-extra
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_extra"))
    (widget-theme :initarg :widget-theme :accessor widget-theme
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_theme"))
    (widget-help :initarg :widget-help :accessor widget-help
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_help"))
    (widget-export-image :initarg :widget-export-image :accessor widget-export-image
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_export_image"))
    (widget-component-slider :initarg :widget-component-slider :accessor widget-component-slider
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_component_slider"))
    (widget-repr-slider :initarg :widget-repr-slider :accessor widget-repr-slider
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_repr_slider"))
    (widget-repr-choices :initarg :widget-repr-choices :accessor widget-choices
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_repr_choices"))
    (widget-repr-control-buttons :initarg :widget-repr-control-buttons :accessor widget-general
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_repr_control_buttons"))
    (widget-repr-add :initarg :widget-repr-add :accessor widget-repr-add
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_repr_add"))
    (widget-accordion-repr-parameters :initarg :widget-accordion-repr-parameters :accessor widget-accordion-repr-parameters
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_accordion_repr_parameters"))
    (widget-repr-parameters-dialog :initarg :widget-repr-parameters-dialog :accessor widget-repr-parameters-dialog
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_repr_parameters_dialog"))
    (widget-repr-name :initarg :widget-repr-name :accessor widget-repr-name
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_repr_name"))
    (widget-component-dropdown :initarg :widget-component-dropdown :accessor widget-component-dropdown
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_component_dropdown"))
    (widget-drag :initarg :widget-drag :accessor widget-drag
 		   :initform nil
-		   :metadata (:sync nil
+		   :metadata (:sync t
 				    :json-name "widget_drag"))
    ;;;include the other parameters found in the __init__ function
   (view :initarg :view :accessor view
@@ -177,27 +179,29 @@
   (min-delay :initarg :min-delay :accessor min-delay
 	     :type integer
 	     :initform 40)
-  (widget-names :initarg :widget-names :accessor widget-names
+  (%widget-names :initarg :widget-names :accessor widget-names
 		 :type list
 		 :initform ()))
   (:metaclass traitlets:traitlet-class))
    
-(defmethod initialize-instance :after ((self TrajectoryPlayer) &key)
-  (setf iparams '(:t (%interpolation-t self) :step 1 :type (%iterpolation-type))
-	-render-params '(:factor 4 :antialias t :trim nil :transparent nil))
-  (error "Help me! Fix widget_names and observe"))
+(defmethod initialize-instance :after ((player TrajectoryPlayer) &key)
+  (setf (iparams player) (list (cons :t (%interpolation-t player))
+			       (cons :step 1)
+			       (cons :type (%iterpolation-type player)) ))
+  (setf (render-params player) (list (cons :factor 4)
+				    (cons :antialias :true)
+				    (cons :trim :false)
+				    (cons :transparent :false)))
+  ;; the following doesn't appear to be used anywhere correct
+  ;; https://github.com/drmeister/spy-ipykernel/blob/master/nglview/player.py#L80
+  ;; self._widget_names = [w for w in dir(self) if w.startswith('wiget_')]
+
 #|
  self._widget_names = [w for w in dir(self) if w.startswith('wiget_')]
         self.observe(self._on_widget_built, names=['widget_repr_parameters',
             'widget_repr',
             'widget_preference'])
 |#
-
-(defmethod %on-widget-built ((self TrajectoryPlayer) change)
-  (let ((widget (aref change "new")))
-       (if widget
-	   (setf (padding (layout widget)) "5%"))))
-;;Not sure about this one
 
 (defmethod %update-padding ((self TrajectoryPlayer) &optional (padding *DEFAULT-PADDING*))
   (with-slots (widget-general widget-repr widget-preference widget-repr-parameters widget-help widget-extra wiget-picked) self

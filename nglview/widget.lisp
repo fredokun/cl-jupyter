@@ -1,6 +1,11 @@
 (in-package :nglv)
 
 
+(defclass component-viewer ()
+  ((%view :initarg :view :accessor view)
+   (%index :initarg :index :accessor index)))
+
+
 (defclass nglwidget (cljw::dom-widget)
   (
    (%image-data :initarg :image-data
@@ -62,8 +67,8 @@
 		     :initform 0
 		     :metadata (:sync t :json-name "_n_dragged_files"))
    ;; TODO: remove %parameters?
-   (%parameters :initarg :parameters
-		:accessor parameters
+   (%parameters :initarg :%parameters
+		:accessor %parameters
 		:type cljw:dict
 		:initform nil) ; not synchronized https://github.com/drmeister/spy-ipykernel/blob/master/nglview/widget.py#L124
    (%full-stage-parameters :initarg :full-stage-parameters
@@ -200,7 +205,7 @@
       (when theme-p (setf (theme widget) theme))
       (setf (stage widget) (make-instance 'stage :view widget))
 ;;;      (setf (control widget) (make-instance 'viewer-control :view widget))
-      (warn "What do we do about add_repr_method_shortcut")
+      #+(or)(warn "What do we do about add_repr_method_shortcut")
       (cljw:widget-log "Starting handle-msg-thread from process ~s~%" mp:*current-process*)
       (setf (handle-msg-thread widget)
 	    (mp:process-run-function
@@ -235,23 +240,32 @@
 	    (setf (init-representations widget) representations))
 	  (setf (init-representations widget)
 		#((("type" ."cartoon")
-		   ("params" . (
-				( "sele" . "polymer")
-				)))
+		   ("params" . (( "sele" . "polymer"))))
 		  (("type" . "ball+stick")
-		   ("params" . (
-				( "sele" . "hetero OR mol")
-				)))
+		   ("params" . (( "sele" . "hetero OR mol"))))
 		  (("type" . "ball+stick")
-		   ("params" . (
-				( "sele" . "not protein and not nucleic")
-				))))))
+		   ("params" . (( "sele" . "not protein and not nucleic")))))))
       (%set-unsync-camera widget)
       (let ((selector (remove #\- (format nil "~W" (uuid:make-v4-uuid)))))
 	(%remote-call widget "setSelector" :target "Widget" :args (list selector)))
-      (warn "Set the Trajectoryplayer")
+      #+(or)(warn "Set the Trajectoryplayer")
       (setf (already-constructed widget) t)
       widget)))
+
+
+(defun parameters (widget)
+  (%parameters widget))
+
+(defun (setf parameters) (params widget)
+  (let ((params (camelize-dict params)))
+    (setf (%parameters widget) params)
+    (%remote-call widget "setParameters"
+		  :target "Widget"
+		  :args (vector params)))
+  params)
+
+
+
   #|
    if isinstance(structure, Trajectory):
    name = py_utils.get_name(structure, kwargs)
@@ -285,27 +299,30 @@
    |#
 
 
+(defun camera (widget)
+  (cond
+    ((string= (camera-str widget) "orthographic")
+     :orthographic)
+    ((string= (camera-str widget) "perspective")
+     :perspective)
+    (t (error "Illegal value for %camera-str ~s - must be one of orthographic or perspective"))))
 
-#++
-(defmethod %set-initial-structure ((widget nglwidget) structures)
-  "initialize structures for Widget
+(defun (setf camera) (value widget)
+  "Values:  :perspective or :orthographic"
+  (checktype value (member :perspective :orthographic))
+  (let ((camera-str (ecase value
+		      (:perspective "perspective")
+		      (:orthographic "orthographic"))))
+    (setf (camera-str widget) camera-str)
+    (%remote-call widget "setParameters"
+		  :target "Stage"
+		  :kwargs (plist-to-kwargs '(:camera-type camera-str)))))
 
-        Parameters
-        ----------
-        structures : list
-            list of Structure or Trajectory
-  "
-  (let ((init-structures-sync (if (consp structures)
-				  structures
-				  (list structures))))
-    (when init-structures-sync
-      (mapc (lambda (structure)
-	      (setf (init-structures-sync widget)
-		    (vector (list (cons "data" (get-structure-string structure))
-				  (cons "ext" (ext structure))
-				  (cons "params" (params structure))
-				  (cons "id" (id structure))))))
-	    init-structures-sync))))
+
+;;;  _request_stage_parameters
+;;;         isn't called by anything!
+
+
 
 
 
@@ -337,10 +354,14 @@
     (new-value (class traitlets:traitlet-class) (object nglwidget) (slotd traitlets:effective-traitlet))
   (call-next-method)
   (let ((slot-name (clos:slot-definition-name slotd)))
-    (when (eq slot-name '%loaded)
-      (when new-value
-	(cljw:widget-log "%loaded is true - firing callbacks~%")
-	(%fire-callbacks object (reverse (ngl-displayed-callbacks-before-loaded-reversed object)))))))
+    (cond
+      ((eq slot-name '%loaded)
+       (when new-value
+	 (cljw:widget-log "%loaded is true - firing callbacks~%")
+	 (%fire-callbacks object (reverse (ngl-displayed-callbacks-before-loaded-reversed object)))))
+      (t
+       (call-next-method)))))
+
 
 (defmethod %fire-callbacks ((widget nglwidget) callbacks)
   (cljw:widget-log "%fire-callbacks entered in process ~s~%" mp:*current-process*)
@@ -358,6 +379,11 @@
 			     cl-jupyter:*default-special-bindings*))
   (cljw:widget-log "Done %fire-callbacks~%"))
 
+
+(defmethod sync-view ((widget nglwidget))
+  "Call this if you want to sync multiple views of a single viewer
+   Note: unstable feature"
+  (%fire-callbacks widget (reverse (ngl-displayed-callbacks-after-loaded-reversed widget))))
 
 (defmethod wait-until-finished ((widget nglwidget) &optional (timeout 0.0001))
   (pythread:clear (event widget))
@@ -383,7 +409,8 @@
   (setf (ngl-component-ids self) (append (ngl-component-ids self) (list (id structure))))
   (when (> (n-components self) 1)
     (center-view self :component (- (length (ngl-component-ids self)) 1)))
-  (%update-component-auto-completion self))
+  (%update-component-auto-completion self)
+  structure)
 
 (defmethod add-trajectory ((self NGLWidget) trajectory &rest kwargs)
   (let ((backends *BACKENDS*)
@@ -681,7 +708,7 @@
    |#
 
 (defmethod %update-component-auto-completion ((self NGLWidget))
-  (warn "Do something for %update-component-auto-completion")
+  #+(or)(warn "Do something for %update-component-auto-completion")
   #+(or)(let ((trajids (loop for traj in (%trajlist self) collect (id traj)))
 	      (index 0))
 	  (loop for cid in (ngl-component-ids self)
@@ -820,7 +847,7 @@
 ||#
 
 (defmethod %update-component-auto-completions ((widget nglwidget))
-  (warn "What do I do in %update-component-auto-completions?"))
+  #+(or)(warn "What do I do in %update-component-auto-completions?"))
 
 
 (defmethod center-view ((widget nglwidget) &key (selection "*") (duration 0) (component 0))
@@ -880,8 +907,50 @@
 		:args (list colors component-index repr-index)))
 
 
+(defmethod clear-representations ((self nglwidget) &key (component 0))
+  "clear all representations for given component
 
-(defmethod add-representation ((self nglwidget) repr-type &rest kwargs &key (selection "all"))
+        Parameters
+        ----------
+        component : int, default 0 (first model)
+            You need to keep track how many components you added.
+   "
+  (%remote-call self
+		"clearRepresentations"
+		:target "compList"
+		:kwargs (list (cons "component_index" component))))
+
+
+(defmethod add-shape ((self nglwidget) shapes &key (name "shape"))
+  "add shape objects
+
+        Parameters
+        ----------
+        shapes : vector of vectors
+        name : str, default 'shape'
+            name of given shape
+
+        Notes
+        -----
+        Supported shape: 'mesh', 'sphere', 'ellipsoid', 'cylinder', 'cone', 'arrow'.
+        
+        See also
+        --------
+        {ngl_url}
+
+        Examples
+        --------
+        (asdf:load-system :nglview)
+        (defparameter *v* (make-instance 'nglv::nglwidget))
+        (defparameter *sphere* (vector "sphere" #(0 0 9) #(1 0 0) 1.5))
+        (defparameter *arrow* (vector "arrow" #(1 2 7) #(30 3 3) #(1 0 1) 1.0))
+        (nglv::add-shape *v* (list *sphere* *arrow* :name "my_shape"))
+        "
+  (%remote-call self "addShape"
+		:target "Widget"
+		:args (list name shapes)))
+
+(defmethod add-representation ((self nglwidget) repr-type &rest kwargs &key (use-worker nil use-worker-p) (selection "all"))
   "Add structure representation (cartoon, licorice, ...) for given atom selection.
 
         Parameters
@@ -910,19 +979,18 @@
         >>> w.add_cartoon(selection) # w.add_representation('cartoon', selection)
         "
   (when (string= repr-type "surface")
-    (when (null (assoc "useWorker" kwargs :key #'car :test #'string=))
-      (push (cons "useWorker" :false) kwargs)))
+    (unless use-worker-p
+      (setf (getf kwargs :use-worker) :false)))
+  
   ;; avoid space sensitivity
-  (setf repr-type (string-trim repr-type " "))
+  (setf repr-type (string-trim " " repr-type))
   ;; overwrite selection
-  (setf selection (seq-to-string (string-trim selection " ")))
-  (let* ((kwargs2 (camelize-dict kwargs))
-	 (comp-assoc (assoc "component" kwargs2 :key #'car :test #'string=))
-	 (component (if comp-assoc
-			(progn
-			  (setf kwargs2 (delete comp-assoc kwargs2))
-			  (cdr comp-assoc))
-			0)))
+  (setf selection (seq-to-string (string-trim " " selection)))
+  (let* ((kwargs2 (dict-from-plist kwargs))
+	 (comp-assoc (assoc :component kwargs))
+	 (component (prog1
+			(getf kwargs :component 0)
+		      (remf kwargs :component))))
     #|for k, v in kwargs2.items():
     try:
     kwargs2[k] = v.strip()
@@ -930,8 +998,10 @@
     # e.g.: opacity=0.4
     kwargs2[k] = v
     |#
-    (let ((params (append kwargs2 (list (cons "sele" selection)))))
+    (let* ((params (dict-from-plist kwargs :remove '(:selection))))
+      (push (cons "sele" selection) params)
       (push (cons "component_index" component) params)
+;;;      (format t "kwargs -> ~s~%" params)
       (%remote-call self "addRepresentation"
 		    :target "compList"
 		    :args (list repr-type)
