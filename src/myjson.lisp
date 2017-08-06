@@ -250,7 +250,7 @@ Note:   Python None maps to NIL
 	      (char<= init #\9)) (parse-json-digits input))
 	(t
 	 (concatenate 'string 
-		      (format nil "~A" (parse-json-digit input :min #\1))
+		      (format nil "~A" (parse-json-digit input :min #\0))
 		      (parse-json-digits input)))))
 
 (example (with-input-from-string (s "132402")
