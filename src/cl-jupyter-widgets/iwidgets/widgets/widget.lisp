@@ -30,6 +30,8 @@
   (defparameter *widget-serialization*
     (list :from-json 'json-to-widget
 	  :to-json 'widget-to-json)))
+
+
 (deftype bool () '(member :true :false :null))
 (deftype unicode () '(simple-array character *))
 (deftype cunicode () '(simple-array character *))
@@ -38,6 +40,88 @@
 (deftype instance () T)
 (deftype dict () T) ;; alist?
 
+(deftype binary-types () '(simple-array ext:byte8 *))
+
+(defclass instance-dict ()
+  ())
+
+;;; See trait_types.py NumberFormat
+(defun number-format (&key format)
+  (unicode format))
+
+(defun %put-buffers (state buffer-paths buffers)
+    "The inverse of _remove_buffers, except here we modify the existing dict/lists.
+    Modifying should be fine, since this is used when state comes from the wire.
+    "
+  (loop for buffer-path in buffer-paths
+     for buffer in buffers
+     for path-end = (path-end state buffer-path)
+     do (setf (cdr path-end) buffer)))
+
+(defun %separate-buffers (substate path buffer-paths buffers)
+  "For internal, see %remove-buffers"
+  ;; remove binary types from dicts and lists, but keep track of their paths
+  ;; any part of the dict/list that needs modification will be cloned, so the original stays untouched
+  ;; e.g. {'x': {'ar': ar}, 'y': [ar2, ar3]}, where ar/ar2/ar3 are binary types
+  ;; will result in {'x': {}, 'y': [None, None]}, [ar, ar2, ar3], [['x', 'ar'], ['y', 0], ['y', 1]]
+  ;; instead of removing elements from the list, this will make replacing the buffers on the js side much easier
+  (cond
+    ((typep substate 'vector)
+     (let ((is-cloned nil))
+       (loop for i from 0 below (length substate)
+	  for v = (elt substate i)
+	  do (if (typep v 'binary-types)
+		 (progn
+		   (when (not is-cloned)
+		     (setf substate (copy-seq substate))
+		     (setf is-cloned t))
+		   (setf (elt substate i) nil)
+		   (vector-push-extend v buffers)
+		   (vector-push-extend (append path (list i)) buffer-paths))
+		 (when (typep v '(or list vector))
+		   (let ((vnew (%separate-buffers v (append path (list i)) buffer-paths buffers)))
+		     (unless (eq v vnew)
+		       (unless is-cloned
+			 (setf substate (copy-seq substate))
+			 (setf is-cloned t))
+		       (setf (elt substate i) vnew))))))))
+    ((typep substate 'list) ;; alist is dictionary
+     (let ((is-cloned nil))
+       (loop for (k . v) in substate
+	  do (if (typep v 'binary-types)
+		 (progn
+		   (when (not is-cloned)
+		     (setf substate (loop for (ks . vs) in substate
+				       collect (cons ks vs)))
+		     (setf is-cloned t))
+		   (setf substate (loop for (ks . vs) in substate
+				     unless (string= k ks)
+				     collect (cons ks vs)))
+		   (vector-push-extend v buffers)
+		   (vector-push-extend (append path (list k)) buffer-paths))
+		 (when (typep v '(or list vector))
+		   (let ((vnew (%separate-buffers v (append path (list k)) buffer-paths buffers)))
+		     (unless (eq v vnew)
+		       (unless is-cloned
+			 (setf substate (loop for (ks . vs) in substate
+					   collect (cons ks vs)))
+			 (setf is-cloned t))
+		       (setf (cdr (assoc k substate)) vnew))))))))
+    (t (error "expected state to be a vector or a dict, not ~a" substate))))
+
+(defun %remove-buffers (state)
+  "Return (state_without_buffers, buffer_paths, buffers) for binary message parts
+
+    As an example:
+    >>> state = {'plain': [0, 'text'], 'x': {'ar': memoryview(ar1)}, 'y': {'shape': (10,10), 'data': memoryview(ar2)}}
+    >>> _remove_buffers(state)
+    ({'plain': [0, 'text']}, {'x': {}, 'y': {'shape': (10, 10)}}, [['x', 'ar'], ['y', 'data']],
+     [<memory at 0x107ffec48>, <memory at 0x107ffed08>])
+  "
+  (let ((buffer-paths (make-array 16 :fill-pointer 0 :adjustable t))
+	(buffers (make-array 16 :fill-pointer 0 :adjustable t)))
+    (let ((new-state (%separate-buffers state nil buffer-paths buffers)))
+      (values state buffer-paths buffers))))
 
 (defclass callback-dispatcher ()
   ((%callbacks :initarg :callbacks :initform nil :accessor callbacks)))
@@ -54,43 +138,134 @@
       (setf (callbacks self) (delete callback (callbacks self)))
       (push callback (callbacks self))))
 
+;;; --------------------------------------------------
+;;;
+;;; What am I going to do with WidgetRegistry??????
+;;;
+;;;
+
+
+(defclass widget-registry ()
+  ((%registry :initform (make-hash-table :test #'equal) :accessor registry)))
+
+(defmacro set-default (key hash-table default)
+  (let ((value (gensym))
+	(foundp (gensym)))
+    `(multiple-value-bind (,value ,foundp)
+	 (gethash ,key ,hash-table)
+       (if ,foundp
+	   ,value
+	   (setf (gethash ,key ,hash-table) ,default)))))
+
+(defmethod widget-registry-register ((self widget-registry) model-module model-module-version-range model-name view-module view-module-version-range view-name klass)
+  (let* ((model-module-ht  (set-default model-module               (registry self)  (make-hash-table :test #'equal)))
+	 (model-version-ht (set-default model-module-version-range model-module-ht  (make-hash-table :test #'equal)))
+	 (model-name-ht    (set-default model-name                 model-version-ht (make-hash-table :test #'equal)))
+	 (view-module-ht   (set-default view-module                model-name-ht    (make-hash-table :test #'equal)))
+	 (view-version-ht  (set-default view-module-version-range  view-module-ht   (make-hash-table :test #'equal))))
+    (setf (gethash view-name view-version-ht) klass)))
+		     
+(defmethod widget-registry-get ((self widget-registry) model-module model-module-version model-name view-module view-module-version-range view-name)
+  (let* ((module-versions-ht (gethash model-module (registry self)))
+	 (model-names-ht (first (loop for value being the hash-values in module-versions-ht collect value)))
+	 (view-modules-ht (gethash model-name model-names-ht))
+	 (view-versions-ht (gethash view-module view-modules-ht))
+	 (view-names-ht (first (loop for value being the hash-values in view-versions-ht collect value)))
+	 (widget-class (gethash view-name view-names-ht)))
+    widget-class))
+
+
+(defmethod widget-registry-items ((self widget-registry))
+  (error "Implement widget-registry-items"))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *the-widget-registry* (make-instance 'widget-registry)))
+
+(defun slot-default-value (widget-class slot-name)
+  (let* ((class-slots (clos:class-slots widget-class))
+	 (slot (find slot-name class-slots :key #'clos:slot-definition-name)))
+    (if slot
+	(funcall (clos:slot-definition-initfunction slot))
+	(error "Could not find slot with name ~a in ~a" slot-name class-slots))))
+
+(defun do-register (widget-class-name)
+  (let ((widget-class (find-class widget-class-name)))
+    (clos:finalize-inheritance widget-class)
+    (widget-registry-register *the-widget-registry*
+			      (slot-default-value widget-class '%model-module)
+			      (slot-default-value widget-class '%model-module-version)
+			      (slot-default-value widget-class '%model-name)
+			      (slot-default-value widget-class '%view-module)
+			      (slot-default-value widget-class '%view-module-version)
+			      (slot-default-value widget-class '%view-name)
+			      widget-class)
+    widget-class))
+
+(defmacro register (widget-class-name)
+  "Register a widget class in the widget registry."
+  `(do-register ',widget-class-name))
+
 
 (defgeneric ipython-display-callback (widget &rest kwargs))
+
+(defmacro defclass-widget-register (name &body body)
+  `(defclass ,name ,@body)
+  #|`(progn
+     (defclass ,name ,@body)
+     (register ,name))
+|#
+)
 
 (defclass widget (traitlets:synced-object)
   ((%widget-construction-callback
     :accessor widget-construction-callback
     :initform (make-instance 'callback-dispatcher))
    (%widgets :allocation :class :initform (make-hash-table) :accessor widgets)
-   (%widget-types :allocation :class :initform (make-hash-table) :accessor widget-types)
+   (%widget-types :allocation :class :initform *the-widget-registry* :accessor widget-types)
    ;; Traits
-   (%model-module :initarg :model-module :accessor model-module
-		  :type unicode
-		  :initform (unicode "jupyter-js-widgets")
-		  :metadata (:json-name "_model_module"
-					:sync t
-					:help "A requirejs module name in which to find _model_name. If empty, look in the global registry."))
    (%model-name :initarg :model-name :accessor model-name
 		:type unicode
 		:initform (unicode "WidgetModel")
-		:metadata (:sync t
-				 :json-name "_model_name"))
-   (%view-module :initarg :view-module :accessor view-module
-		 :type (or null unicode)
-		 :initform nil
-		 :metadata (:sync t
-				  :json-name "_view_module"))
+		:metadata (:sync t :json-name "_model_name"
+				 :help "Name of the model." :read-only t))
+   (%model-module :initarg :model-module :accessor model-module
+		  :type unicode
+		  :initform (unicode "@jupyter-widgets/base")
+		  :metadata (:json-name "_model_module"
+					:sync t
+					:help "A requirejs module name in which to find _model_name. If empty, look in the global registry."))
+   (%model-module-version :initarg :model-module-version :accessor model-module-version
+			  :type unicode
+			  :initform (unicode *jupyter-widgets-base-version*)
+			  :metadata (:json-name "_model_module_version"
+						:sync t
+						:help "A semver requirement for namespace version containg the model"
+						:read-only t))
    (%view-name :initarg :view-name :accessor view-name
 	       :type (or null unicode)
 	       :initform nil
 	       :metadata
 	       (:sync t
-		      :json-name "_view_name"))
-   (%msg-throttle :initarg :msg-throttle :accessor msg-throttle
-		  :type integer
-		  :initform 3
-		  :metadata (:sync t
-				   :json-name "msg_throttle") )
+		      :json-name "_view_name"
+		      :help "The name of the view"))
+   (%view-module :initarg :view-module :accessor view-module
+		 :type (or null unicode)
+		 :initform nil
+		 :metadata (:sync t :json-name "_view_module"))
+   (%view-module-version :initarg :view-module-version :accessor view-module-version
+			 :type unicode
+			 :initform ""
+			 :metadata (:sync t :json-name "_view_module_version"))
+   (%view-count :initarg :view-count :accessor view-count
+		:type integer
+		:initform :null
+		:metadata (:sync t :json-name "_view_count"
+				 :help "EXPERIMENTAL: The number of views of the model displayed in the frontend. This attribute is experimental and may change or be removed in the future. None signifies that views will not be tracked. Set this to 0 to start tracking view creation/deletion."))
+   #+(or)(%msg-throttle :initarg :msg-throttle :accessor msg-throttle
+                        :type integer
+                        :initform 3
+                        :metadata (:sync t
+				   :json-name "msg_throttle"))
    (%comm :initarg :comm :accessor comm :initform nil)
    (%key-map :initarg :key-map :accessor key-map) ; alist of (slot-name . json-name)
    (%property-lock :initarg :property-lock :accessor property-lock :initform nil)
@@ -127,6 +302,10 @@
   (widget-log "call-widget-constructed widget -> ~a~%" w)
   (do-call (widget-construction-callback w) w))
 
+(defun handle-comm-opened (comm msg)
+  "Static method, called when a widget is constructed"
+  (error "FINISH IMPLEMENTING ME"))
+
 (defun keys (widget)
   (mapcar #'car (key-map widget)))
 
@@ -138,35 +317,44 @@
 		   (getf (traitlets::metadata slot-def) :json-name))))
     
 
+(defun check-*send-updates* ()
+  (widget-log "In check-*send-updates* -> ~a~%" *send-updates*))
+
 (defmethod initialize-instance :around ((w widget) &rest initargs)
   (widget-log "widget.lisp initialize-instance initargs: ~a~%" initargs)
-  (let* ((*send-updates* nil) ; suppress sending updates to browser when initializing
-	 (w (call-next-method)))
-    (setf (key-map w) (get-key-map w))
-    (call-widget-constructed w)
-    (widget-open w)))
+  (unwind-protect
+       (let* ((*send-updates* nil) ; suppress sending updates to browser when initializing
+	      (w (progn
+		   (check-*send-updates*)
+		   (widget-log ">>>>   Suppressing sending updates to browser  *send-updates* -> ~a~%" *send-updates*)
+		   (call-next-method))))
+	 (setf (key-map w) (get-key-map w))
+	 (call-widget-constructed w)
+	 (prog1
+	     (widget-open w)
+	   (widget-log "widget.lisp initialize-instance done *send-updates* -> ~a~%" *send-updates*)))
+    (widget-log "<<<< Leaving *send-updates* ~a context~%" *send-updates*)))
 
 (defvar *print-widget-backtrace* nil)
 
 (defun widget-open (self)
-  (multiple-value-bind (state buffer-keys buffers)
-      (split-state-buffers self (get-state self))
+  (multiple-value-bind (state buffer-paths buffers)
+      (%remove-buffers (get-state self))
     (widget-log "In widget-open~%")
     (widget-log "state -> ~a~%"
 		(with-output-to-string (sout)
 		  (print-as-python state sout :indent 4)))
-    (widget-log "buffer-keys -> ~s~%" buffer-keys)
+    (widget-log "buffer-paths -> ~s~%" buffer-paths)
     (widget-log "buffers -> ~s~%" buffers)
     (let ((kwargs (list :target-name "jupyter.widget"
-			:data state)))
+			:data (list (cons "state" state) (cons "buffer_paths" buffer-paths))
+                        :buffers buffers
+			:metadata (list (cons "version" *protocol-version*))
+)))
       (when (model-id self)
 	(setf (getf kwargs :comm-id) (model-id self)))
       (setf (comm self) (apply #'comm.__init__ kwargs))
-      (widget-log "    creating comm -> ~s~%" (comm self))
-      (when buffers
-	;; See comment about buffers at
-	;; https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget.py#L205
-	(send-state self)))))
+      (widget-log "    creating comm -> ~s~%" (comm self)))))
 
 (defun binary-types-p (obj)
   ;;; In python this test is
@@ -174,19 +362,6 @@
   ;; isinstance(obj, _binary_types)
   nil)
 
-(defun split-state-buffers (self state)
-  (let (buffer-keys
-	(buffers #())
-	new-state)
-    (loop for (key . value) in state
-       do (if (binary-types-p value)
-	      (progn
-		(push value buffers)
-		(push key buffer-keys))
-	      (push (cons key value) new-state)))
-    (values new-state buffer-keys buffers)))
-
-       
 (defun send-state (self &key key)
   "From https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget.py#L252
    Sends the widget state, or a part of the widget state to the front-end.
@@ -194,11 +369,11 @@
 key : a key or a list of keys (optional)
       A property's name or a list of property names to sync with the front-end"
   (let ((state (get-state self :key key)))
-    (multiple-value-bind (state buffer-keys buffers)
-	(split-state-buffers self state)
+    (multiple-value-bind (state buffer-paths buffers)
+	(%remove-buffers state)
       (let ((msg (list (cons "method" "update")
 		       (cons "state" state)
-		       (cons "buffers" buffer-keys))))
+		       (cons "buffer_paths" buffer-paths))))
 	(widget-log "widget.send-state~%")
 	(%send self msg :buffers buffers)))))
 
@@ -213,47 +388,56 @@ buffers : list  - A list of binary buffers "
 		    (cons "content" content))
 	 :buffers buffers))
 
-(defun widget-display (widget)
+(defun do-ipython-display (widget)
+  (widget-log "widget::do-ipython-display  (ipython-display widget) -> ~a~%" (ipython-display widget))
   (if (ipython-display widget)
       (funcall (ipython-display widget) widget)
       (warn "ipython-display callback is nil for widget ~a" widget)))
 
 (defmethod ipython-display-callback ((self widget) &rest kwargs)
   "This is called to display the widget"
+  (widget-log "widget::ipython-display~%")
   (when (view-name self)
-    (%send self '(("method" . "display")))
-    (%handle-displayed self)))
+    ;; The 'application/vnd.jupyter.widget-view+json' mimetype has not been registered yet.
+    ;; See the registration process and naming convention at
+    ;; http://tools.ietf.org/html/rfc6838
+    ;; and the currently registered mimetypes at
+    ;; http://www.iana.org/assignments/media-types/media-types.xhtml.
+    (let ((data (list (cons "text/plain" "A Jupyter Widget")
+                      (cons "application/vnd.jupyter.widget-view+json"
+                            (list (cons "version_major" 2)
+                                  (cons "version_minor" 0)
+                                  (cons "model_id" (model-id self)))))))
+      (widget-log "Calling cl-jupyter:display with data -> ~s~%" data)
+      (cl-jupyter:display data)
+      (%handle-displayed self))))
 
   
 (defmethod %handle-msg ((self widget) msg)
   (widget-log "In %handle-msg~%")
   (let* ((content (extract-message-content msg))
 	 (data    (assoc-value "data" content))
-	 (method  (assoc-value "method" data)))
+	 (method  (assoc-value "method" data))
+         state)
     (widget-log "      content -> ~s~%" content)
     (cond
-      ((string= method "backbone")
-       (widget-log "method backbone  data -> ~S~%" data)
-       (if (member "sync_data" data :key #'car :test #'string=)
-	   (let ((buffer-keys (assoc-value "buffer_keys" data #())))
-	     (widget-log "found sync_data~%")
-	     ;; get binary buffers
-	     ;; push them into sync-data as (buffer-key . buffer-value) pairs
-	     (let ((sync-data (assoc-value "sync_data" data nil))
-		   (buffers (cl-jupyter:message-buffers msg)))
-	       (when sync-data
-		 (loop for buffer-key across buffer-keys
-		    for index from 0
-		    do (push (cons buffer-key (svref index buffers)) sync-data)))
-	       ;; At this point sync-data should contain (buffer-key . buffer ) pairs
-	       (set-state self sync-data)))
-	   (widget-log "sync_data was not found in ~a" data)))
+      ((string= method "update")
+       (widget-log "method update  data -> ~S~%" data)
+       (when (assoc-contains "state" data)
+         (let ((state (assoc-value "state" data)))
+           (widget-log "Found state ~s in data~%" state)
+           (when (assoc-contains "buffer_paths" data)
+             (let ((buffer-paths (assoc-value "buffer_paths" data #())))
+               (widget-log "Found buffer_paths ~s in data~%" buffer-paths)
+               (%put-buffers state (assoc-value "buffer_paths" data)
+                             (assoc-value "buffers" content))))
+           (set-state self state))))
       ((string= method "request_state")
        (widget-log "method request_state~%")
        (send-state self))
       ((string= method "custom")
        (widget-log "method custom   data -> ~s~%" data)
-       (when (member "content" data :key #'car :test #'string=)
+       (when (assoc-contains "content" data)
 	 (widget-log "About to call handle-custom-msg~%")
 	 (handle-custom-msg self
 			    (assoc-value "content" data)
@@ -383,6 +567,7 @@ buffers : list  - A list of binary buffers "
 
 |#
 (defmethod %handle-displayed ((self widget))
+  (widget-log "In %handle-displayed (display-callbacks self) -> ~a~%" (display-callbacks self))
   (do-call (display-callbacks self) self))
     
 (defun %send (self msg &key (buffers #()))

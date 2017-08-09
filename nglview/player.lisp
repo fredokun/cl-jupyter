@@ -290,7 +290,7 @@
 		       (cons (%make-extra-box self) "Extra")
 		       (cons (%make-hide-tab-with-place-proxy self) "Hide")
 		       (cons (%show-website self) "Help")))
-	 (tab (%make-delay-tab box-factory :selected-index 1)))
+	 (tab (%make-delay-tab box-factory :selected-index 0)))
     (setf (align-self (layout tab)) "center" (align-items (layout tab)) "stretch")
     (setf (widget-tab self) tab)
     (widget-tab self)))
@@ -468,7 +468,7 @@
 
 (defmethod %refresh ((self TrajectoryPlayer) component-slider repr-slideR)
   (%request-repr-parameters (%view self) :component (value component-slider) :repr-index (value repr-slider))
-  (%remote-call (%view self) "requestReprInfo" :target "Widget")
+  (%update-repr-dict (%view self))
   (%handle-repr-dict-changed (%view self) :change (list (cons "new" (%repr-dict (%view self))))))
 
 

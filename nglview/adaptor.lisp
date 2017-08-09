@@ -125,6 +125,7 @@
             return open('tmp.pdb').read()
 |#
 
+
 (defclass SimpletrajTrajectory (Trajectory Structure)
   ((path :initarg :path :accessor path :initform nil)
    (structure-path :initarg :structure-path :accessor structure-path :initform path)

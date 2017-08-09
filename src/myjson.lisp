@@ -417,6 +417,9 @@ with a new line")
 	   => "blabla (ME TOTO)")
 
 
+(defmethod encode-json (stream (thing cljw::instance-dict) &key (indent nil) (first-line nil))
+  (error "You need to encode json for the instance-dict ~a" thing))
+
 (defmethod encode-json (stream (thing cons) &key (indent nil) (first-line nil))
   (json-write stream (if first-line nil indent) (if indent t nil) "{")
   (let ((sepstr (if indent (format nil ",~%") ",")))

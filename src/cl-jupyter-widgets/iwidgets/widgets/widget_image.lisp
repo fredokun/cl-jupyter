@@ -20,7 +20,7 @@ https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_i
 
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_image.py#L19
-(defclass image (dom-widget value-widget core-widget)
+(defclass image (domwidget value-widget core-widget)
   ((image-format :initarg :format :accessor image-format
 	    :type unicode
 	    :initform (unicode "png")

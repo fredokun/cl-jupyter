@@ -1,7 +1,7 @@
 (in-package :cl-jupyter-widgets)
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L19
-(defclass %float (labeled-widget value-widget core-widget)
+(defclass %float (description-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	   :type float
 	   :initform 0.0
@@ -148,7 +148,7 @@
 
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L180
-(defclass %float-range (labeled-widget value-widget core-widget)
+(defclass %float-range (description-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	  :type vector
 	  :initform (vector 0.0 1.0)

@@ -17,7 +17,7 @@
 
 
 
-(defclass button (dom-widget core-widget)
+(defclass button (domwidget core-widget)
  ((description :initarg :description :accessor description
 		:type unicode
 		:initform (unicode "")

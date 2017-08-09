@@ -120,9 +120,7 @@
       (call-next-method)))
 
 (defmethod (setf clos:slot-value-using-class) :before
-    (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
-  (cljw:widget-log "*send-updates* -> ~a   setting value of slot -> ~s  to value -> ~s~%"
-                   cljw:*send-updates* slotd new-value))
+    (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet)))
 
 (defmethod (setf clos:slot-value-using-class) :after
     (new-value (class traitlet-class) object (slotd effective-traitlet))

@@ -201,7 +201,7 @@
 		(send-stream (kernel-iopub (shell-kernel shell)) msg "stderr" stderr :key (kernel-key shell)))
 	      ;; send the first result
 	      (if (and (consp results) (typep (car results) 'cljw:widget))
-		  (cljw::widget-display (car results))
+		  (cljw:do-ipython-display (car results))
 		  (send-execute-result (kernel-iopub (shell-kernel shell)) 
 				       msg execution-count (car results) :key (kernel-key shell)))
 	      ;; status back to idle

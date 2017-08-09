@@ -17,7 +17,8 @@
     (when val
       (push :use-widget-log *features*))))
 ;;; Always turn it on for now
-(pushnew :use-widget-log *features*)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (pushnew :use-widget-log *features*))
 
 (eval-when (:execute :load-toplevel)
   (let ((log-file-name (cond
@@ -113,6 +114,8 @@
 (defun extract-message-content (msg)
   (myjson:parse-json-from-string (cl-jupyter:message-content msg)))
 
+(defun assoc-contains (key-string alist)
+  (assoc key-string alist :test #'string=))
 
 (defun assoc-value (key-string alist &optional (default nil default-p))
   (or (listp alist) (error "alist must be a list"))
@@ -149,7 +152,7 @@
     (prin1 object stream))
 
   (defmethod print-as-python ((object array) stream)
-    (format stream "[ ")
+    (format stream "[= ")
     (loop for value across object
        do (let ((value-as-string (with-output-to-string (sout)
 				   (print-as-python value sout))))
@@ -184,15 +187,15 @@
 	 (loop for (key . value) in sorted-dict
 	    do (let ((value-as-string (with-output-to-string (sout)
 					(print-as-python value sout))))
-		 (format stream "~vt~s: ~a,~%" *python-indent* key value-as-string))))
-       (format stream "}~%"))
+		 (format stream "~vt~s::: ~a,~%" *python-indent* key value-as-string))))
+       (format stream "}"))
       (t 
-       (format stream "[ ")
+       (format stream "[& ")
        (loop for value in object
 	  do (let ((value-as-string (with-output-to-string (sout)
 				      (print-as-python value sout))))
 	       (format stream "~a, " value-as-string)))
-       (format stream "]~%"))))
+       (format stream "]"))))
   )
 
 (defun as-python (msg)
@@ -216,6 +219,7 @@
 (defparameter *debug-kernel* nil)
 
 (defun save-jupyter-cell-state ()
+  (declare (special cl-jupyter:*parent-msg* cl-jupyter:*shell* cl-jupyter:*kernel*))
   (setf *debug-parent-msg* cl-jupyter:*parent-msg*
 	*debug-shell* cl-jupyter:*shell*
 	*debug-kernel* cl-jupyter:*kernel*))
@@ -224,4 +228,5 @@
   `(let ((cl-jupyter:*parent-msg* *debug-parent-msg*)
 	 (cl-jupyter:*shell* *debug-shell*)
 	 (cl-jupyter:*kernel* *debug-kernel*))
+     (declare (special cl-jupyter:*parent-msg* cl-jupyter:*shell* cl-jupyter:*kernel*))
      ,form))

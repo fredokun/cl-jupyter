@@ -2,7 +2,7 @@
 ;;;Python code: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets6/widgets/widget_selection.py#L49
 
 
-(defclass %selection (labeled-widget value-widget core-widget)
+(defclass %selection (description-widget value-widget core-widget)
     ((value :initarg :value :accessor value
 	  :initform nil
 	  :metadata (:sync t

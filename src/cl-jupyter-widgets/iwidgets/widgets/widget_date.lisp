@@ -1,7 +1,7 @@
 (in-package :cl-jupyter-widgets)
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_date.py#L18
-(defclass date-picker (labeled-widget dom-widget core-widget)
+(defclass date-picker (description-widget domwidget core-widget)
   ((value :initarg value :accessor value
 	  :type unicode
 	  :initform (unicode "")

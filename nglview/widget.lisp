@@ -1,6 +1,8 @@
 (in-package :nglv)
 
 
+(defparameter *frontend-version* "0.5.4-dev.8") ;; must match to js/package.json and js/src/widget_ngl.js
+
 (defclass component-viewer ()
   ((%view :initarg :view :accessor view)
    (%index :initarg :index :accessor index)))
@@ -183,7 +185,8 @@
    )
   (:default-initargs
    :view-name (cljw:unicode "NGLView")
-   :view-module (cljw:unicode "nglview-js-widgets"))
+    :view-module (cljw:unicode "nglview-js-widgets")
+    :view-module-version (cljw:unicode *frontend-version*))
   (:metaclass traitlets:traitlet-class))
 
 (defun make-nglwidget (&rest kwargs-orig
@@ -335,11 +338,22 @@
   (let ((msg-type (cljw:assoc-value "type" content)))
     (cljw:widget-log "    custom message msg-type -> ~s~%" msg-type)
     (cond
+      ((string= msg-type "request_frame")
+       (incf (frame widget) (step (player widget)))
+       (if (>= (frame widget) (count widget))
+	   (setf (frame widget) 0)
+	   (if (< (frame widget) 0)
+	       (setf (frame widget) (1- (count widget))))))
+      ((string= msg-type "repr_parameters")
+       (let* ((data-dict (dict-lookup (ngl-msg widget) "data")))
+	 (error "Finish implementing repr_parameters")))
       ((string= msg-type "request_loaded")
        (cljw:widget-log "      handling request_loaded~%")
        (unless (loaded widget)
 	 (setf (loaded widget) nil))
        (setf (loaded widget) (eq (cljw:assoc-value "data" content) :true)))
+      ((string= msg-type "repr_dict")
+       (setf (%repr-dict widget) (dict-lookup (ngl-msg widget) "data")))
       ((string= msg-type "async_message")
        (cljw:widget-log "%ngl-handle-msg - received async_message~%")
        (when (string= (cljw:assoc-value "data" content) "ok")
@@ -907,6 +921,11 @@
 		:args (list colors component-index repr-index)))
 
 
+
+
+
+
+
 (defmethod clear-representations ((self nglwidget) &key (component 0))
   "clear all representations for given component
 
@@ -916,7 +935,7 @@
             You need to keep track how many components you added.
    "
   (%remote-call self
-		"clearRepresentations"
+		"removeAllRepresentations"
 		:target "compList"
 		:kwargs (list (cons "component_index" component))))
 

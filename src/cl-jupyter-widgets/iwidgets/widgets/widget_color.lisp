@@ -1,6 +1,6 @@
 (in-package :cl-jupyter-widgets)
 ;;;Python code: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets6/widgets/widget_color.py#L18
-(defclass color-picker (labeled-widget dom-widget core-widget)
+(defclass color-picker (description-widget domwidget core-widget)
   ((value :initarg :value :accessor value
 	   :type unicode 
 	   :initform "black"

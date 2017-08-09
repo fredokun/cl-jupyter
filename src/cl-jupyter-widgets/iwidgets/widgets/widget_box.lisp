@@ -1,6 +1,6 @@
 (in-package :cl-jupyter-widgets)
 ;;;Python code: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets6/widgets/widget_box.py#L18
-(defclass Box (dom-widget core-widget)
+(defclass Box (domwidget core-widget)
   ((children :initarg :children :accessor children
 	     :type vector
 	     :initform (vector)
@@ -25,9 +25,9 @@
     :view-name (unicode "BoxView"))
   (:metaclass traitlets:traitlet-class))
 
-(defclass proxy (dom-widget)
+(defclass proxy (domwidget)
  ((child :initarg :child :accessor child
-	  :initform (make-instance 'dom-widget)
+	  :initform (make-instance 'domwidget)
 	  :metadata (:sync t
 			   :json-name "child"
 			   :help "Child widget of the Proxy"
