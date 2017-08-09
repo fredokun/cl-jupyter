@@ -26,7 +26,8 @@
 
 (defpackage #:cl-jupyter
   (:use #:cl #:fredo-utils #:myjson)
-  (:export 
+  (:export
+   #:send-execute-raw-display-object ; cl-jupyter-widgets uses this
    #:display
    #:display-plain render-plain
    #:display-html render-html

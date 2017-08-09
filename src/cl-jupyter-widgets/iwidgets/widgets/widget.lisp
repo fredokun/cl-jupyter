@@ -53,8 +53,8 @@
     "The inverse of _remove_buffers, except here we modify the existing dict/lists.
     Modifying should be fine, since this is used when state comes from the wire.
     "
-  (loop for buffer-path in buffer-paths
-     for buffer in buffers
+  (loop for buffer-path across buffer-paths
+     for buffer across buffers
      for path-end = (path-end state buffer-path)
      do (setf (cdr path-end) buffer)))
 
@@ -206,8 +206,6 @@
   `(do-register ',widget-class-name))
 
 
-(defgeneric ipython-display-callback (widget &rest kwargs))
-
 (defmacro defclass-widget-register (name &body body)
   `(defclass ,name ,@body)
   #|`(progn
@@ -215,6 +213,9 @@
      (register ,name))
 |#
 )
+
+(defgeneric %ipython-display-callback (widget iopub parent-msg execution-count key))
+
 
 (defclass widget (traitlets:synced-object)
   ((%widget-construction-callback
@@ -276,8 +277,8 @@
    (%msg-callbacks :initarg :msg-callbacks :accessor msg-callbacks
 		   :initform (make-instance 'callback-dispatcher))
    (%model-id :initarg :model-id :accessor model-id :initform nil)
-   (%ipython-display :initarg :ipython-display :accessor ipython-display
-		     :initform #'ipython-display-callback)
+   (%ipython-display :initarg :%ipython-display :accessor %ipython-display
+		     :initform #'%ipython-display-callback)
    )
   (:metaclass traitlets:traitlet-class))
 
@@ -296,7 +297,7 @@
     (remhash (model-id self) *Widget.widgets*)
     (close (comm self))
     (setf (comm self) nil)
-    (setf (ipython-display self) nil)))
+    (setf (%ipython-display self) nil)))
 
 (defun call-widget-constructed (w)
   (widget-log "call-widget-constructed widget -> ~a~%" w)
@@ -388,16 +389,17 @@ buffers : list  - A list of binary buffers "
 		    (cons "content" content))
 	 :buffers buffers))
 
-(defun do-ipython-display (widget)
-  (widget-log "widget::do-ipython-display  (ipython-display widget) -> ~a~%" (ipython-display widget))
-  (if (ipython-display widget)
-      (funcall (ipython-display widget) widget)
-      (warn "ipython-display callback is nil for widget ~a" widget)))
+(defun ipython-display (widget iopub parent-msg execution-count key)
+  (widget-log "widget::ipython-display  (%ipython-display widget) -> ~a~%" (%ipython-display widget))
+  (if (%ipython-display widget)
+      (funcall (%ipython-display widget) widget iopub parent-msg execution-count key)
+      (warn "%ipython-display callback is nil for widget ~a" widget)))
 
-(defmethod ipython-display-callback ((self widget) &rest kwargs)
+
+(defmethod %ipython-display-callback ((widget widget) iopub parent-msg execution-count key)
   "This is called to display the widget"
-  (widget-log "widget::ipython-display~%")
-  (when (view-name self)
+  (widget-log "widget::%ipython-display-callback~%")
+  (when (view-name widget)
     ;; The 'application/vnd.jupyter.widget-view+json' mimetype has not been registered yet.
     ;; See the registration process and naming convention at
     ;; http://tools.ietf.org/html/rfc6838
@@ -407,10 +409,16 @@ buffers : list  - A list of binary buffers "
                       (cons "application/vnd.jupyter.widget-view+json"
                             (list (cons "version_major" 2)
                                   (cons "version_minor" 0)
-                                  (cons "model_id" (model-id self)))))))
+                                  (cons "model_id" (model-id widget)))))))
       (widget-log "Calling cl-jupyter:display with data -> ~s~%" data)
-      (cl-jupyter:display data)
-      (%handle-displayed self))))
+;;; Rather than mimicking 'display(data,raw=True) the way that ipywidgets does
+;;;      as in https://github.com/jupyter-widgets/ipywidgets/blob/master/ipywidgets/widgets/widget.py#L698
+;;; I am going to do what cl-jupyter:display would do - create a cl-jupyter::display-object
+;;;     and then return that to the caller - that should publish it.
+      #+(or)(cl-jupyter:display data #| raw=True ???? |#)
+      (let ((display-obj (make-instance 'cl-jupyter::display-object :value widget :data data)))
+        (cl-jupyter:send-execute-raw-display-object iopub parent-msg execution-count display-obj :key key)) 
+      (%handle-displayed widget))))
 
   
 (defmethod %handle-msg ((self widget) msg)
@@ -430,7 +438,7 @@ buffers : list  - A list of binary buffers "
              (let ((buffer-paths (assoc-value "buffer_paths" data #())))
                (widget-log "Found buffer_paths ~s in data~%" buffer-paths)
                (%put-buffers state (assoc-value "buffer_paths" data)
-                             (assoc-value "buffers" content))))
+                             (assoc-value "buffers" content #()))))
            (set-state self state))))
       ((string= method "request_state")
        (widget-log "method request_state~%")

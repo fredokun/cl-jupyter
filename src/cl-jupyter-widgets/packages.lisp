@@ -11,7 +11,7 @@
    #:*handle-comm-close-hook*
    #:*send-updates*
    #:notify-change
-   #:do-ipython-display
+   #:ipython-display
    #:widget
    #:widget-open
    #:widget-send

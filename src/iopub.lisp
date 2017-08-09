@@ -48,14 +48,19 @@
     ;;(format t "content to send = ~W~%" (encode-json-to-string (message-content code-msg)))
     (message-send (iopub-socket iopub) code-msg :identities '("execute_input") :key key)))
 
+(defun send-execute-raw-display-object (iopub parent-msg execution-count display-obj &key (key nil))
+  (cljw:widget-log "iopub.lisp::send-execute-raw-display-object    display-obj -> ~s~%" display-obj)
+  (let ((result-msg (make-message parent-msg "execute_result" nil
+                                  `(("execution_count" . ,execution-count)
+                                    ("data" . ,(display-object-data display-obj))
+                                    ("metadata" . ())))))
+    (message-send (iopub-socket iopub) result-msg :identities '("execute_result") :key key)))
 
 (defun send-execute-result (iopub parent-msg execution-count result &key (key nil))
+  (cljw:widget-log "iopub.lisp::send-execute-result    result -> ~s~%" result)
   (let ((display-obj (display result)))
-    (let ((result-msg (make-message parent-msg "execute_result" nil
-				    `(("execution_count" . ,execution-count)
-				      ("data" . ,(display-object-data display-obj))
-				      ("metadata" . ())))))
-      (message-send (iopub-socket iopub) result-msg :identities '("execute_result") :key key))))
+    (send-execute-raw-display-object iopub parent-msg execution-count display-obj :key key)))
+
 
 (defun send-stream (iopub parent-msg stream-name data &key (key nil))
   (let ((stream-msg (make-message parent-msg "stream" nil

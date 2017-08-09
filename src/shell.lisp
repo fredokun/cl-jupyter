@@ -179,10 +179,10 @@
 		;;(format t "Set cl-jupyter-widgets:*kernel* -> ~a  (specialp 'cl-jupyter-widgets:*kernel*) -> ~a~%" cl-jupyter-widgets:*kernel* (core:specialp 'cl-jupyter-widgets:*kernel* ))
 		(cljw:widget-log "Set cl-jupyter:*kernel* -> ~a ~%" cl-jupyter:*kernel*)
 		(evaluate-code (kernel-evaluator (shell-kernel shell)) code))
-	      (cljw:widget-log "Execution count = ~A~%" execution-count)
-	      (cljw:widget-log "results = ~A~%" results)
-	      (cljw:widget-log "STDOUT = ~A~%" stdout)
-	      (cljw:widget-log "STDERR = ~A~%" stderr)
+	      (cljw:widget-log "==> Execution count = ~A~%" execution-count)
+	      (cljw:widget-log "==> results = ~S~%" results)
+	      (cljw:widget-log "==> STDOUT = ~S~%" stdout)
+	      (cljw:widget-log "==> STDERR = ~S~%" stderr)
 	      ;; broadcast the code to connected frontends
 	      (send-execute-code (kernel-iopub (shell-kernel shell)) msg execution-count code :key (kernel-key shell))
 	      (when (and (consp results) (typep (car results) 'cl-jupyter-user::cl-jupyter-quit-obj))
@@ -200,8 +200,10 @@
 	      (when (and stderr (> (length stderr) 0))
 		(send-stream (kernel-iopub (shell-kernel shell)) msg "stderr" stderr :key (kernel-key shell)))
 	      ;; send the first result
+              (cljw:widget-log "==> About to display results -> ~s~%" results)
 	      (if (and (consp results) (typep (car results) 'cljw:widget))
-		  (cljw:do-ipython-display (car results))
+		  (cljw:ipython-display (car results) (kernel-iopub (shell-kernel shell))
+                                        msg execution-count (kernel-key shell))
 		  (send-execute-result (kernel-iopub (shell-kernel shell)) 
 				       msg execution-count (car results) :key (kernel-key shell)))
 	      ;; status back to idle
