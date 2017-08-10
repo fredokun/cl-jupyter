@@ -3,7 +3,8 @@
 
 
 (defclass %selection (labeled-widget value-widget core-widget)
-    ((value :initarg :value :accessor value
+  ((value :initarg :value :accessor value
+	  :validator validate-selection
 	  :initform nil
 	  :metadata (:sync t
 			   :json-name "value"
@@ -34,6 +35,14 @@
     :model-module (unicode "jupyter-js-widgets")
     :view-module (unicode "jupyter-js-widgets"))
   (:metaclass traitlets:traitlet-class))
+
+(defun validate-selection (object val)
+  (if (slot-boundp object 'options) 
+      (let ((valid (member val (options object) :test #'string= :key #'car)))
+	(if valid
+	    val
+	    (error "New value for ~a is invalid: ~a" object val))
+	val)))
 
 (defclass multiple-selection (%selection)
     ((value :type vector :initform (make-array 0 :fill-pointer 0 :adjustable t)

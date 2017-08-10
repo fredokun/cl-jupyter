@@ -37,14 +37,9 @@
 (defmethod _on_change_widget_child_value ((self RepresentationControl) change)
   (let ((owner (aref change "owner"))
 	(new (aref change "new")))
-    (error "Help Implement meeeeeeeee %on-Change-widget-child-value in representation.lisp")))
-#|
-    def _on_change_widget_child_value(self, change):
-        owner = change['owner']
-        new = change['new']
-        self.parameters = {py_utils._camelize(owner._ngl_description): new}
-|#
-
+    (setf (parameters self) (list (cons (camelize (ngl-description owner)) new))))
+  (values))
+    
 (defmethod %on-parameters-changed ((self RepresentationControl) change)
   (if (not (%disabled-update-parameters self))
       (let ((parameters (aref change "new")))
@@ -78,7 +73,7 @@
     (setf (name self) name (%disable-update-parameters self) t)
     (loop for kid across (children self)
        do
-	 (setf desc (%camelize py-utils (%ngl-description kid))))
+	 (setf desc (camelize (ngl-description kid))))
     (error "Implement me!1 %update from representation.lisp")
     (setf (%disable-update-parameters self) nil)))
 #|
@@ -125,7 +120,7 @@
       ;;NOTE: INTERACTIVE IS NOT IMPLEMENTED IN COMMON LISP!!! (find it in python in ipywidgets6/widgets/interaction.py
 	    (loop for kid across (children widget)
 	       do
-	       ;;I think I want to use unwind-protect here
+	       ;;I think I want to use unwind-protect here or handler-case or somethin.
 		 (error "finish implementing %make-widget in represenation.lisp"))
 	  #|
  try:

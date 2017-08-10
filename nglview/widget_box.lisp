@@ -33,7 +33,7 @@
       (%update-size self)
       (setf (%is-beautified self) t)))
 
-(defclass DraggableBox(Box)
+(defclass DraggableBox(cljw::box)
   ((%dialog :initarg :%dialog :accessor %dialog
 	    :type unicode
 	    :initform (unicode "off")

@@ -1,6 +1,6 @@
 (in-package :cl-jupyter-widgets)
 ;;;Python code: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets6/widgets/widget_box.py#L18
-(defclass Box (dom-widget core-widget)
+(defclass box (dom-widget core-widget)
   ((children :initarg :children :accessor children
 	     :type vector
 	     :initform (vector)

@@ -1117,7 +1117,32 @@
   (values))
 
 (defmethod %add-shape ((widget nglwidget) shapes &key (name "shape"))
-  
+  "add shape objects
+
+        TODO: update doc, caseless shape keyword
+
+        Parameters
+        ----------
+        shapes : list of tuple
+        name : str, default 'shape'
+            name of given shape
+
+        Notes
+        -----
+        Supported shape: 'mesh', 'sphere', 'ellipsoid', 'cylinder', 'cone', 'arrow'.
+        
+        See also
+        --------
+        {ngl_url}
+
+        Examples
+        --------
+        >>> sphere = ('sphere', [0, 0, 9], [1, 0, 0], 1.5)
+        >>> arrow = ('arrow', [1, 2, 7 ], [30, 3, 3], [1, 0, 1], 1.0)
+        >>> view._add_shape([sphere, arrow], name='my_shape')"
+  (%remote-call widget "addShape"
+		:target "Widget"
+		:args (list name shapes)))
 
 
 (defclass ComponentViewer ()
