@@ -1,3 +1,4 @@
+
 (in-package #:cl-jupyter-widgets)
 
 (defvar *debug-cl-jupyter-widgets* t)
@@ -11,11 +12,13 @@
 (defvar *widget-log* nil)
 (defvar *widget-log-queue* nil)
 
-(eval-when (:execute :load-toplevel)
-  (setf *debugger-hook*
-	#'(lambda (condition &rest args)
-	    (widget-log "~a~%" condition)
-	    (widget-log "~a~%" (backtrace-as-string)))))
+(eval-when (:compile-toplevel)
+  (let ((val (ext:getenv "USE_WIDGET_LOG")))
+    (when val
+      (push :use-widget-log *features*))))
+;;; Always turn it on for now
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (pushnew :use-widget-log *features*))
 
 (eval-when (:execute :load-toplevel)
   (let ((log-file-name (cond
@@ -36,21 +39,29 @@
 	  (let ((msg (mp:queue-wait-dequeue *widget-log-queue*)))
 	    (princ msg *widget-log*)
 	    (finish-output *widget-log*)))))
-    (defun widget-log (fmt &rest args)
+    (defun always-widget-log (fmt &rest args)
       (let ((msg (apply #'format nil fmt args)))
 	(mp:queue-enqueue *widget-log-queue* msg)))
     (format *widget-log* "===================== new run =======================~%")))
 
-
-
-#+(or)
+#+use-widget-log
+(defmacro widget-log (fmt &rest args)
+  `(always-widget-log ,fmt ,@args))
+#-use-widget-log
 (defmacro widget-log (fmt &rest args)
   nil)
+
+
+
+(eval-when (:execute :load-toplevel)
+  (setf *debugger-hook*
+	#'(lambda (condition &rest args)
+	    (always-widget-log "~a~%" condition)
+	    (always-widget-log "~a~%" (backtrace-as-string)))))
 
 (export 'widget-log)
 
 (widget-log "Starting load   packages -> ~a~%" (list-all-packages))
-
 
 (defmacro with-error-handling (msg &body body)
   (let ((wrn (gensym))
@@ -103,6 +114,8 @@
 (defun extract-message-content (msg)
   (myjson:parse-json-from-string (cl-jupyter:message-content msg)))
 
+(defun assoc-contains (key-string alist)
+  (assoc key-string alist :test #'string=))
 
 (defun assoc-value (key-string alist &optional (default nil default-p))
   (or (listp alist) (error "alist must be a list"))
@@ -139,7 +152,7 @@
     (prin1 object stream))
 
   (defmethod print-as-python ((object array) stream)
-    (format stream "[ ")
+    (format stream "[= ")
     (loop for value across object
        do (let ((value-as-string (with-output-to-string (sout)
 				   (print-as-python value sout))))
@@ -174,15 +187,15 @@
 	 (loop for (key . value) in sorted-dict
 	    do (let ((value-as-string (with-output-to-string (sout)
 					(print-as-python value sout))))
-		 (format stream "~vt~s: ~a,~%" *python-indent* key value-as-string))))
-       (format stream "}~%"))
+		 (format stream "~vt~s::: ~a,~%" *python-indent* key value-as-string))))
+       (format stream "}"))
       (t 
-       (format stream "[ ")
+       (format stream "[& ")
        (loop for value in object
 	  do (let ((value-as-string (with-output-to-string (sout)
 				      (print-as-python value sout))))
 	       (format stream "~a, " value-as-string)))
-       (format stream "]~%"))))
+       (format stream "]"))))
   )
 
 (defun as-python (msg)
@@ -191,3 +204,29 @@
 
 
 (defgeneric on-msg (target callback &key &allow-other-keys))
+
+
+;;; ------------------------------------------------------------
+;;;
+;;; For debugging in slime
+;;;
+;;; In the jupyter notebook use (cl-jupyter-widgets::save-context)
+;;;      That will save the context of that message.
+;;; Then in slime evaluate (in-context (form))
+
+(defparameter *debug-parent-msg* nil)
+(defparameter *debug-shell* nil)
+(defparameter *debug-kernel* nil)
+
+(defun save-jupyter-cell-state ()
+  (declare (special cl-jupyter:*parent-msg* cl-jupyter:*shell* cl-jupyter:*kernel*))
+  (setf *debug-parent-msg* cl-jupyter:*parent-msg*
+	*debug-shell* cl-jupyter:*shell*
+	*debug-kernel* cl-jupyter:*kernel*))
+
+(defmacro in-jupyter-cell (form)
+  `(let ((cl-jupyter:*parent-msg* *debug-parent-msg*)
+	 (cl-jupyter:*shell* *debug-shell*)
+	 (cl-jupyter:*kernel* *debug-kernel*))
+     (declare (special cl-jupyter:*parent-msg* cl-jupyter:*shell* cl-jupyter:*kernel*))
+     ,form))

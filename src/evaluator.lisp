@@ -31,6 +31,7 @@ The history of evaluations is also saved by the evaluator.
           (aref history-in (- href 1))
         nil))))
 
+(clasp-cleavir:open-debug-log "/tmp/take-history-out.log")
 (defun take-history-out (hist-ref &optional value-ref)
   (let ((history-out (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-out)))
     (let ((href (if (< hist-ref 0)
@@ -44,6 +45,8 @@ The history of evaluations is also saved by the evaluator.
                          (<= value-ref (length out-values)))
                 (elt out-values (- value-ref 1)))
               (values-list out-values)))))))
+(clasp-cleavir:close-debug-log)
+
 
 (defun make-evaluator (kernel)
   (let ((evaluator (make-instance 'evaluator

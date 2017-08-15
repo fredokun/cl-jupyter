@@ -30,16 +30,14 @@ def get_name(obj, kwargs):
      :while end))
 
 (defun camelize (arg)
-  (let ((snake (string arg)))
-    (let ((split-snake (my-split snake :delimiterp (lambda (c) (char= c #\_)))))
+  (let ((snake (etypecase arg
+		 (string arg)
+		 (symbol (string-downcase (string arg))))))
+    (let ((split-snake (my-split snake :delimiterp (lambda (c) (or (char= c #\_) (char= c #\-))))))
       (with-output-to-string (sout)
 	(princ (car split-snake) sout)
 	(loop for part in (cdr split-snake)
 	   do (princ (string-capitalize part) sout))))))
-
-(defun camelize-dict (alist)
-  (mapcar (lambda (x) (cons (camelize (car x)) (cdr x))) alist))
-
 
 (defun dict-entry (key dict)
   "Lookup the key in the a-list with string keys and return the entry"
@@ -61,9 +59,17 @@ def get_name(obj, kwargs):
 	  dict)
 	(cons (cons key value) dict))))
 
+(defun camelize-dict (alist)
+  (mapcar (lambda (x) (cons (camelize (car x)) (cdr x))) alist))
+
+(defun dict-from-plist (plist &key remove)
+  "Convert a plist (keyword value pairs from &key arguments) to a JSON dict"
+  (loop for (key value) on plist by #'cddr
+     unless (member key remove)
+     collect (cons (camelize key) value)))
+
 (defun seq-to-string (seq)
-  "e.g. convert [1, 3, 5] to \"@1,3,5\"
-"
+  "e.g. convert [1, 3, 5] to \"@1,3,5\""
   (cond
     ((stringp seq)
      seq)

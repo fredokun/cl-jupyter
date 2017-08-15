@@ -250,7 +250,7 @@ Note:   Python None maps to NIL
 	      (char<= init #\9)) (parse-json-digits input))
 	(t
 	 (concatenate 'string 
-		      (format nil "~A" (parse-json-digit input :min #\1))
+		      (format nil "~A" (parse-json-digit input :min #\0))
 		      (parse-json-digits input)))))
 
 (example (with-input-from-string (s "132402")
@@ -416,6 +416,9 @@ with a new line")
 	     (json-write stream nil nil (format nil "blabla ~A" toto))))
 	   => "blabla (ME TOTO)")
 
+
+(defmethod encode-json (stream (thing cljw::instance-dict) &key (indent nil) (first-line nil))
+  (error "You need to encode json for the instance-dict ~a" thing))
 
 (defmethod encode-json (stream (thing cons) &key (indent nil) (first-line nil))
   (json-write stream (if first-line nil indent) (if indent t nil) "{")

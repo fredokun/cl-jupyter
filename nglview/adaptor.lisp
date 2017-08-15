@@ -46,14 +46,20 @@
 (defmethod get-structure-string ((self cando-structure))
   (check-type self cando-structure)
   (check-type (matter self) chem:aggregate)
-  (cljw:widget-log "Saving structure to /tmp/structure.mol2~%")
-  (cando:save-mol2 (matter self) "/tmp/structure.mol2" :use-sybyl-types t)
-  (with-open-file (stream "/tmp/structure.mol2" :direction :input)
-    (let* ((entire-file (make-string (+ (file-length stream) 2)
-				     :initial-element #\newline)))
-      (read-sequence entire-file stream)
-      (close stream)
-      entire-file)))
+  (progn
+    (cljw:widget-log "Generating mol2 as string~%")
+    (chem:aggregate-as-mol2-string (matter self)))
+  #++(progn
+       (cljw:widget-log "Saving structure to /tmp/structure.mol2~%")
+  
+       (cando:save-mol2 (matter self) "/tmp/structure.mol2" :use-sybyl-types t)
+       (with-open-file (stream "/tmp/structure.mol2" :direction :input)
+	 (let* ((entire-file (make-string (+ (file-length stream) 2)
+					  :initial-element #\newline)))
+	   (read-sequence entire-file stream)
+	   (close stream)
+	   entire-file))))
+>>>>>>> master
 
 
 
@@ -123,6 +129,7 @@
             self.-ase_atoms.write('tmp.pdb')
             return open('tmp.pdb').read()
 |#
+
 
 (defclass SimpletrajTrajectory (Trajectory Structure)
   ((path :initarg :path :accessor path :initform nil)

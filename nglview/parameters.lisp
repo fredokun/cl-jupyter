@@ -5,6 +5,7 @@
 						 ("tube" . "tube")
 						 ("trace" . "trace")
 						 ("label" . "label")
+						 ("slice" . "slice")
 						 ("unitcell" . "unitcell")
 						 ("cartoon" . "cartoon")
 						 ("licorice" . "licorice")

@@ -77,6 +77,7 @@
 	  (log-error "Could not close comm during comm-open failure cleanup. The comm may not have been opened yet err: ~a" err))))))
 
 (defvar *send-updates* t)
+
 (defmethod comm-msg ((self comm-manager) stream ident msg)
   (widget-log "[comm-msg] msg -> ~a~%" msg)
   (let* ((content (extract-message-content msg))

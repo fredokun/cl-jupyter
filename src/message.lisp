@@ -289,10 +289,6 @@ The wire-deserialization part follows.
 (defun message-send (socket msg &key (identities nil) (key nil))
   (let ((wire-parts (wire-serialize msg :identities identities :key key)))
     #+(or)(format t "~%[Send] wire parts: ~W~%" wire-parts)
-<<<<<<< HEAD
-    (cl-jupyter-widgets::widget-log "wire-parts -> ~a~%" wire-parts)
-=======
->>>>>>> master
     (dolist (part wire-parts)
       (pzmq:send socket part :sndmore t))
     (prog1

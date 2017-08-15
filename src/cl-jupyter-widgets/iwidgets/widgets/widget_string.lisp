@@ -1,7 +1,7 @@
 (in-package :cl-jupyter-widgets)
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_string.py#L17
-(defclass %string (labeled-widget value-widget core-widget)
+(defclass %string (description-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	   :type unicode
 	   :initform (unicode "")

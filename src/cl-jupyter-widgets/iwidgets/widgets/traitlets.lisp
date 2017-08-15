@@ -1,3 +1,4 @@
+
 (in-package #:traitlets)
 
 (cl-jupyter-widgets:widget-log "Loading traitlets.lisp~%")
@@ -45,6 +46,8 @@
   ())
 
 ;;; If a user tries to probe a (super)class slot with no metadata, return no metadata.
+(defmethod metadata ((slot clos:direct-slot-definition))
+  nil)
 (defmethod metadata ((slot clos:effective-slot-definition))
   nil)
 
@@ -85,8 +88,9 @@
 	  ;; Metadata are plists, so just append.
 	  (loop for dsd in direct-slot-definitions appending (metadata dsd)))
     (let ((validatorfs (loop for dsd in direct-slot-definitions
-                             when (slot-boundp dsd 'validator)
-                               collect (validator dsd))))
+			     when (and (slot-exists-p dsd 'validator)
+				       (slot-boundp dsd 'validator))
+			     collect (validator dsd))))
       (cond ((null validatorfs))
             ((null (rest validatorfs))
              (setf (validator result) (first validatorfs)))
@@ -108,17 +112,18 @@
   ((%mutex :initform (mp:make-shared-mutex) :accessor mutex))
   (:metaclass traitlet-class))
 
+#++
 (defmethod (setf clos:slot-value-using-class) (val (class traitlet-class) self (slotd effective-traitlet))
   (if (slot-boundp slotd 'validator)
-      (call-next-method
-       (funcall (coerce (validator slotd) 'function) self val)
-       class self slotd)
+      (progn
+	(cljw:widget-log "About to call validator and then set the slot: ~s~%" slotd)
+	(call-next-method
+	 (funcall (coerce (validator slotd) 'function) self val)
+	 class self slotd))
       (call-next-method)))
 
 (defmethod (setf clos:slot-value-using-class) :before
-    (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
-  (cljw:widget-log "*send-updates* -> ~a   setting value of slot -> ~s  to value -> ~s~%"
-                   cljw:*send-updates* slotd new-value))
+    (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet)))
 
 (defmethod (setf clos:slot-value-using-class) :after
     (new-value (class traitlet-class) object (slotd effective-traitlet))
@@ -143,12 +148,31 @@
 
 (defmethod clos:slot-value-using-class
     ((class traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (cljw:widget-log "Process: ~a READING slot -> ~s  (getf (metadata slotd) :sync) -> ~a~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
   (if (getf (metadata slotd) :sync)
-      (with-shared-lock (mutex object) (call-next-method))
+      (progn
+	(cljw:widget-log " About to with-shared-lock~%")
+	(with-shared-lock (mutex object) (call-next-method)))
+      (call-next-method)))
+
+#++(defmethod (setf clos:slot-value-using-class)
+    (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (cljw:widget-log "Process: ~a WRITING slot -> ~s (getf (metadata slotd) :sync) -> ~s~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
+  (if (getf (metadata slotd) :sync)
+      (progn
+	(cljw:widget-log " About to with-write-lock~%")
+	(with-write-lock (mutex object) (call-next-method)))
       (call-next-method)))
 
 (defmethod (setf clos:slot-value-using-class)
     (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
+  (cljw:widget-log "Process: ~a WRITING slot -> ~s (getf (metadata slotd) :sync) -> ~s~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
   (if (getf (metadata slotd) :sync)
-      (with-write-lock (mutex object) (call-next-method))
+      (if (slot-boundp slotd 'validator)
+	  (progn
+	    (cljw:widget-log "About to call validator and then set the slot: ~s~%" slotd)
+	    (let ((validated-value (funcall (coerce (validator slotd) 'function) object new-value)))
+	      (with-write-lock (mutex object) (call-next-method validated-value class object slotd))
+	      validated-value))
+	  (call-next-method))
       (call-next-method)))

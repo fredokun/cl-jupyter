@@ -11,28 +11,48 @@
 		 :ironclad
 		 :cl-base64)
     :serial t
-    :components (
-		 (:file "packages")
 ;;; cl-jupyter-widgets stuff
-		 (:file "tools")
-		 (:file "manager")
-		 (:file "interface")
-		 (:file "traitlets")
-		 (:file "widget")
-		 (:file "domwidget")
-		 (:file "widget_style")
-		 (:file "widget_layout")
-		 (:file "widget_int")
-		 (:file "widget_bool")
-		 (:file "widget_color")
-		 (:file "widget_image")
-		 (:file "widget_selection")
-		 (:file "widget_float")
-		 (:file "widget_button")
-		 (:file "widget_string")
-		 (:file "widget_box")
-		 (:file "widget_selectioncontainer")
-		 (:file "comm")
+    :components ((:file "packages")
+		 (:module cl-jupyter-widgets
+			  :pathname "cl-jupyter-widgets"
+			  :serial t
+			  :components ((:file "packages")
+				       (:file "tools")
+				       (:module ikernel
+						:pathname "ikernel"
+						:serial t
+						:components ((:file "manager")
+							     (:file "comm")))
+				       (:module iwidgets
+						:pathname "iwidgets"
+						:serial t
+						:components
+						((:file "init")
+						 (:file "version")
+						 (:module widgets
+							  :pathname "widgets"
+							  :serial t
+							  :components ( ;;(:file "widgets-version")
+								       (:file "interface")
+								       (:file "traitlets")
+								       (:file "trait_types")
+								       (:file "widget")
+								       (:file "valuewidget")
+								       (:file "domwidget")
+								       (:file "widget_style_7")
+								       (:file "widget_core_7")
+								       (:file "widget_description_7")
+								       (:file "widget_layout_7")
+								       (:file "widget_int_7")
+								       (:file "widget_bool_7")
+								       (:file "widget_color_7")
+								       (:file "widget_image")
+								       (:file "widget_selection_7")
+								       (:file "widget_float_7")
+								       (:file "widget_button_7")
+								       (:file "widget_string_7")
+								       (:file "widget_box_7")
+								       (:file "widget_selectioncontainer")))))))
 ;;; cl-jupyter stuff
 		 (:file "utils")
 		 (:file "myjson")

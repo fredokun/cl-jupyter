@@ -1,7 +1,7 @@
 (in-package :cl-jupyter-widgets)
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_output.py#L18
-(defclass output (dom-widget core-widget)
+(defclass output (domwidget core-widget)
   ((msg-id :initarg :msg-id :accessor msg-id
 	   :type unicode
 	   :initform (unicode "")
@@ -10,8 +10,8 @@
   (:default-initargs
    :view-name (unicode "OutputView")
     :model-name (unicode "OutputModel")
-    :model-module (unicode "jupyter-js-widgets")
-    :view-module (unicode "jupyter-js-widgets")
+    :model-module (unicode "@jupyter-js/output")
+    :view-module (unicode "@jupyter-js/output")
     )
   (:metaclass traitlets:traitlet-class))
 

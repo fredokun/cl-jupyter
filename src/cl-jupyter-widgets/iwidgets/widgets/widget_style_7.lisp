@@ -4,8 +4,8 @@
 (defclass style (widget)
   ()
   (:default-initargs
-   :model-module (unicode "jupyter-js-widgets")
-   :view-module (unicode "jupyter-js-widgets")
+   :model-name (unicode "StyleModel")
    :view-name (unicode "StyleView")
-   :model-name (unicode "StyleModel"))
-   (:metaclass traitlets:traitlet-class))
+   :view-module (unicode "@jupyter-widgets/base")
+   :view-module-version (unicode *jupyter-widgets-base-version*))
+  (:metaclass traitlets:traitlet-class))
