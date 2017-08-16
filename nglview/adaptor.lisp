@@ -45,7 +45,7 @@
   (check-type (matter self) chem:aggregate)
   (progn
     (cljw:widget-log "Generating mol2 as string~%")
-    (chem:aggregate-as-mol2-string (matter self)))
+    (chem:aggregate-as-mol2-string (matter self) t))
   #++(progn
        (cljw:widget-log "Saving structure to /tmp/structure.mol2~%")
   
