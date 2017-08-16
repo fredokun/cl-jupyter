@@ -4,7 +4,7 @@
 (defparameter *frontend-version* "0.5.4-dev.8") ;; must match to js/package.json and js/src/widget_ngl.js
 
 ;; Save up to 8 previous picks
-(defparameter *pick-history-depth* 8)
+(defparameter *pick-history-depth* 16)
 
 (defclass component-viewer ()
   ((%view :initarg :view :accessor view)
