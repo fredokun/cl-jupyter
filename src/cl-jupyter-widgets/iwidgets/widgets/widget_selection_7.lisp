@@ -55,7 +55,7 @@
 	    :documentation "Iterable of values, (label, value) pairs, or a mpaaing of {label: value} pairs that the user can select. The labels are the strings that will be displayed in the UI, representing the actual Python choices, and should be unique.")
    (%options-full :initarg :options-full :accessor options-full
 		  :initform nil)
-   (%options-labels :initarg :options-labels :acessor options-labels
+   (%options-labels :initarg :options-labels :accessor options-labels
 		    :initform nil
 		    :metadata (:sync t
 				     :json-name "options_labels"))
@@ -68,12 +68,12 @@
   (:metaclass traitlets:traitlet-class))
 
 (defclass-widget-register toggle-buttons-style (style core-widget)
-  (button-width :initarg :button-width :accessor button-width
+  ((button-width :initarg :button-width :accessor button-width
 		:type unicode
 		:initform (unicode "")
 		:metadata (:sync t
 				 :json-name "button_width"
-				 :help "The width of each button."))
+				 :help "The width of each button.")))
   (:default-initargs
       :model-name (unicode "ToggleButtonsStyleModel"))
   (:metaclass traitlets:traitlet-class))
@@ -203,7 +203,7 @@
    (continuous-update :initarg :continuous-update :accessor continuous-update
 		      :type bool
 		      :initform :true
-		      :metadta (:sync t
+		      :metadata (:sync t
 				      :json-name "continuous_update"
 				      :help "Update the value of the widget as the user is holding the slider."))
    )
