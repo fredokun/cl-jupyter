@@ -37,7 +37,7 @@
   (:metaclass traitlets:traitlet-class))
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_controller.py#L40
-(defclass controller (domwidget core-widget)
+(defclass-widget-register controller (domwidget core-widget)
   ((index :initarg :index :accessor index
 	  :type integer
 	  :metadata (:sync t
