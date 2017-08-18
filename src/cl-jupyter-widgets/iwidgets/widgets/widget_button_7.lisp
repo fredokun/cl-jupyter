@@ -18,7 +18,6 @@
   (:metaclass traitlets:traitlet-class))
 
 
-
 (defclass-widget-register button (domwidget core-widget)
  ((description :initarg :description :accessor description
 		:type unicode
@@ -50,19 +49,16 @@
 		 :metadata (:sync t
 				  :json-name "button_style"
 				  :help "Use a predefined styling for the button. Options include: \"primary\", \"success\", \"info\", \"warning\", \"danger\", and \"""\"."))
-  (style :accessor style
-	 :initform (make-instance 'instance-dict :instance (make-instance 'button-style))
-	 :metadata (:sync t
-			  :json-name "style"
-			  :to-json json-to-widget
-			  :from-json widget-to-json))
-
+   #|(style :initarg :style :accessor style
+	   :initform (make-instance 'instance-dict :instance (make-instance 'button-style))
+	   :metadata #.`(:sync t :json-name "style" :help "Styling customizations"
+                            ,@*widget-serialization*))|#
   (%click-handlers :initform (make-instance 'callback-dispatcher)
 		   :accessor click-handlers)
   )
   (:default-initargs
-   :model-module (unicode "jupyter-js-widgets")
-    :view-module (unicode "jupyter-js-widgets")
+   :model-module (unicode "@jupyter-widgets/controls")
+    :view-module (unicode "@jupyter-widgets/controls")
     :view-name (unicode "ButtonView")
     :model-name (unicode "ButtonModel"))
  (:metaclass traitlets:traitlet-class))
@@ -83,12 +79,11 @@
         ----------
         content: dict
             Content of the msg."
-  (when (string= (cdr (assoc "event" content)) "click")
-    (click-handlers self))
+  (when (string= (cdr (assoc "event" content :test #'string=)) "click")
+    (do-call (click-handlers self) self))
   (values))
 
 
-;;Start Meister code copy
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
 

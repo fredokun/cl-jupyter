@@ -14,10 +14,10 @@
   ((%description :initarg :description :accessor description
 		 :initform (unicode "")
 		 :metadata (:sync t :json-name "description" :help "Description of the control."))
-   (%style :initarg :style :accessor style
+   #|(%style :initarg :style :accessor style
 	   :initform (make-instance 'instance-dict :instance (make-instance 'description-style))
 	   :metadata #.`(:sync t :json-name "style" :help "Styling customizations"
-                            ,@*widget-serialization*)))
+                            ,@*widget-serialization*))|#)
   (:metaclass traitlets:traitlet-class))
 
 

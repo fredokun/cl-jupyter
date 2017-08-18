@@ -15,9 +15,6 @@
 		   :metadata (:sync t
 				     :json-name "selected_index"
 				     :help "The index of the selected page. This is either an integer selecting a particular sub-widget, or None to have no widgets selected.")))
-  (:default-initargs
-   ;:model-module (unicode "jupyter-js-widgets")
-   ; :view-module (unicode "jupyter-js-widgets"))
   (:metaclass traitlets:traitlet-class))
 
 

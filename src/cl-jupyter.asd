@@ -52,7 +52,7 @@
 								       (:file "widget_button_7")
 								       (:file "widget_string_7")
 								       (:file "widget_box_7")
-								       (:file "widget_selectioncontainer")))))))
+								       (:file "widget_selectioncontainer_7")))))))
 ;;; cl-jupyter stuff
 		 (:file "utils")
 		 (:file "myjson")

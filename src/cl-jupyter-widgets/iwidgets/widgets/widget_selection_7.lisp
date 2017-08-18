@@ -91,11 +91,11 @@
 	  :metadata (:sync t
 			   :json-name "icons"
 			   :help "Font-awesome icon. Styles we know about include: check, bullseye, camera, refresh, eye-slash, trash, eraser. Syntax: :icons (vector \"refresh\" \"check\" \"camera\"). This would give you three icons if you have three buttons."))
-   (style :initarg :style :accessor style
+  #| (style :initarg :style :accessor style
 	  :initform (make-instance 'instance-dict :instance (make-instance 'toggle-buttons-style))
 	  :metadata (:sync t
 			   :to-json json-to-widget
-			   :from-json widget-to-json))
+			   :from-json widget-to-json))|#
    (button_style :initarg :button_style :accessor button_style
 		 :type unicode
 		 :initform (unicode "")
@@ -241,7 +241,7 @@ def _label_to_value(label, obj):
         return obj._options_dict[label]
 
 |#
-
+#|
 (defun %label-to-value (k object)
       (gethash 'k (slot-value object '_options_dict)))
 
@@ -280,16 +280,16 @@ def _labels_to_values(k, obj):
     (if (zerop (length value))
 	(vector-push-extend (aref _options_values 0) value))))
 
-
+|#
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
 
-(defmethod initialize-instance :after ((%selection %selection) &key)
-  (with-slots (options-labels options-full options options-values) %selection
+(defmethod initialize-instance :after ((self %selection) &key)
+  (with-slots (%options-labels %options-full options %options-values) self
     (setf options-full options
 	  options-labels (mapcar #'car options)
 	  options-values (mapcar #'cdr options))
-    (when (zerop (length value))
+    (when (zerop (length (value self)))
       (setf value (car options-values)))))
 
 

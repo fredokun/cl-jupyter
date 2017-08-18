@@ -36,8 +36,7 @@
 	 (gethash '(subseq x 10) *Widget.widgets))
 	((vectorp x)
 	 (map 'vector (lambda (x) (widget-to-json x obj)) x))
-	(t x))
-  (warn "Implement json-to-widget as in https://github.com/drmeister/widget-dev/blob/master/ipywidgets/widgets/widget.py#L33"))
+	(t x)))
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
