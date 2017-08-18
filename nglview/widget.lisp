@@ -3,13 +3,20 @@
 
 (defparameter *frontend-version* "0.5.4-dev.8") ;; must match to js/package.json and js/src/widget_ngl.js
 
+;; Save up to 8 previous picks
+(defparameter *pick-history-depth* 16)
+
 (defclass component-viewer ()
   ((%view :initarg :view :accessor view)
    (%index :initarg :index :accessor index)))
 
 
-(defclass nglwidget (cljw::dom-widget)
-  (
+(defclass nglwidget (cljw::domwidget)
+  ((%ngl_version :initarg :ngl-version
+                 :accessor ngl-version
+                 :type cljw:unicode
+                 :initform (cljw:unicode)
+                 :metadata (:sync t :json-name "_ngl_version"))
    (%image-data :initarg :image-data
 		:type cljw:unicode
 		:initform (cljw:unicode "")
@@ -38,6 +45,10 @@
 	    :type cljw:dict
 	    :initform nil
 	    :metadata (:sync t :json-name "picked"))
+   (%pick-history :initarg :pick-history
+                  :accessor pick-history
+                  :type list
+                  :initform nil)
    (%n-components :initarg :n-components
 		  :accessor n-components
 		  :type integer
@@ -74,15 +85,15 @@
 		:type cljw:dict
 		:initform nil) ; not synchronized https://github.com/drmeister/spy-ipykernel/blob/master/nglview/widget.py#L124
    (%full-stage-parameters :initarg :full-stage-parameters
-		:accessor full-stage-parameters
-		:type cljw:dict
-		:initform nil
-		:metadata (:sync t :json-name "_full_stage_parameters"))
+                           :accessor full-stage-parameters
+                           :type cljw:dict
+                           :initform nil
+                           :metadata (:sync t :json-name "_full_stage_parameters"))
    (%original-stage-parameters :initarg :original-stage-parameters
-		:accessor original-stage-parameters
-		:type cljw:dict
-		:initform nil
-		:metadata (:sync t :json-name "_original_stage_parameters"))
+                               :accessor original-stage-parameters
+                               :type cljw:dict
+                               :initform nil
+                               :metadata (:sync t :json-name "_original_stage_parameters"))
    ;; Not sync'd
    (%coordinates-dict :initarg :coordinates-dict
 		      :accessor coordinates-dict
@@ -93,15 +104,15 @@
 		:type cunicode
 		:initform (cljw:unicode "orthographic")
 		:metadata (:sync t :json-name "_camera_str"
-				 :caseless-str-enum ( "perspective" "orthographic")))
+                           :caseless-str-enum ( "perspective" "orthographic")))
    (%repr-dict :initarg :repr-dict
 	       :accessor repr-dict
 	       :type cljw:dict
 	       :initform nil)
    (%ngl-component-ids :initarg :ngl-component-ids
-			 :accessor ngl-component-ids
-			 :type list
-			 :initform nil)
+                       :accessor ngl-component-ids
+                       :type list
+                       :initform nil)
    (%ngl-component-names :initarg :ngl-component-names
 			 :accessor ngl-component-names
 			 :type list
@@ -325,6 +336,14 @@
      (sleep timeout)
      (when (pythread:is-set (event widget))
        (return-from %wait-until-finished))))
+
+(defmethod cljw::notify-change :after ((widget nglwidget) (slot-name (eql '%picked)) &optional value)
+  (cljw:widget-log "In notify-change :after for %picked  value -> ~s~%" value)
+  (when (and value
+             (dict-entry "atom" value)
+             (slot-boundp widget '%pick-history))
+    (push value (pick-history widget))
+    (setf (pick-history widget) (subseq (pick-history widget) 0 (min *pick-history-depth* (length (pick-history widget)))))))
 
 (defun camera (widget)
   (cond
@@ -1113,14 +1132,13 @@
         (defparameter *v* (make-instance 'nglv::nglwidget))
         (defparameter *sphere* (vector "sphere" #(0 0 9) #(1 0 0) 1.5))
         (defparameter *arrow* (vector "arrow" #(1 2 7) #(30 3 3) #(1 0 1) 1.0))
-        (nglv::add-shape *v* (list *sphere* *arrow* :name "my_shape"))
+        (nglv::add-shape *v* (vector *sphere* *arrow*) :name "my_shape")
         "
   (%remote-call self "addShape"
 		:target "Widget"
 		:args (list name shapes)))
 
 (defmethod add-representation ((self nglwidget) repr-type &rest kwargs &key (use-worker nil use-worker-p) (selection "all"))
->>>>>>> master
   "Add structure representation (cartoon, licorice, ...) for given atom selection.
 
         Parameters

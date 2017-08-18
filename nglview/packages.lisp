@@ -8,6 +8,7 @@
    #:shape
    #:remote-call-thread-queue
    #:wait-until-finished
+   #:show-aggregate
    )
   )
 

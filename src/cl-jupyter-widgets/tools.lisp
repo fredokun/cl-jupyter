@@ -16,9 +16,9 @@
   (let ((val (ext:getenv "USE_WIDGET_LOG")))
     (when val
       (push :use-widget-log *features*))))
-;;; Always turn it on for now
+;;; Always turn it off for now
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew :use-widget-log *features*))
+     (pushnew :use-widget-log *features*))
 
 (eval-when (:execute :load-toplevel)
   (let ((log-file-name (cond
