@@ -46,6 +46,11 @@
 
 (in-package #:cl-jupyter-user)
 
+;;; Look for a COMMON-LISP-USER::CONFIGURE-JUPYTER function to configure the jupyter notebook
+(let ((startup-fn (find-symbol "CONFIGURE-JUPYTER" :common-lisp-user)))
+  (when startup-fn
+    (funcall startup-fn)))
+
 ;; start main loop
 (cl-jupyter:kernel-start)
 
