@@ -145,7 +145,7 @@
 
 (defmethod clos:slot-value-using-class
     ((class traitlet-class) (object synced-object) (slotd effective-traitlet))
-  (cljw:widget-log "Process: ~a READING slot -> ~s  (getf (metadata slotd) :sync) -> ~a~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
+  #++(cljw:widget-log "Process: ~a READING slot -> ~s  (getf (metadata slotd) :sync) -> ~a~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
   (if (getf (metadata slotd) :sync)
       (progn
 	(cljw:widget-log " About to with-shared-lock~%")
@@ -154,7 +154,7 @@
 
 #++(defmethod (setf clos:slot-value-using-class)
     (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
-  (cljw:widget-log "Process: ~a WRITING slot -> ~s (getf (metadata slotd) :sync) -> ~s~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
+     #++(cljw:widget-log "Process: ~a WRITING slot -> ~s (getf (metadata slotd) :sync) -> ~s~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
   (if (getf (metadata slotd) :sync)
       (progn
 	(cljw:widget-log " About to with-write-lock~%")
@@ -163,7 +163,7 @@
 
 (defmethod (setf clos:slot-value-using-class)
     (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet))
-  (cljw:widget-log "Process: ~a WRITING slot -> ~s (getf (metadata slotd) :sync) -> ~s~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
+  #++(cljw:widget-log "Process: ~a WRITING slot -> ~s (getf (metadata slotd) :sync) -> ~s~%" mp:*current-process* slotd (getf (metadata slotd) :sync))
   (if (getf (metadata slotd) :sync)
       (if (slot-boundp slotd 'validator)
 	  (progn
