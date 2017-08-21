@@ -12,6 +12,15 @@
 ;;;;   When the value of the slot is set, the validator is called with
 ;;;;   the instance and the new value as arguments, and whatever it returns
 ;;;;   is what's actually put in the slot.
+;;;; * :observers has a list of things coerceable to functions.
+;;;;   When the value of the slot is set, the observers are called in an
+;;;;   undefined order with four arguments: the object, the name of the
+;;;;   slot, the new value in the slot, and the old value in the slot.
+;;;;   If the slot was previously unbound, the observer is not called.
+;;;;   It's not specified when this is done in relation to changing the
+;;;;   slot value; observers should use their arguments to get the values.
+;;;;   However if there's a validator that's run first.
+
 ;;;; An additional class synced-object, if inherited from, puts a read-write
 ;;;; lock on slots with :sync <true> in their metadata.
 
@@ -31,12 +40,24 @@
     (setf (value instance) 17)
     (value instance)) ; => 10
 )
+;;; Example use of observers:
+#+(or)
+(progn
+  (defclass foo ()
+    ((%bar :initarg :bar :accessor bar :observers (display-change)))
+    (:metaclass traitlet-class))
+  (defun display-change (object name new old)
+    (format t "Slot ~a of ~a changed: ~a -> ~a~%" name object old new))
+  (let ((i (make-instance 'foo :bar 7))) ; no output
+    (setf (bar i) 3)) ; Slot %BAR of #<FOO> changed: 7 -> 3
+  )
 
 ;;; metadata, syncing, validation, and whatever else could be separate classes,
 ;;; but they're all pretty simple and we're basically just here to mimic traitlets.
 
 (defclass traitlet (clos:slot-definition)
   ((validator :initarg :validator :accessor validator)
+   (observers :initarg :observers :accessor observers :initform nil)
    (metadata :initarg :metadata :accessor metadata :initform nil)))
 
 (defclass direct-traitlet (traitlet clos:standard-direct-slot-definition)
@@ -47,6 +68,10 @@
 
 ;;; If a user tries to probe a (super)class slot with no metadata, return no metadata.
 (defmethod metadata ((slot clos:effective-slot-definition))
+  nil)
+
+;;; Ditto for observers.
+(defmethod observers ((slot clos:effective-slot-definition))
   nil)
 
 ;;; User interface
@@ -85,6 +110,9 @@
     (setf (metadata result)
 	  ;; Metadata are plists, so just append.
 	  (loop for dsd in direct-slot-definitions appending (metadata dsd)))
+    (setf (observers result)
+          ;; observers are lists, so just append.
+          (loop for dsd in direct-slot-definitions appending (observers dsd)))
     (let ((validatorfs (loop for dsd in direct-slot-definitions
                              when (slot-boundp dsd 'validator)
                                collect (validator dsd))))
@@ -120,7 +148,12 @@
       (call-next-method)))
 
 (defmethod (setf clos:slot-value-using-class) :before
-    (new-value (class traitlet-class) (object synced-object) (slotd effective-traitlet)))
+    (new-value (class traitlet-class) object (slotd effective-traitlet))
+  (when (clos:slot-boundp-using-class class object slotd)
+    (let ((old (clos:slot-value-using-class class object slotd)))
+      (loop for observer in (observers slotd)
+            do (funcall (coerce observer 'function)
+                        object (clos:slot-definition-name slotd) new-value old)))))
 
 (defmethod (setf clos:slot-value-using-class) :after
     (new-value (class traitlet-class) object (slotd effective-traitlet))
@@ -169,7 +202,6 @@
 	  (progn
 	    (cljw:widget-log "About to call validator and then set the slot: ~s~%" slotd)
 	    (let ((validated-value (funcall (coerce (validator slotd) 'function) object new-value)))
-	      (with-write-lock (mutex object) (call-next-method validated-value class object slotd))
-	      validated-value))
+	      (with-write-lock (mutex object) (call-next-method validated-value class object slotd))))
 	  (call-next-method))
       (call-next-method)))
