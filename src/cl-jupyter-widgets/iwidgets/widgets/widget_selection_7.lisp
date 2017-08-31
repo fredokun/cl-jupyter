@@ -5,13 +5,16 @@
 
 (defclass %selection (description-widget value-widget core-widget)
   ((value :initarg :value :accessor value
-	  :initform nil)
+	  :initform nil
+	  :validator validate-selection)
    (label :initarg :label :accessor label
 	  :type unicode
-	  :initform (unicode ""))
+	  :initform (unicode "")
+	  :validator validate-label)
    (index :initarg :index :accessor index
 	  :type integer
 	  :initform nil
+	  :validator validate-index
 	  :metadata (:sync t
 			   :json-name "index"
 			   :help "Selected index"))
@@ -302,3 +305,28 @@ def _labels_to_values(k, obj):
 	    val
 	    (error "New value for ~a is invalid: ~a" object val))
 	val)))
+
+(defun validate-index (object val)
+  (if (slot-boundp object 'value)
+      (let ((valid (length (options object))))
+	(if (<= val valid)
+	    val
+	    (error "New value for ~a is invalid: ~a" object val))
+	val)))
+
+(defun validate-label (object val)
+  (if (slot-boundp object 'label)
+      (let ((valid (assoc val (label object) :test #'string=)))
+	(if valid
+	    val
+	    (error "New value for ~a is invalid: ~a" object val))
+	val)))
+
+(defun validate-range-index (object val)
+  (if (slot-boundp object 'value)
+      (let ((valid (length (value object))))
+	(when (not (= (length val) (valid)))
+	    (error "Invalid Selection: index must have two values, but is ~a" val))
+	;;FINISH ME
+	)
+      val))

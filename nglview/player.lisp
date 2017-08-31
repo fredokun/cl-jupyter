@@ -191,12 +191,11 @@
   (setf (render-params player) (list (cons :factor 4)
 				    (cons :antialias :true)
 				    (cons :trim :false)
-				    (cons :transparent :false)))
+				    (cons :transparent :false))))
   ;; the following doesn't appear to be used anywhere correct
   ;; https://github.com/drmeister/spy-ipykernel/blob/master/nglview/player.py#L80
   ;; self._widget_names = [w for w in dir(self) if w.startswith('wiget_')]
 
->>>>>>> master
 #|
  self._widget_names = [w for w in dir(self) if w.startswith('wiget_')]
         self.observe(self._on_widget_built, names=['widget_repr_parameters',
