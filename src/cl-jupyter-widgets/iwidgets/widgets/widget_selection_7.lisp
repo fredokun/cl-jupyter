@@ -1,3 +1,4 @@
+
 (in-package :cl-jupyter-widgets)
 ;;;Python code: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets6/widgets/widget_selection.py#L49
 
@@ -13,8 +14,8 @@
 	  :validator validate-label)
    (index :initarg :index :accessor index
 	  :type integer
-	  :initform nil
-	  :validator validate-index
+	  :initform 0
+	 ; :validator validate-index
 	  :metadata (:sync t
 			   :json-name "index"
 			   :help "Selected index"))
@@ -28,15 +29,15 @@
 	      :metadata (:sync t
 			       :json-name "disabled"
 			       :help "Enable or disable user changes."))
-   (%options-full :initarg :options-full :accessor options-full
+   (options-full :initarg :options-full :accessor options-full
 		  :initform nil)
-   (%options-labels :initarg :options-labels :accessor options-labels
-		    :initform nil
-		    :type list
+   (options-labels :initarg :options-labels :accessor options-labels
+		    :initform (make-array 0 :adjustable t :fill-pointer 0)
+		    :type vector
 		    :metadata (:sync t
-				     :json-name "options_labels"
+				     :json-name "_options_labels"
 				     :help "The labels for the options."))
-   (%options-values :accessor options-values
+   (options-values :accessor options-values
 		    :initform nil
 		    :type list))
   (:metaclass traitlets:traitlet-class))
@@ -288,12 +289,16 @@ def _labels_to_values(k, obj):
   (slot-value w slot-name))
 
 (defmethod initialize-instance :after ((self %selection) &key)
-  (with-slots (%options-labels %options-full options %options-values) self
-    (setf options-full options
-	  options-labels (mapcar #'car options)
-	  options-values (mapcar #'cdr options))
+  (with-slots (options-labels options-full options options-values value index) self
+    (setf options-full options)
+    (loop for (k . v) in options
+       do
+	  (vector-push-extend k options-labels) 
+	  (push v options-values))
     (when (zerop (length (value self)))
-      (setf value (car options-values)))))
+      (setf value (car options-values)))
+    (setf index (position value options :key #'cdr :test #'equal))))
+
 
 
 ;;;FIXME: Make validators -_- ....and propagators?
