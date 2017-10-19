@@ -52,6 +52,7 @@
    (index :initarg :index :accessor label
 	  :type vector
 	  :initform (make-array 0 :fill-pointer 0 :adjustable t)
+	  :validator validate-multiple-indexes
 	  :metadata (:sync t
 			   :json-name "index"))
    (options :initarg :options :accessor options
@@ -189,6 +190,7 @@
    (index :initarg :index :accessor index
 	  :type vector ;?
 	  :initform nil
+	  :validator validate-range-index
 	  :metadata (:sync t
 			   :json-name "index"
 			   :help "Min and max selected indices."))
@@ -296,8 +298,9 @@ def _labels_to_values(k, obj):
 	  (vector-push-extend k options-labels) 
 	  (push v options-values))
     (when (zerop (length (value self)))
-      (setf value (car options-values)))
-    (setf index (position value options :key #'cdr :test #'equal))))
+      (setf value (car options-values)
+	    (index self) (value self))
+    (setf index (position value options :key #'cdr :test #'equal)))))
 
 
 
@@ -331,7 +334,21 @@ def _labels_to_values(k, obj):
   (if (slot-boundp object 'value)
       (let ((valid (length (value object))))
 	(when (not (= (length val) (valid)))
-	    (error "Invalid Selection: index must have two values, but is ~a" val))
-	;;FINISH ME
+	    (error "Invalid Selection: index must have two values, but has ~a" (length val)))
+	(loop for i in val
+	   do
+	     (when (or (> i valid) (< i 0))
+	       (error "Invalid Selection: index is out of range. Please select an index in range of options."))
 	)
+      val)))
+
+(defun validate-multiple-indexes (object val)
+  (if (slot-boundp object 'options)
+      (let ((valid (length (options object))))
+	(loop for i in val
+	   do
+	     (when (or (> i (length (options-labels object)) (< i 0)))
+	       (error "Invalid Selection: index is out of range. Please select an index in range of options."))))
       val))
+
+

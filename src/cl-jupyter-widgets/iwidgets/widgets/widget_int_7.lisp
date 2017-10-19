@@ -15,16 +15,18 @@
   (:metaclass traitlets:traitlet-class))
 
 (defclass %bounded-int (%int)
-  (
+  ((value :validator validate-bounded-int)
   (max :initarg :max :accessor max
 	:type integer
 	:initform 100
+	:validator validate-int-max
 	:metadata (:sync t
 			 :json-name "max"
 			 :help "Max value."))
   (min :initarg :min :accessor min
 	:type integer
 	:initform 0
+	:validator validate-int-min
 	:metadata (:sync t
 			 :json-name "min"
 			 :help "Min value."))
@@ -151,6 +153,7 @@
   ((value :initarg :value :accessor value
 	  :type tuple
 	  :initform (tuple 0 1)
+	  :validator validate-int-range
 	  :metadata (:sync t
 			   :json-name "value"
 			   :help "Tuple of (lower, upper) bounds"))
@@ -195,15 +198,18 @@
   (:metaclass traitlets:traitlet-class))
 
 (defclass %bounded-int-range(int-range)
-  ((max :initarg :max :accessor max
+  ((value :validator validate-bounded-int-range)
+   (max :initarg :max :accessor max
 	:type integer
 	:initform 100
+	:validator validate-int-max
 	:metadata (:sync t
 			 :json-name "max"
 			 :help "Max value"))
    (min :initarg :min :accessor min
 	:type integer
 	:initform 0
+	:validator validate-int-min
 	:metadata (:sync t
 			 :json-name "min"
 			 :help "Min value"))
@@ -258,3 +264,51 @@
      collect (clos:slot-definition-name slot-def)))
     
 
+(defun validate-bounded-int (object val)
+  (if (and (slot-boundp object 'min) (slot-boundp object 'max))
+      (let ((min (min object)) (max (max object)))
+	(cond ((< val min) min)
+	      ((> val max) max)
+	      (t val)))
+      val))
+
+(defun validate-int-min (object val)
+  (if (slot-boundp object 'min)
+      (with-slots ((max max) (value value)) object
+	(cond ((> val  max) max)
+	      ((> val value) (setf value val))
+	      (t val))
+	val)))
+
+
+(defun validate-int-max (object val)
+  (if (slot-boundp object 'max)
+      (with-slots ((min min) (value value)) object
+	(cond ((> value  val) (setf value val))
+	      ((< val min) min)
+	      (t val))
+	val)))	      
+
+
+(defun validate-bounded-int-range (object val)
+  (flet ((enforce-min (val min) (if (< val min) min val))
+	 (enforce-max (val max) (if (> val max) max val)))
+	  (let ((low-val (cl:min (elt val 0) (elt val 1)))
+		(high-val (cl:max (elt val 0) (elt val 1))))
+	    ;; Now low-val <= high-val
+	    (if (and (slot-boundp object 'min) (slot-boundp object 'max))
+		(let ((min (min object))
+		      (max (max object)))
+		  (let ((low-val-min (enforce-min low-val min))
+			(high-val-min (enforce-min high-val min)))
+		    (let ((low-val-min-max (enforce-max low-val-min max))
+			  (high-val-min-max (enforce-max high-val-min max)))
+		      (vector low-val-min-max high-val-min-max))))
+		(vector low-val high-val)))))
+  
+	
+(defun validate-int-range (object val)
+  (if (slot-boundp 'object value)
+      (when (> (aref val 0) (aref val 1))
+	(error "Setting lower > upper"))
+      val))

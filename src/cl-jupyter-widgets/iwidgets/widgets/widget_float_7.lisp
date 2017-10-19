@@ -18,12 +18,14 @@
    (max :initarg :max :accessor max
 	 :type float
 	 :initform 100.0
+	 :validator validate-float-max
 	 :metadata (:sync t
 			  :json-name "max"
 			  :help "Max value"))
    (min :initarg :min :accessor min
 	 :type float
 	 :initform 0.0
+	 :validator validate-float-min
 	 :metadata (:sync t
 			  :json-name "min"
 			  :help "Min value"))
@@ -38,7 +40,6 @@
 	      (t val)))
       val))
 
-;(defun validate-range-vector (object val)
   
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L67
@@ -104,12 +105,6 @@
 		:metadata (:sync t
 				 :json-name "orientation"
 				 :help "vertical or horizontal"))
-   #|(_range :initarg :range :accessor range
-	   :type bool
-	   :initform :false
-	   :metadata (:sync t
-			    :json-name "_range"
-			    :help "Display a range selector"))|#
    (readout :initarg :readout :accessor readout
 	    :type bool
 	     :initform :true
@@ -122,11 +117,6 @@
 		   :metadata (:sync t
 				    :json-name "readout_format"
 				    :help "Format for the readout"))
-   #|(slider-color :initarg :slider-color :accessor slider-color
-		 :type unicode
-		 :initform (unicode "None")
-		 :metadata (:sync t
-				  :json-name "slider_color"))|#
    (continuous-update :initarg :continuous-update :accessor continuous-update
 		      :type bool
 		       :initform :true
@@ -190,13 +180,10 @@
   ((value :initarg :value :accessor value
 	  :type vector
 	  :initform (vector 0.0 1.0)
+	  ;:validator validate-float-range FIXME
 	  :metadata (:sync t
 			   :json-name "value"
 			   :help "Tuple of (lower, upper) bounds")))
-  ;(:default-initargs
-   ;:model-module (unicode "jupyter-js-widgets")
-    ;:view-module (unicode "jupyter-js-widgets")
-   ; )
   (:metaclass traitlets:traitlet-class))
 
 
@@ -208,37 +195,39 @@
 	  :metadata (:sync t
 			   :json-name "step"
 			   :help "Minimum step that the value can take (ignored by some views)"))
-   (value :validator validate-float-range)
+   (value :validator validate-float-bounded-range)
    (max :initarg :max :accessor max
 	 :type float
 	 :initform 100.0
+	 :validator validate-float-max
 	 :metadata (:sync t
 			  :json-name "max"
 			  :help "Max value"))
    (min :initarg :min :accessor min
 	 :type float
 	 :initform 0.0
+	 :validator validate-float-min
 	 :metadata (:sync t
 			  :json-name "min"
 			  :help "Min value"))
    )
   (:metaclass traitlets:traitlet-class))
 
-(defun validate-float-range (object val)
+(defun validate-float-bounded-range (object val)
   (flet ((enforce-min (val min) (if (< val min) min val))
 	 (enforce-max (val max) (if (> val max) max val)))
-	  (let ((low-val (cl:min (elt val 0) (elt val 1)))
-		(high-val (cl:max (elt val 0) (elt val 1))))
-	    ;; Now low-val <= high-val
-	    (if (and (slot-boundp object 'min) (slot-boundp object 'max))
-		(let ((min (min object))
-		      (max (max object)))
-		  (let ((low-val-min (enforce-min low-val min))
-			(high-val-min (enforce-min high-val min)))
-		    (let ((low-val-min-max (enforce-max low-val-min max))
-			  (high-val-min-max (enforce-max high-val-min max)))
-		      (vector low-val-min-max high-val-min-max))))
-		(vector low-val high-val)))))
+    (let ((low-val (cl:min (elt val 0) (elt val 1)))
+	  (high-val (cl:max (elt val 0) (elt val 1))))
+      ;; Now low-val <= high-val
+      (if (and (slot-boundp object 'min) (slot-boundp object 'max))
+	  (let ((min (min object))
+		(max (max object)))
+	    (let ((low-val-min (enforce-min low-val min))
+		  (high-val-min (enforce-min high-val min)))
+	      (let ((low-val-min-max (enforce-max low-val-min max))
+		    (high-val-min-max (enforce-max high-val-min max)))
+		(vector low-val-min-max high-val-min-max))))
+	  (vector low-val high-val)))))
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_float.py#L243
 (defclass-widget-register float-range-slider(%bounded-float-range)
@@ -284,3 +273,20 @@
     :model-name (unicode "FloatRangeSliderModel"))
   (:metaclass traitlets:traitlet-class))
 
+
+(defun validate-float-min (object val)
+  (if (slot-boundp object 'min)
+      (with-slots ((max max) (value value)) object
+	(cond ((> val  max) max)
+	      ((> val value) (setf value val))
+	      (t val))
+	val)))
+
+
+(defun validate-float-max (object val)
+  (if (slot-boundp object 'max)
+      (with-slots ((min min) (value value)) object
+	(cond ((> value  val) (setf value val))
+	      ((< val min) min)
+	      (t val))
+	val)))
