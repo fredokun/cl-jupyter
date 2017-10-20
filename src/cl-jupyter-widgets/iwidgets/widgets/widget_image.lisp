@@ -52,8 +52,8 @@ https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_i
    (:default-initargs  
        :view-name (unicode "ImageView")
      :model-name (unicode "ImageModel")
-     :model-module (unicode "jupyter-js-widgets")
-     :view-module (unicode "jupyter-js-widgets"))
+     :model-module (unicode "@jupyter-widgets/controls")
+     :view-module (unicode "@jupyter-widgets/controls"))
    (:metaclass traitlets:traitlet-class))
 
 

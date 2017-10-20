@@ -41,9 +41,11 @@ def get_name(obj, kwargs):
 
 (defun dict-entry (key dict)
   "Lookup the key in the a-list with string keys and return the entry"
+  (check-type key string)
   (assoc key dict :test #'equal))
 
 (defun dict-lookup (key dict &optional (default nil default-p))
+  (check-type key string)
   (let ((entry (dict-entry key dict)))
     (if entry
 	(cdr entry)
@@ -52,6 +54,7 @@ def get_name(obj, kwargs):
 	    (error "Could not find key ~s in ~s" key dict)))))
 
 (defun dict-set-or-push (key dict value)
+  (check-type key string)
   (let ((entry (dict-entry key dict)))
     (if entry
 	(progn

@@ -145,7 +145,7 @@
   (:metaclass traitlets:traitlet-class)
   (:default-initargs
     :view-name (unicode "LayoutView")
-    :view-module (unicode "@jupyter-js/base")
+    :view-module (unicode "@jupyter-widgets/base")
     :view-module-version (unicode *jupyter-widgets-base-version*)
     :model-name (unicode "LayoutModel"))
   (:documentation
