@@ -7,7 +7,8 @@
 (defclass %selection (description-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	  :initform nil
-	  :validator validate-selection)
+	  :validator validate-selection
+	  :observers (update-value))
    (label :initarg :label :accessor label
 	  :type unicode
 	  :initform (unicode "")
@@ -15,6 +16,7 @@
    (index :initarg :index :accessor index
 	  :type integer
 	  :initform 0
+	  :observers (update-index)
 	 ; :validator validate-index
 	  :metadata (:sync t
 			   :json-name "index"
@@ -22,6 +24,7 @@
    (options :initarg :options :accessor options
 	     :type list
 	     :initform ()
+	     :observers (update-options)
 	     :documentation "Iterable of values, (label, value) pairs, or a mapping of {label: value} pairs that the user can select. The labels are the strings that will be displayed in the UI, representing the actual Python choices, and should be unique.")
    (disabled :initarg :disabled :accessor disabled
 	      :type bool
@@ -38,8 +41,8 @@
 				     :json-name "_options_labels"
 				     :help "The labels for the options."))
    (options-values :accessor options-values
-		    :initform nil
-		    :type list))
+		    :initform  (make-array 0 :adjustable t :fill-pointer 0)
+		    :type vector))
   (:metaclass traitlets:traitlet-class))
 
 (defclass multiple-selection (description-widget value-widget core-widget)
@@ -296,11 +299,10 @@ def _labels_to_values(k, obj):
     (loop for (k . v) in options
        do
 	  (vector-push-extend k options-labels) 
-	  (push v options-values))
-    (when (zerop (length (value self)))
-      (setf value (car options-values)
-	    (index self) (value self))
-    (setf index (position value options :key #'cdr :test #'equal)))))
+	  (vector-push-extend v options-values))
+    (when (zerop (length value))
+      (setf value (aref options-values 0)))
+    (setf index (position value options :key #'cdr :test #'equal))))
 
 
 
@@ -311,8 +313,8 @@ def _labels_to_values(k, obj):
       (let ((valid (member val (options object) :test #'string= :key #'car)))
 	(if valid
 	    val
-	    (error "New value for ~a is invalid: ~a" object val))
-	val)))
+	    (error "New value for ~a is invalid: ~a" object val)))
+	val))
 #|
 (defun validate-index (object val)
   (if (slot-boundp object 'value)
@@ -327,20 +329,20 @@ def _labels_to_values(k, obj):
       (let ((valid (assoc val (label object) :test #'string=)))
 	(if valid
 	    val
-	    (error "New value for ~a is invalid: ~a" object val))
-	val)))
+	    (error "New value for ~a is invalid: ~a" object val)))
+	val))
 
 (defun validate-range-index (object val)
   (if (slot-boundp object 'value)
       (let ((valid (length (value object))))
-	(when (not (= (length val) (valid)))
+	(unless (= (length val) (valid))
 	    (error "Invalid Selection: index must have two values, but has ~a" (length val)))
 	(loop for i in val
 	   do
 	     (when (or (> i valid) (< i 0))
 	       (error "Invalid Selection: index is out of range. Please select an index in range of options."))
-	)
-      val)))
+	))
+      val))
 
 (defun validate-multiple-indexes (object val)
   (if (slot-boundp object 'options)
@@ -352,3 +354,17 @@ def _labels_to_values(k, obj):
       val))
 
 
+(defun update-index (object name new old)
+  (when (slot-boundp (index object))
+    (unless (equal new old)
+      (setf (label object) (aref (options-labels object) new)
+	    (value object) (aref (options-values object) new))))
+      new)
+
+(defun update-options (object name new old)
+  (values))
+
+(defun update-value (object name new old)
+  (setf (index object) (position (value object) (options object) :key #'cdr :test #'equal)
+	(label object) (aref (options-values object) (index object)))
+  new)

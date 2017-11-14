@@ -73,7 +73,7 @@
   nil)
 
 ;;; Ditto for observers.
-(defmethod observers ((slot clos:effective-slot-definition))
+(defmethod observers ((slot clos:slot-definition))
   nil)
 
 ;;; User interface

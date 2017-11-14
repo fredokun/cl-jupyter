@@ -112,11 +112,14 @@
                       :metadata (:sync t
                                  :json-name "continuous_update"
                                  :help "Update the value of the widget as the user is holding the slider."))
+   #|(style :accessor style :initform (make-instance 'slider-style)
+	  :metadata (:sync t
+			   :json-name "style"
+			   ,@*widget-serialization*))|#
    )
   (:default-initargs
    :view-name (unicode "IntSliderView")
-   :model-name (unicode "IntSliderModel")
-   :style (make-instance 'slider-style))
+   :model-name (unicode "IntSliderModel"))
   (:metaclass traitlets:traitlet-class))
 
 (defclass-widget-register progress-style (description-style core-widget)
@@ -141,11 +144,15 @@
 	       :initform (unicode "")
 	       :metadata (:sync t
 				:json-name "bar_style"
-				:help "Use a predefined styling for the progress bar. Options: \"success\", \"info\", \"warning\", and \"danger\". Default: \"\".")))
+				:help "Use a predefined styling for the progress bar. Options: \"success\", \"info\", \"warning\", and \"danger\". Default: \"\"."))
+      #|(style :accessor style :initform (make-instance 'slider-style)
+	  :metadata (:sync t
+			   :json-name "style"
+   ,@*widget-serialization*))|#
+   )
   (:default-initargs
    :view-name (unicode "ProgressView")
-   :model-name (unicode "IntProgressModel")
-   :style (make-instance 'slider-style))
+   :model-name (unicode "IntProgressModel"))
   (:metaclass traitlets:traitlet-class))
 
 
