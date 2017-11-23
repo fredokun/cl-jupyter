@@ -10,7 +10,7 @@
 
 ;;; Use widget-log to log messages to a file
 (defvar *widget-log* nil)
-(defvar *widget-log-queue* nil)
+(defvar *widget-log-lock* nil)
 
 (eval-when (:compile-toplevel)
   (let ((val (ext:getenv "USE_WIDGET_LOG")))
@@ -29,19 +29,17 @@
 				:direction :output
 				:if-exists :append
 				:if-does-not-exist :create))
-    (setf *trace-output* *widget-log*)
-    (setf *widget-log-queue* (core:make-cxx-object 'mp:blocking-concurrent-queue))
-    (mp:push-default-special-binding '*widget-log-queue* *widget-log-queue*)
-    (mp:process-run-function
-     'widget-log
-     (lambda ()
-       (loop
-	  (let ((msg (mp:queue-wait-dequeue *widget-log-queue*)))
-	    (princ msg *widget-log*)
-	    (finish-output *widget-log*)))))
+    (format *widget-log* "Log started up~%")
+    (setf *widget-log-lock* (mp:make-lock :name 'widget-log))
+    (format *widget-log* "About to start widget-log process~%")
     (defun always-widget-log (fmt &rest args)
       (let ((msg (apply #'format nil fmt args)))
-	(mp:queue-enqueue *widget-log-queue* msg)))
+        (unwind-protect
+             (progn
+               (mp:lock *widget-log-lock* t)
+               (princ msg *widget-log*)
+               (finish-output *widget-log*))
+          (mp:unlock *widget-log-lock*))))
     (format *widget-log* "===================== new run =======================~%")))
 
 #+use-widget-log
