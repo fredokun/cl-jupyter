@@ -3,7 +3,7 @@
 (defun strip (string)
   (string-trim #(#\Space #\Newline #\Return) string))
 
-(defclass TrajectoryPlayer (cljw::dom-widget)
+(defclass TrajectoryPlayer (cljw::domwidget)
   ((%step :initarg :%step :accessor %step
 	 :type integer
 	 :initform 1 ;Original default is 0 but init makes it 1
@@ -24,7 +24,7 @@
 	  :initform 100.0 ;Original default is 0.0 but init makes it 100
 	  :metadata (:sync t
 			   :json-name "delay"))
-   (parameters :initarg :parameters :accessor parameters
+   (%parameters :initarg :parameters :accessor trajectory-player-parameters
 	       :type cljw:dict
 	       :initform nil
 	       :metadata (:sync t
@@ -71,7 +71,7 @@
 		:initform 0.005
 		:metadata (:sync t
 				 :json-name "_spin_speed"))
-   (camera :initarg :camera :accessor camera
+   (camera :initarg :camera :accessor trajectory-player-camera
 	   :type unicode
 	   :initform (unicode "perspective")
 	   :metadata (:sync t
@@ -202,6 +202,8 @@
             'widget_repr',
             'widget_preference'])
 |#
+
+  )
 
 (defmethod %update-padding ((self TrajectoryPlayer) &optional (padding *DEFAULT-PADDING*))
   (with-slots (widget-general widget-repr widget-preference widget-repr-parameters widget-help widget-extra wiget-picked) self

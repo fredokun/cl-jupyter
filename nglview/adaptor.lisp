@@ -60,8 +60,6 @@
 	   (close stream)
 	   entire-file))))
 
-
-
 (defclass TextStructure (Structure)
   ((text :initarg :text :accessor text :initform nil)
    (ext :initarg :ext :accessor ext :initform "pdb")
