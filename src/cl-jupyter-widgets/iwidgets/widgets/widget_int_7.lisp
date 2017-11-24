@@ -2,10 +2,10 @@
 ;;;Python code: https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets6/widgets/widget_int.py#L69
 (defclass %int (description-widget value-widget core-widget)
   ((value :initarg :value :accessor value
-	   :type integer
-	   :initform 0
-	   :metadata (:sync t
-			    :json-name "value"))
+	  :type integer
+	  :initform 0
+	  :metadata (:sync t
+			   :json-name "value"))
    (disabled :initarg :disabled :accessor disabled
 	     :type bool
 	     :initform :false
@@ -16,14 +16,14 @@
 
 (defclass %bounded-int (%int)
   ((value :validator validate-bounded-int)
-  (max :initarg :max :accessor max
+   (max :initarg :max :accessor max
 	:type integer
 	:initform 100
 	:validator validate-int-max
 	:metadata (:sync t
 			 :json-name "max"
 			 :help "Max value."))
-  (min :initarg :min :accessor min
+   (min :initarg :min :accessor min
 	:type integer
 	:initform 0
 	:validator validate-int-min
@@ -284,8 +284,8 @@
       (with-slots ((max max) (value value)) object
 	(cond ((> val  max) max)
 	      ((> val value) (setf value val))
-	      (t val))
-	val)))
+	      (t val)))
+      val))
 
 
 (defun validate-int-max (object val)
@@ -293,8 +293,8 @@
       (with-slots ((min min) (value value)) object
 	(cond ((> value  val) (setf value val))
 	      ((< val min) min)
-	      (t val))
-	val)))	      
+	      (t val)))
+      val))
 
 
 (defun validate-bounded-int-range (object val)

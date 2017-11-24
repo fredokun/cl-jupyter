@@ -11,7 +11,7 @@
    (selected_index :initarg :selected_index :accessor selected_index
 		   :type integer
 		   :initform 0
-		   :validator validated-index
+		   :validator validate-index
 		   :metadata (:sync t
 				     :json-name "selected_index"
 				     :help "The index of the selected page. This is either an integer selecting a particular sub-widget, or None to have no widgets selected.")))
