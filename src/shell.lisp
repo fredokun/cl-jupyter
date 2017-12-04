@@ -6,10 +6,15 @@
 
 |#
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; These variables are always bound when a cell is evaluated
+;;; They define a dynamic environment within which SEND operates
 (defvar *parent-msg* nil)
 (defvar *shell* nil)
 (defvar *kernel* nil)
 (defvar *default-special-bindings*)
+(defvar *special-variables* '(*parent-msg* *shell* *kernel*))
 
 (defclass shell-channel ()
   ((kernel :initarg :kernel :reader shell-kernel)

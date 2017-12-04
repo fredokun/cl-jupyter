@@ -203,8 +203,6 @@
             'widget_preference'])
 |#
 
-  )
-
 (defmethod %update-padding ((self TrajectoryPlayer) &optional (padding *DEFAULT-PADDING*))
   (with-slots (widget-general widget-repr widget-preference widget-repr-parameters widget-help widget-extra wiget-picked) self
     (let ((widget-collection (list widget-general widget-repr widget-preference widget-repr-parameters widget-help widget-extra widget-picked)))

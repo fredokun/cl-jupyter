@@ -127,7 +127,7 @@
     ;; ensure that buffers support memoryview buffer protocol
     (prog1
 	(let ((socket (cl-jupyter::iopub-socket stream)))
-	  (widget-log "About to do message-send~%")
+	  (widget-log "About to do message-send msg=|~s|~%" msg)
 	  (cl-jupyter::message-send socket msg :identities (list msg-type) :key (cl-jupyter::kernel-key cl-jupyter::*shell*)))
       (widget-log "Done with message-send~%"))))
 

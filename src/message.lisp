@@ -177,8 +177,8 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
   (let ((hmac (ironclad:make-hmac key :SHA256)))
     ;; updates
     (loop for part in parts
-       do (let ((part-bin (babel:string-to-octets part)))
-            (ironclad:update-hmac hmac part-bin)))
+          do (let ((part-bin (babel:string-to-octets part)))
+               (ironclad:update-hmac hmac part-bin)))
     ;; digest
     (octets-to-hex-string (ironclad:hmac-digest hmac))))
 
@@ -290,7 +290,10 @@ The wire-deserialization part follows.
   (let ((wire-parts (wire-serialize msg :identities identities :key key)))
     #+(or)(format t "~%[Send] wire parts: ~W~%" wire-parts)
     (dolist (part wire-parts)
-      (pzmq:send socket part :sndmore t))
+      ;;; FIXME: Try converting all base strings to character strings
+      (let ((part-character-string (make-array (length part) :element-type 'character :initial-contents part)))
+        (cl-jupyter-widgets:widget-log "pzmq:send socket part-character-string=|~s| type-of -> ~s~%" part (type-of part-character-string))
+        (pzmq:send socket part-character-string :sndmore t)))
     (prog1
 	(pzmq:send socket nil)
       (cl-jupyter-widgets:widget-log "Leaving message-send~%"))))
@@ -320,6 +323,7 @@ The wire-deserialization part follows.
 (defun message-recv (socket)
   (cljw:widget-log "[Recv] About to zmq-recv-list socket~%")
   (let ((parts (zmq-recv-list socket)))
-    (cljw:widget-log "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
+    (dolist (part parts)
+      (cljw:widget-log "[Recv]: part: |~A|  type-of -> ~a~%" part (type-of part)))
     #++(format t "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
     (wire-deserialize parts)))

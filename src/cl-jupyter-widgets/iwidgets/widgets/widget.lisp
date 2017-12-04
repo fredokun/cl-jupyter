@@ -46,6 +46,7 @@
 
 
 (deftype bool () '(member :true :false :null))
+(deftype bytes () '(simple-array ext:byte8 *))
 (deftype unicode () '(simple-array character *))
 (deftype cunicode () '(simple-array character *))
 (deftype tuple () '(vector * *))
@@ -291,14 +292,14 @@
 		   :initform (make-instance 'callback-dispatcher))
    (%model-id :initarg :model-id :accessor model-id :initform nil)
    (%ipython-display :initarg :%ipython-display :accessor %ipython-display
-		     :initform #'%ipython-display-callback)
+		     :initform '%ipython-display-callback)
    )
   (:metaclass traitlets:traitlet-class))
 
 ;;; observe('comm')
 (defmethod (setf comm) :after (comm (widg widget))
   (setf (model-id widg) (comm-id comm))
-  (on-msg comm (lambda (msg) (funcall #'%handle-msg widg msg)))
+  (on-msg comm (lambda (msg) (funcall '%handle-msg widg msg)))
   (setf (gethash (model-id widg) *widget.widgets*) widg))
 
 (defmethod model-id ((widg widget))
@@ -374,7 +375,7 @@
   ;;; In python this test is
   ;; _binary_types = (memoryview, buffer)
   ;; isinstance(obj, _binary_types)
-  nil)
+  (typep obj 'binary-types))
 
 (defun send-state (self &key key)
   "From https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget.py#L252

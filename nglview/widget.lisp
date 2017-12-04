@@ -166,14 +166,18 @@
    self._handle_msg_thread.daemon = True
    self._handle_msg_thread.start()
    |#
-   (%remote-call-thread
+   ;; Only one remote-call-thread in pythread:*remote-call-thread*
+   #+(or)(%remote-call-thread
     :initarg :remote-call-thread
     :accessor remote-call-thread
-    :initform nil)
-   (%remote-call-thread-queue
+    :allocation :class
+    :initform pythread:*remote-call-thread*)
+   ;; Only one remote-call-thread-queue in pythread:*remote-call-thread-queue*
+   #+(or)(%remote-call-thread-queue
     :initarg :remote-call-thread-queue
     :accessor remote-call-thread-queue
-    :initform (core:make-cxx-object 'mp:blocking-concurrent-queue))
+    :allocation :class
+    :initform pythread:*remote-call-thread-queue*)
    (%handle-msg-thread
     :accessor handle-msg-thread
     :initform nil)
@@ -217,30 +221,29 @@
     (when gui-p (remf kwargs :gui))
     (when theme-p (remf kwargs :theme))
     (let ((widget (apply #'make-instance 'nglwidget kwargs)))
+      (gctools:finalize widget #'(lambda () (format t "Finalizing widget~%") (widget-close widget)))
       (when gui-p (setf (init-gui widget) gui))
       (when theme-p (setf (theme widget) theme))
       (setf (stage widget) (make-instance 'stage :view widget))
 ;;;      (setf (control widget) (make-instance 'viewer-control :view widget))
       #+(or)(warn "What do we do about add_repr_method_shortcut")
-      (cljw:widget-log "Starting handle-msg-thread from process ~s~%" mp:*current-process*)
-      (setf (handle-msg-thread widget)
-	    (mp:process-run-function
-	     'handle-msg-thread
-	     (lambda ()
-	       (cljw:on-msg widget #'%ngl-handle-msg)
-	       (cljw:widget-log "Calling cljw:on-msg widget with #'%ngl-handle-msg in process: ~s~%" mp:*current-process*)
-	       (loop
-		  ;; yield while respecting callbacks to ngl-handle-msg
-		  (mp:process-yield))
-	       (cljw:widget-log "UNREACHABLE!!! Leaving handle-msg-thread - but this shouldn't happen - this thread should be killed!!!!!~%"))
-	     cl-jupyter:*default-special-bindings*))
-      (setf (remote-call-thread widget)
-	    (mp:process-run-function
-	     'remote-call-thread
-	     (lambda () (pythread:remote-call-thread-run
-			 widget
-			 (list "loadFile" "replaceStructure")))
-	     cl-jupyter:*default-special-bindings*))
+      ;;; Handle messages - in Python they start a daemon - WHY????
+      (cljw:on-msg widget '%ngl-handle-msg)
+      #+(or)(progn
+              (cljw:widget-log "Starting handle-msg-thread from process ~s~%" mp:*current-process*)
+              (setf (handle-msg-thread widget)
+                    (mp:process-run-function
+                     'handle-msg-thread
+                     (lambda ()
+                       (cljw:on-msg widget '%ngl-handle-msg)
+                       (cljw:widget-log "Calling cljw:on-msg widget with #'%ngl-handle-msg in process: ~s~%" mp:*current-process*)
+                       (loop
+                         ;; yield while respecting callbacks to ngl-handle-msg
+                         (mp:process-yield)
+                         (sleep 1) ;; I don't want to sleep here - do I?   Will it slow down callbacks to %ngl-handle-msg
+                         (format t "handle-msg-thread in process-yield loop ~s~%" (get-internal-real-time ) ))
+                       (cljw:widget-log "Leaving handle-msg-thread - but this shouldn't happen - this thread should be killed!!!!!~%"))
+                     cl-jupyter:*default-special-bindings*)))
       (when parameters-p (setf (parameters widget) parameters))
       (cond
 	((typep structure 'Trajectory)
@@ -314,15 +317,8 @@
    ]
    |#
 
-(defmethod (setf clos:slot-value-using-class)
-    (new-value (class traitlets:traitlet-class) (object nglwidget) (slotd traitlets:effective-traitlet))
-  (call-next-method)
-  (let ((slot-name (clos:slot-definition-name slotd)))
-    (when (eq slot-name '%loaded)
-      (when new-value
-	(cljw:widget-log "%loaded is true - firing callbacks~%")
-	(%fire-callbacks object (reverse (ngl-displayed-callbacks-before-loaded-reversed object)))))))
-
+#|
+;;; Duplicate code
 (defmethod %fire-callbacks ((widget nglwidget) callbacks)
   (loop for callback in callbacks
      do (progn
@@ -336,6 +332,7 @@
      (sleep timeout)
      (when (pythread:is-set (event widget))
        (return-from %wait-until-finished))))
+|#
 
 (defmethod cljw::notify-change :after ((widget nglwidget) (slot-name (eql '%picked)) &optional value)
   (cljw:widget-log "In notify-change :after for %picked  value -> ~s~%" value)
@@ -394,7 +391,8 @@
        (cljw:widget-log "      handling request_loaded~%")
        (unless (loaded widget)
 	 (setf (loaded widget) nil))
-       (setf (loaded widget) (eq (cljw:assoc-value "data" content) :true)))
+       (setf (loaded widget) (eq (cljw:assoc-value "data" content) :true))
+       (cljw:widget-log "(loaded widget) -> ~a    (cljw:assoc-value \"data\" content) -> ~s~%" (loaded widget) (cljw:assoc-value "data" content)))
       ((string= msg-type "repr_dict")
        (setf (repr-dict widget) (dict-lookup "data" (ngl-msg widget))))
       ((string= msg-type "async_message")
@@ -410,6 +408,7 @@
 (defmethod (setf clos:slot-value-using-class)
     (new-value (class traitlets:traitlet-class) (object nglwidget) (slotd traitlets:effective-traitlet))
   (call-next-method)
+  (cljw:widget-log "(setf clos:slot-value-using-class) was called~%")
   (let ((slot-name (clos:slot-definition-name slotd)))
     (cond
       ((eq slot-name '%loaded)
@@ -427,7 +426,7 @@
 	   (loop for callback in callbacks
 	      do (progn
 		   (cljw:widget-log "      %fire-callback -> ~s in process ~s~%" (pythread:method-name callback) mp:*current-process*)
-		   (pythread:fire-callback widget callback)
+		   (pythread:fire-callback callback widget)
 		   (when (string= (pythread:method-name callback) "loadFile")
 		     (cljw:widget-log "    Waiting until finished~%")
 		     (wait-until-finished widget))))))
@@ -492,11 +491,11 @@
 
 
 
-(defmethod add-structure ((widget nglwidget) structure &rest kwargs)
-  (cljw:widget-log "In add-structure  (loaded widget) -> ~a   (already-constructed widget) -> ~a~%" (loaded widget) (already-constructed widget))
+(defmethod add-structure ((self nglwidget) structure &rest kwargs)
+  (cljw:widget-log "In add-structure  (loaded self) -> ~a   (already-constructed self) -> ~a~%" (loaded self) (already-constructed self))
   (if (not (typep structure 'Structure))
       (error "~s is not an instance of Structure" structure))
-  (apply #'%load-data self structure kwargs)
+  (apply '%load-data self structure kwargs)
   (setf (ngl-component-ids self) (append (ngl-component-ids self) (list (id structure))))
   (when (> (n-components self) 1)
     (center-view self :component (- (length (ngl-component-ids self)) 1)))
@@ -514,7 +513,7 @@
 
 
 (defmethod add-component ((widget nglwidget) filename &rest kwargs)
-  (apply #'%load-data widget filename kwargs)
+  (apply '%load-data widget filename kwargs)
   (append (ngl-component-ids widget) (list (uuid:make-v4-uuid)))
   (%update-component-auto-completion widget))
 
@@ -548,6 +547,9 @@
 				 (cons "binary" :false)))))
     (let ((name (get-name obj :dictargs kwargs2)))
       (setf (ngl-component-names widget) (append (ngl-component-names widget) (cons name nil)))
+      (cljw:widget-log "About to %remote-call widget loadFile~%")
+      (cljw:widget-log "  args: ~a~%" args)
+      (cljw:widget-log "  kwargs: ~a~%" kwargs)
       (%remote-call widget "loadFile"
 		    :target "Stage"
 		    :args args
@@ -667,8 +669,8 @@
     (push (cons "methodName" method-name) msg)
     (push (cons "args" (coerce args 'vector)) msg)
     (push (cons "kwargs" kwargs) msg)
-    (let ((callback (make-instance
-		     'pythread:remote-call-callback
+    (let ((callback (pythread:make-remote-call-callback
+                     :widget widget
 		     :callback (lambda (widget)
 				 (cljw:widget-log "%remote-call method-name -> ~s~%" method-name)
 				 (cljw:widget-log "     %remote-call widget -> ~s~%" widget)
@@ -680,7 +682,7 @@
       (if (loaded widget)
 	  (progn
 	    (cljw:widget-log "enqueing remote-call ~a~%" callback)
-	    (pythread:remote-call-add widget callback))
+	    (pythread:remote-call-add callback))
 	  (push callback (ngl-displayed-callbacks-before-loaded-reversed widget)))
       (push callback (ngl-displayed-callbacks-after-loaded-reversed widget))))
   t)
@@ -858,8 +860,9 @@
 
 (defmethod cl-jupyter-widgets:widget-close ((widget nglwidget))
   (call-next-method)
-  (mp:process-kill (remote-call-thread widget))
-  (mp:process-kill (handle-msg-thread widget))
+  ;; (mp:process-kill (remote-call-thread widget))
+  (when (handle-msg-thread widget)
+    (mp:process-kill (handle-msg-thread widget)))
   ;;; FIXME: Kill handle-msg-thread 
   )
 

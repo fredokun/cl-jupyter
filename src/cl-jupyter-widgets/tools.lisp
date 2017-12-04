@@ -215,16 +215,11 @@
 (defparameter *debug-parent-msg* nil)
 (defparameter *debug-shell* nil)
 (defparameter *debug-kernel* nil)
+(defparameter *debug-env* nil)
 
 (defun save-jupyter-cell-state ()
-  (declare (special cl-jupyter:*parent-msg* cl-jupyter:*shell* cl-jupyter:*kernel*))
-  (setf *debug-parent-msg* cl-jupyter:*parent-msg*
-	*debug-shell* cl-jupyter:*shell*
-	*debug-kernel* cl-jupyter:*kernel*))
+  (setf *debug-env* (mapcar #'symbol-value 'cl-jupyter:*special-variables*)))
 
 (defmacro in-jupyter-cell (form)
-  `(let ((cl-jupyter:*parent-msg* *debug-parent-msg*)
-	 (cl-jupyter:*shell* *debug-shell*)
-	 (cl-jupyter:*kernel* *debug-kernel*))
-     (declare (special cl-jupyter:*parent-msg* cl-jupyter:*shell* cl-jupyter:*kernel*))
+  `(progv ,'cl-jupyter:*special-variables* ,*debug-env*
      ,form))
