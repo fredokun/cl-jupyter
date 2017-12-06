@@ -1,6 +1,6 @@
 (in-package :nglv)
 
-(cljw:widget-log "shape.lisp~%")
+(cljw:widget-log "in shape.lisp~%")
 
 (defclass shape ()
   ((view :initarg :view :accessor view :initform nil)

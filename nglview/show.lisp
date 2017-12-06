@@ -1,7 +1,7 @@
 (in-package :nglv)
 ;;;https://github.com/drmeister/spy-ipykernel/blob/master/nglview/show.py#L37
 
-(cljw:widget-log "shape.lisp~%")
+(cljw:widget-log "widget-log show.lisp~%")
 
 (defparameter *all* (list "demo" "show_pdbid" "show_url" "show_text" "show_ase" "show_simpletraj" "show_mdtraj" "show_pytraj" "show_mdanalysis" "show_parmed" "show_rdkit" "show_structure_file" "show_htmd"))
 

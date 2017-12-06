@@ -1,3 +1,4 @@
+(cljw:widget-log "widget-log parameters.lisp~%")
 (defparameter *REPRESENTATION-NAME-PAIRS* '(("axes" . "axes")
 						 ("point" . "point")
 						 ("line" . "line")

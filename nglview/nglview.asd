@@ -4,7 +4,7 @@
     :version "0.1"
     :author "Kevin Esslinger"
     :license "LGPL2. See LICENSE."
-    :depends-on (:cl-jupyter :bordeaux-threads)
+    :depends-on (:cl-jupyter :bordeaux-threads :trivial-http)
     :serial t
     :components (
 		 (:file "packages")
