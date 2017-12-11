@@ -174,13 +174,18 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
   (apply #'concatenate (cons 'string (map 'list (lambda (x) (format nil "~(~2,'0X~)" x)) bytes))))
 
 (defun message-signing (key parts)
-  (let ((hmac (ironclad:make-hmac key :SHA256)))
-    ;; updates
-    (loop for part in parts
-          do (let ((part-bin (babel:string-to-octets part)))
-               (ironclad:update-hmac hmac part-bin)))
-    ;; digest
-    (octets-to-hex-string (ironclad:hmac-digest hmac))))
+  #+clasp(let* ((all-parts (with-output-to-string (sout)
+                             (loop for part in parts
+                                   do (princ part sout))))
+                (all-parts-octets (babel:string-to-octets all-parts)))
+           (core:hmac-sha256 all-parts-octets key))
+  #-clasp(let ((hmac (ironclad:make-hmac key :SHA256)))
+           ;; updates
+           (loop for part in parts
+                 do (let ((part-bin (babel:string-to-octets part)))
+                      (ironclad:update-hmac hmac part-bin)))
+           ;; digest
+           (octets-to-hex-string (ironclad:hmac-digest hmac))))
 
 (example
  (message-signing (babel:string-to-octets "toto") '("titi" "tata" "tutu" "tonton"))

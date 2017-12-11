@@ -8,7 +8,7 @@
                  :bordeaux-threads
                  :uuid
                  :babel
-                 :ironclad
+                 #-clasp :ironclad
                  :cl-base64)
     :serial t
 ;;; cl-jupyter-widgets stuff
