@@ -295,13 +295,13 @@ The wire-deserialization part follows.
 
 (defun message-send (socket msg &key (identities nil) (key nil))
   (let ((wire-parts (wire-serialize msg :identities identities :key key)))
-    #+(or)(format t "~%[Send] wire parts: ~W~%" wire-parts)
+    (cl-jupyter-widgets:widget-log "[Send] wire parts: ~W~%" wire-parts)
     (cl-jupyter-widgets:widget-log "Entering message-send~%")
     (unwind-protect
          (progn
            (mp:get-lock *message-send-lock*)
            (dolist (part wire-parts)
-;;; FIXME: Try converting all base strings to character strings
+;;; FIXME: Try converting all base strings to character strings - does it make any difference?
              (let ((part-character-string (make-array (length part) :element-type 'character :initial-contents part)))
                (cl-jupyter-widgets:widget-log "pzmq:send socket part-character-string=|~s|~%" part)
                (pzmq:send socket part-character-string :sndmore t)))
