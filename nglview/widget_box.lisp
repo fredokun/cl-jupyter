@@ -4,6 +4,7 @@
   ((%gui-style :initarg :%gui-style :accessor %gui-style
 	       :type unicode
 	       :initform (unicode "row")
+	       :observers (%update-gui-style)
 	       :metadata (:sync t
 				:json-name "_gui_style"
 				:help "Options: row or column"))
@@ -15,12 +16,12 @@
 (defmethod box.--init-- ((self BoxNGL) #|uh oh|# &key)
   (setf (layout self) (make-form-item-layout)))
 
-(defmethod %update-gui-style ((self BoxNGL) change)
-  (let ((what (aref change "new")))
-    (setf (flex-flow (layout self)) (lower what))))
+(defmethod %update-gui-style (object name new old)
+  (let ((what new))
+    (setf (flex-flow (layout object)) (lower what))))
 
 (defmethod %ipython-display- (self #|uh oh|# &key)
-  (%beautify))
+  (%beautify self))
 
 (defmethod %update-size (self)
   (loop for widget across (children self)
@@ -33,6 +34,8 @@
       (%update-size self)
       (setf (%is-beautified self) t)))
 
+
+#+or
 (defclass DraggableBox(cljw::box)
   ((%dialog :initarg :%dialog :accessor %dialog
 	    :type unicode

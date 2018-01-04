@@ -1,6 +1,6 @@
 (in-package :nglv)
 
-(cljw:widget-log "shape.lisp~%")
+(cljw:widget-log "in shape.lisp~%")
 
 (defclass shape ()
   ((view :initarg :view :accessor view :initform nil)
@@ -25,3 +25,9 @@
 
 (defmethod add ((self shape) &rest args)
   (%add-shape (view self) args))
+
+(defmethod add-buffer ((self shape) name &rest kwargs &key &allow-other-keys)
+  (%remote-call (view self) "addBuffer"
+		:target "Widget"
+		:args name
+		:kwargs kwargs))

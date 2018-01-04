@@ -6,28 +6,52 @@
 
 (defclass remote-call-callback ()
   ((%callback :initarg :callback :accessor callback)
-   (%method-name :initarg :method-name :accessor method-name)))
+   (%widget :initarg :widget :accessor widget)
+   (%method-name :initarg :method-name :accessor method-name)
+   (%special-variables :initarg :special-variables :accessor special-variables)
+   (%special-values :initarg :special-values :accessor special-values)))
 
-(defun fire-callback (widget callback)
-  (funcall (callback callback) widget))
 
-(defun remote-call-thread-run (widget registered-funcs)
+(defun make-remote-call-callback (&key widget method-name callback)
+  (make-instance 'remote-call-callback
+                 :widget widget
+                 :method-name method-name
+                 :callback callback
+                 :special-variables cl-jupyter:*special-variables*
+                 :special-values (mapcar #'symbol-value cl-jupyter:*special-variables*)))
+
+                 
+(defun fire-callback (callback &optional passed-widget)
+  (when passed-widget
+    (unless (eq passed-widget (widget callback))
+      (error "passed-widget ~s does not match callback widget ~s" passed-widget (widget callback))))
+  (progv (special-variables callback) (special-values callback)
+    (funcall (callback callback) (widget callback))))
+
+(defun remote-call-thread-run (registered-funcs)
   "Keep pulling callbacks out of the queue and evaluating them"
   (loop
-     (multiple-value-bind (callback found)
-	 (mp:queue-wait-dequeue-timed (nglv:remote-call-thread-queue widget) 1000)
-       (when found
-	 ;; messages are sent within the dynamic environment of a specific *parent-msg*,*shell* and *kernel*
-	 (funcall (callback callback) widget)
-	 (when (member (method-name callback) registered-funcs :test #'string=)
-	   (cljw:widget-log "method-name is one of ~s - waiting until callback is finished~%" registered-funcs)
-	   (%wait-until-finished widget))
-	 (cljw:widget-log "Callback finished~%")))))
+    (let ((callback (clext.queue:dequeue *remote-call-thread-queue*))) ;; (nglv:remote-call-thread-queue widget())))
+      ;; messages are sent within the dynamic environment of a specific *parent-msg*,*shell* and *kernel*
+      (cond
+        ((eq callback :shutdown)
+         (return-from remote-call-thread-run nil))
+        ((eq callback :status)
+         (format t "I am still alive~%"))
+        ((eq callback :ping)
+         (format t "PONG~%"))
+        ((typep callback 'remote-call-callback)
+         (fire-callback callback)
+         (when (member (method-name callback) registered-funcs :test #'string=)
+           (cljw:widget-log "method-name is one of ~s - waiting until callback is finished~%" registered-funcs)
+           (%wait-until-finished widget))
+         (cljw:widget-log "Callback finished~%"))
+        (t
+         (format t "Handle remote-call-thread-run callback: ~a~%" callback)
+         (cljw:widget-log "Handle remote-call-thread-run callback: ~a~%" callback))))))
 
-
-(defun remote-call-add (widget callback)
-  #+(or)(mp:queue-enqueue (remote-call-thread-queue widget) callback)
-  (fire-callback widget callback))
+(defun remote-call-add (message-or-callback)
+  (clext.queue:enqueue *remote-call-thread-queue* message-or-callback))
 
 (cljw:widget-log "defclass event  pythread.lisp~%")
 
@@ -66,6 +90,13 @@
 
 (cljw:widget-log "done  pythread.lisp~%")
 
+
+(defparameter *remote-call-thread-queue* (clext.queue:make-queue 'remote-call-thread-queue))
+
+(defparameter *remote-call-thread* (mp:process-run-function
+                                    'remote-call-thread
+                                    (lambda () (remote-call-thread-run
+                                                (list "loadFile" "replaceStructure")))))
 
 
 

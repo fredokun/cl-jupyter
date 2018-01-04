@@ -4,10 +4,11 @@
     :version "0.1"
     :author "Kevin Esslinger"
     :license "LGPL2. See LICENSE."
-    :depends-on (:cl-jupyter)
+    :depends-on (:cl-jupyter :bordeaux-threads :trivial-http)
     :serial t
     :components (
 		 (:file "packages")
+                 (:file "queue")
 		 (:file "utils")
 		 (:file "shape")
 		 (:file "pythread")
