@@ -58,6 +58,11 @@
 (defclass instance-dict ()
   ())
 
+(defun javascript-true-p (arg)
+  (if (eq :true arg)
+      t
+      nil))
+
 ;;; See trait_types.py NumberFormat
 (defun number-format (&key format)
   (unicode format))
