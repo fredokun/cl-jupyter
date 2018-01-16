@@ -978,18 +978,12 @@
 
 (defmethod %make-command-box ((self TrajectoryPlayer))
   (let ((widget-text-command (make-instance 'cl-jupyter-widgets::text)))
-    (error "only YOU can prevent this error from existing. %make-command-box player.lisp")))
-#|
-   def _make_command_box(self):
-        widget_text_command = Text()
-
-        @widget_text_command.on_submit
-        def _on_submit_command(_):
-            command = widget_text_command.value
-            js_utils.execute(command)
-            widget_text_command.value = ''
-        return widget_text_command
-|#
+    (flet ((submit-command (_)
+	     (let ((command (value widget-text-command)))
+	       (execute js-utils command)
+	       (setf (value widget-text-command) ""))))
+      (cljw::on-submit widget-text-command #'submit-command)
+      widget-text-command)))
 
 
 (defmethod %create-all-tabs ((self TrajectoryPlayer))
