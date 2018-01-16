@@ -72,7 +72,7 @@
   (register-callback (click-handlers self) callback :remove remove)
   (values))
 
-(defmethod %handle-button-msg ((self button) content buffers)
+(defmethod %handle-button-msg ((self button) _ content buffers)
   "Handle a msg from the front-end.
 
         Parameters
