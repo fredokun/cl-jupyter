@@ -704,8 +704,9 @@
 			       :trim (value checkbox-trim)
 			       :transparent (value checkbox-transparent)
 			       :filename filename))
-	     (on-click-images (button-move-images)
+	     (click-images (button-movie-images)
 	       (error "Help implement on-click-images in player.lisp!")))
+	(cljw::on-click button-movie-images #'click-images)
 	(let* ((vbox (make-instance 'cl-jupyter-widgets::vbox
 				   :children (vector button-movie-images
 						     start-text
