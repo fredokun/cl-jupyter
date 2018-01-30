@@ -26,6 +26,7 @@
           shell)))))
 
 (defun shell-loop (shell)
+  "Main kernel loop, which waits for messages from the notebook"
   (let ((active t))
     (format t "[Shell] loop started~%")
     (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
@@ -43,6 +44,8 @@
 		       (handle-kernel-info-request shell identities msg buffers))
 		      ((equal msg-type "execute_request")
 		       (setf active (handle-execute-request shell identities msg buffers)))
+                      ((equal msg-type "inspect_request")
+                       (handle-inspect-request shell identities msg buffers))
 		      (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))
 
 
@@ -186,6 +189,21 @@
 				     ("payload" . ,(vector))))))
 	  (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))
 	  t)))))
+
+#|
+
+### Message type: inspect_request ###
+
+|#
+
+(defun handle-inspect-request (shell identities msg buffers)
+  (format t "[Shell] handling 'inspect_request'~%")
+  (let ((content (parse-json-from-string (message-content msg))))
+    (format t "  ==> Message content = ~W~%" content)
+    (let ((code (afetch "code" content :test #'equal))
+          (cursor-pos (afetch "cursor_pos" content :test #'equal))
+          (detail-level (afetch "detail_level" content :test #'equal)))
+      (format t "  ===> Code to inspect = ~W~%" code))))
 
 #|
      
