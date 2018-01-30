@@ -12,7 +12,7 @@
    (sync-frame :initarg :sync-frame :accessor sync-frame
 	       :type boolean
 	       :initform nil ;Original default is true but init makes it false
-	       :ovservers (update-sync-frame)
+	       :observers (update-sync-frame)
 	       :metadata (:sync t
 				:json-name "sync_frame"))
    (interpolate :initarg :interpolate :accessor interpolate
