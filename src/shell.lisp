@@ -6,10 +6,15 @@
 
 |#
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; These variables are always bound when a cell is evaluated
+;;; They define a dynamic environment within which SEND operates
 (defvar *parent-msg* nil)
 (defvar *shell* nil)
 (defvar *kernel* nil)
 (defvar *default-special-bindings*)
+(defvar *special-variables* '(*parent-msg* *shell* *kernel*))
 
 (defclass shell-channel ()
   ((kernel :initarg :kernel :reader shell-kernel)
@@ -30,44 +35,50 @@
           (pzmq:bind socket endpoint)
           shell)))))
 
+(defparameter *session-receive-lock* (mp:make-lock :name 'session-receive-lock))
+
 (defun shell-loop (shell)
-  (let ((active t))
-    (format t "[Shell] loop started~%")
-    (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
-    (format t "[Shell] entering main loop~%")
-    (while active
-      (format t "[Shell] top of main loop~%")
-      (vbinds (identities sig msg)  (message-recv (shell-socket shell))
-	      (cljw:widget-log "[Shell] Received message ~s~%" msg)
-	      (progn
-		(cljw:widget-log "Shell Received message:~%")
-		(cljw:widget-log "  | identities: ~A~%" identities)
-		(cljw:widget-log "  | signature: ~W~%" sig)
-		(cljw:widget-log "  | message: ~A~%" (encode-json-to-string (message-header msg)))
-		(cljw:widget-log "  | buffers: ~W~%" (message-buffers msg)))
-	      ;; TODO: check the signature (after that, sig can be forgotten)
-	      (let* ((msg-type (header-msg-type (message-header msg))))
-		(let ((*parent-msg* msg)
-		      (*shell* shell)
-		      (*kernel* (shell-kernel shell)))
-		  (let ((*default-special-bindings* (list (cons '*parent-msg* *parent-msg*)
-							  (cons '*shell* *shell*)
-							  (cons '*kernel* *kernel*))))
-		    (cljw::widget-log "  |  *parent-msg* -> ~s~%" *parent-msg*)
-		    (cond ((equal msg-type "kernel_info_request")
-			   (handle-kernel-info-request shell identities msg))
-			  ((equal msg-type "execute_request")
-			   (setf active (handle-execute-request shell identities msg)))
-			  ((equal msg-type "comm_open")
-			   (when cl-jupyter-widgets:*handle-comm-open-hook*
-			     (funcall cl-jupyter-widgets:*handle-comm-open-hook* shell identities msg)))
-			  ((equal msg-type "comm_msg")
-			   (when cl-jupyter-widgets:*handle-comm-msg-hook*
-			     (funcall cl-jupyter-widgets:*handle-comm-msg-hook* shell identities msg)))
-			  ((equal msg-type "comm_close")
-			   (when cl-jupyter-widgets:*handle-comm-close-hook*
-			     (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg)))
-			  (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))))
+  (unwind-protect
+       (progn
+         (mp:get-lock *session-receive-lock*)
+         (let ((active t))
+           (format t "[Shell] loop started~%")
+           (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
+           (format t "[Shell] entering main loop~%")
+           (while active
+                  (format t "[Shell] top of main loop~%")
+                  (vbinds (identities sig msg)  (message-recv (shell-socket shell))
+                          (cljw:widget-log "[Shell] Received message ~s~%" msg)
+                          (progn
+                            (cljw:widget-log "Shell Received message:~%")
+                            (cljw:widget-log "  | identities: ~A~%" identities)
+                            (cljw:widget-log "  | signature: ~W~%" sig)
+                            (cljw:widget-log "  | message: ~A~%" (encode-json-to-string (message-header msg)))
+                            (cljw:widget-log "  | buffers: ~W~%" (message-buffers msg)))
+                          ;; TODO: check the signature (after that, sig can be forgotten)
+                          (let* ((msg-type (header-msg-type (message-header msg))))
+                            (let ((*parent-msg* msg)
+                                  (*shell* shell)
+                                  (*kernel* (shell-kernel shell)))
+                              (let ((*default-special-bindings* (list (cons '*parent-msg* *parent-msg*)
+                                                                      (cons '*shell* *shell*)
+                                                                      (cons '*kernel* *kernel*))))
+                                (cljw::widget-log "  |  *parent-msg* -> ~s~%" *parent-msg*)
+                                (cond ((equal msg-type "kernel_info_request")
+                                       (handle-kernel-info-request shell identities msg))
+                                      ((equal msg-type "execute_request")
+                                       (setf active (handle-execute-request shell identities msg)))
+                                      ((equal msg-type "comm_open")
+                                       (when cl-jupyter-widgets:*handle-comm-open-hook*
+                                         (funcall cl-jupyter-widgets:*handle-comm-open-hook* shell identities msg)))
+                                      ((equal msg-type "comm_msg")
+                                       (when cl-jupyter-widgets:*handle-comm-msg-hook*
+                                         (funcall cl-jupyter-widgets:*handle-comm-msg-hook* shell identities msg)))
+                                      ((equal msg-type "comm_close")
+                                       (when cl-jupyter-widgets:*handle-comm-close-hook*
+                                         (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg)))
+                                      (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))))
+    (mp:giveup-lock *session-receive-lock*)))
 
 
 #|

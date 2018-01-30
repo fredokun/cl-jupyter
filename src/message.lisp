@@ -174,13 +174,18 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
   (apply #'concatenate (cons 'string (map 'list (lambda (x) (format nil "~(~2,'0X~)" x)) bytes))))
 
 (defun message-signing (key parts)
-  (let ((hmac (ironclad:make-hmac key :SHA256)))
-    ;; updates
-    (loop for part in parts
-       do (let ((part-bin (babel:string-to-octets part)))
-            (ironclad:update-hmac hmac part-bin)))
-    ;; digest
-    (octets-to-hex-string (ironclad:hmac-digest hmac))))
+  #+clasp(let* ((all-parts (with-output-to-string (sout)
+                             (loop for part in parts
+                                   do (princ part sout))))
+                (all-parts-octets (babel:string-to-octets all-parts)))
+           (core:hmac-sha256 all-parts-octets key))
+  #-clasp(let ((hmac (ironclad:make-hmac key :SHA256)))
+           ;; updates
+           (loop for part in parts
+                 do (let ((part-bin (babel:string-to-octets part)))
+                      (ironclad:update-hmac hmac part-bin)))
+           ;; digest
+           (octets-to-hex-string (ironclad:hmac-digest hmac))))
 
 (example
  (message-signing (babel:string-to-octets "toto") '("titi" "tata" "tutu" "tonton"))
@@ -286,14 +291,24 @@ The wire-deserialization part follows.
 
 |#
 
+(defparameter *message-send-lock* (mp:make-lock :name 'message-send-lock))
+
 (defun message-send (socket msg &key (identities nil) (key nil))
   (let ((wire-parts (wire-serialize msg :identities identities :key key)))
-    #+(or)(format t "~%[Send] wire parts: ~W~%" wire-parts)
-    (dolist (part wire-parts)
-      (pzmq:send socket part :sndmore t))
-    (prog1
-	(pzmq:send socket nil)
-      (cl-jupyter-widgets:widget-log "Leaving message-send~%"))))
+    (cl-jupyter-widgets:widget-log "[Send] wire parts: ~W~%" wire-parts)
+    (cl-jupyter-widgets:widget-log "Entering message-send~%")
+    (unwind-protect
+         (progn
+           (mp:get-lock *message-send-lock*)
+           (dolist (part wire-parts)
+;;; FIXME: Try converting all base strings to character strings - does it make any difference?
+             (let ((part-character-string (make-array (length part) :element-type 'character :initial-contents part)))
+               (cl-jupyter-widgets:widget-log "pzmq:send socket part-character-string=|~s|~%" part)
+               (pzmq:send socket part-character-string :sndmore t)))
+           (prog1
+               (pzmq:send socket nil)
+             (cl-jupyter-widgets:widget-log "Leaving message-send~%")))
+      (mp:giveup-lock *message-send-lock*))))
 
 (defun recv-string (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
   "Receive a message part from a socket as a string."
@@ -320,6 +335,7 @@ The wire-deserialization part follows.
 (defun message-recv (socket)
   (cljw:widget-log "[Recv] About to zmq-recv-list socket~%")
   (let ((parts (zmq-recv-list socket)))
-    (cljw:widget-log "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
+    (dolist (part parts)
+      (cljw:widget-log "[Recv]: part: |~A|  type-of -> ~a~%" part (type-of part)))
     #++(format t "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
     (wire-deserialize parts)))

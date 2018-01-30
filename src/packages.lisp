@@ -45,6 +45,7 @@
    #:*kernel*
    #:*parent-msg*
    #:*default-special-bindings*
+   #:*special-variables*
    #:kernel-start))
 
 (defpackage #:cl-jupyter-user
