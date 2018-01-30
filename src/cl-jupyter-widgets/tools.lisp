@@ -218,8 +218,8 @@
 (defparameter *debug-env* nil)
 
 (defun save-jupyter-cell-state ()
-  (setf *debug-env* (mapcar #'symbol-value 'cl-jupyter:*special-variables*)))
+  (setf *debug-env* (mapcar #'symbol-value cl-jupyter:*special-variables*)))
 
 (defmacro in-jupyter-cell (form)
-  `(progv ,'cl-jupyter:*special-variables* ,*debug-env*
+  `(progv ',cl-jupyter:*special-variables* ',*debug-env*
      ,form))
