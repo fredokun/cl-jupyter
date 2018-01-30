@@ -241,15 +241,15 @@
 (defmethod update-sync-frame (object name new old)
   (if new
       (%set-sync-frame (%view object))
-      (%set-unsync-frame (%view object)))))
+      (%set-unsync-frame (%view object))))
 
 (defmethod %update-delay (object name new old)
-  (%set-delay (%view object) new)))
+  (%set-delay (%view object) new))
 
 (defmethod update-parameters (object name new old)
   (setf (sync-frame object) (get params "sync_frame" (sync-frame object))
 	(delay object) (get params "delay" (delay object))
-	(step object) (get params "step" (step object)))))
+	(step object) (get params "step" (step object))))
 
 (defmethod %interpolation-t-changed (object name new old)
   (setf (aref (iparams object) "t") (new)))
