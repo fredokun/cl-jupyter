@@ -196,6 +196,45 @@
 
 |#
 
+(defun get-token (code pos)
+  "Find a token to look up, based on code string and position.
+  
+  Look backwards to find the opening brace, then read the first token.
+  For a function/macro expression this should be a symbol.
+
+  Returns nil as first value if nothing found or an error occurred
+  "
+  (when (zerop (length code))
+    (return-from get-token (values nil 0)))
+  
+  (let ((start-paren (let ((start-pos (if (char= (char code pos) #\)) ; Ignore ')' at point
+                                          (1- pos)
+                                          pos))
+                           (paren-count 1)) ; Keep track of the number of parentheses
+                       ;; Note: This will get confused by literal parentheses in the source code
+                       (loop for i from start-pos downto 0 do ; Search backwards through the string
+                            (case (char code i)
+                              (#\( (progn
+                                     (decf paren-count)
+                                     (when (zerop paren-count)
+                                       (return i))))  ; Found beginning of this form, so return index
+                              (#\) (incf paren-count))
+                              (otherwise nil))
+                          finally (return-from get-token (values nil 0))))))  ; Not found
+    
+    ;; Read from the string, starting at (start-paren + 1)
+    ;; Don't error, just return nil
+    (ignore-errors (read-from-string code nil nil :start (1+ start-paren)))))
+  
+(example (get-token "" 0) => (values nil 0))
+(example (get-token "(" 0) => (values nil 1))
+(example (get-token "(test" 0) => (values 'test 5))
+(example (get-token "(  test" 5) => (values 'test 7))
+; Ignore nested forms before position
+(example (get-token "( *test-sym (answer 42) here" 25) => '*test-sym)
+; This next example triggers a read error condition
+(example (get-token "(let ()" 6) => nil)
+
 (defun handle-inspect-request (shell identities msg buffers)
   (format t "[Shell] handling 'inspect_request'~%")
   (let ((content (parse-json-from-string (message-content msg))))
@@ -203,7 +242,35 @@
     (let ((code (afetch "code" content :test #'equal))
           (cursor-pos (afetch "cursor_pos" content :test #'equal))
           (detail-level (afetch "detail_level" content :test #'equal)))
-      (format t "  ===> Code to inspect = ~W~%" code))))
+
+      (format t "  ===> Code to inspect = ~W~%" code)
+        
+      (let ((reply (let ((text (let ((token (get-token code cursor-pos)))
+                                 (if (and token (symbolp token))
+                                     ;; Get output of describe into a string
+                                     (let ((str (make-string-output-stream)))
+                                       (describe token str)
+                                       (get-output-stream-string str))))))
+                     
+                     ;; Here text is either nil or a description
+                     (format t "  ===> Description = ~W~%" text)
+                     
+                     (if text
+                         (make-message msg "inspect_reply" nil
+                                       `(("status" . "ok")
+                                         ("found" . :true)
+                                         ("data" . (("text/plain" . ,text)
+                                                    ("text/html" . "test2")
+                                                    ("text/markdown" . "test3")))))
+                         ;; No text
+                         (make-message msg "inspect_reply" nil
+                                       `(("status" . "ok")
+                                         ("found" . :false)))))))
+        
+        (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))
+        t))))
+
+
 
 #|
      
