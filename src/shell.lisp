@@ -196,11 +196,14 @@
 
 |#
 
-(defun get-token (code pos)
+(defun get-token (code pos &optional (levels 1))
   "Find a token to look up, based on code string and position.
   
   Look backwards to find the opening brace, then read the first token.
   For a function/macro expression this should be a symbol.
+
+  LEVELS contains the number of opening parentheses to stop at.
+  If this is 1 then the innermost form is searched, 2 finds the parent form etc.
 
   Returns nil as first value if nothing found or an error occurred
   "
@@ -210,14 +213,12 @@
   (let ((start-paren (let ((start-pos (if (char= (char code pos) #\)) ; Ignore ')' at point
                                           (1- pos)
                                           pos))
-                           (paren-count 1)) ; Keep track of the number of parentheses
+                           (paren-count levels)) ; Keep track of the number of parentheses
                        ;; Note: This will get confused by literal parentheses in the source code
                        (loop for i from start-pos downto 0 do ; Search backwards through the string
                             (case (char code i)
-                              (#\( (progn
-                                     (decf paren-count)
-                                     (when (zerop paren-count)
-                                       (return i))))  ; Found beginning of this form, so return index
+                              (#\( (when (zerop (decf paren-count)) ; Decrement parenthesis count
+                                     (return i)))  ; Found beginning of this form, so return index
                               (#\) (incf paren-count))
                               (otherwise nil))
                           finally (return-from get-token (values nil 0))))))  ; Not found
@@ -225,7 +226,7 @@
     ;; Read from the string, starting at (start-paren + 1)
     ;; Don't error, just return nil
     (ignore-errors (read-from-string code nil nil :start (1+ start-paren)))))
-  
+
 (example (get-token "" 0) => (values nil 0))
 (example (get-token "(" 0) => (values nil 1))
 (example (get-token "(test" 0) => (values 'test 5))
@@ -235,7 +236,20 @@
 ; This next example triggers a read error condition
 (example (get-token "(let ()" 6) => nil)
 
+(defun get-token-search (code pos &optional (levels 2))
+  "Searches for a token using get-token, starting in the innermost form 
+   and going outwards up to LEVELS"
+  (loop for level from 1 to levels do
+       (let ((token (get-token code pos level)))
+         (if token (return-from get-token-search token))))
+  nil) ; Not found
+
+(example (get-token-search "(  test" 5) => 'test)
+(example (get-token-search "(let ()" 6) => 'let)
+
 (defun handle-inspect-request (shell identities msg buffers)
+  "Inspection request. Processes a inspect_request message in MSG,
+   calling message-send with an inspect_reply type message."
   (format t "[Shell] handling 'inspect_request'~%")
   (let ((content (parse-json-from-string (message-content msg))))
     (format t "  ==> Message content = ~W~%" content)
@@ -243,9 +257,9 @@
           (cursor-pos (afetch "cursor_pos" content :test #'equal))
           (detail-level (afetch "detail_level" content :test #'equal)))
 
-      (format t "  ===> Code to inspect = ~W~%" code)
+      ;;(format t "  ===> Code to inspect = ~W~%" code)
         
-      (let ((reply (let ((text (let ((token (get-token code cursor-pos)))
+      (let ((reply (let ((text (let ((token (get-token-search code cursor-pos)))
                                  (if (and token (symbolp token))
                                      ;; Get output of describe into a string
                                      (let ((str (make-string-output-stream)))
@@ -253,15 +267,14 @@
                                        (get-output-stream-string str))))))
                      
                      ;; Here text is either nil or a description
-                     (format t "  ===> Description = ~W~%" text)
+                     ;;(format t "  ===> Description = ~W~%" text)
                      
                      (if text
                          (make-message msg "inspect_reply" nil
                                        `(("status" . "ok")
                                          ("found" . :true)
                                          ("data" . (("text/plain" . ,text)
-                                                    ("text/html" . "test2")
-                                                    ("text/markdown" . "test3")))))
+                                                    ("dummy" . "none"))))) ; Note: needed for some reason. JSON map encoding?
                          ;; No text
                          (make-message msg "inspect_reply" nil
                                        `(("status" . "ok")
