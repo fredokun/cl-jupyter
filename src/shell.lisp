@@ -46,6 +46,8 @@
 		       (setf active (handle-execute-request shell identities msg buffers)))
                       ((equal msg-type "inspect_request")
                        (handle-inspect-request shell identities msg buffers))
+                      ((equal msg-type "complete_request")
+                       (handle-complete-request shell identities msg buffers))
 		      (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))
 
 
@@ -283,7 +285,22 @@
         (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))
         t))))
 
+#|
 
+### Message type: complete_request ###
+
+|#
+
+(defun handle-complete-request (shell identities msg buffers)
+  "Processes a complete_request message in MSG,
+   calling message-send with a complete_reply type message."
+  (format t "[Shell] handling 'complete_request'~%")
+  (let ((content (parse-json-from-string (message-content msg))))
+    (format t "  ==> Message content = ~W~%" content)
+    (let ((code (afetch "code" content :test #'equal))
+          (cursor-pos (afetch "cursor_pos" content :test #'equal)))
+      
+      (format t "  ===> Code to inspect = ~W~%" code))))
 
 #|
      
