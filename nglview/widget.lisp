@@ -36,6 +36,7 @@
    (%background :initarg :background
 		:accessor background
 		:type cljw:unicode
+		:observers (%update-background-color)
 		:initform (cljw:Unicode "white")
 		:metadata (:sync t :json-name "background")) ; I think this is deprecated
    (%loaded :initarg :loaded
@@ -84,8 +85,12 @@
    ;; TODO: remove %parameters?
    (%parameters :initarg :%parameters
 		:accessor %parameters
-		:type cljw:dict
+		:type list
 		:initform nil) ; not synchronized https://github.com/drmeister/spy-ipykernel/blob/master/nglview/widget.py#L124
+   (parameters :initarg :parameters
+	       :accessor parameters
+	       :type list
+	       :initform nil)
    (%full-stage-parameters :initarg :full-stage-parameters
                            :accessor full-stage-parameters
                            :type cljw:dict
@@ -274,17 +279,18 @@
       widget)))
 
 
-(defun parameters (widget)
-  (%parameters widget))
+;(defun parameters (widget)
+;  (parameters widget))
 
+#|
 (defun (setf parameters) (params widget)
   (let ((params (camelize-dict params)))
-    (setf (%parameters widget) params)
+    (setf (parameters widget) params)
     (%remote-call widget "setParameters"
 		  :target "Widget"
-		  :args (vector params)))
+		  :args params))
   params)
-
+|#
 
 
   #|
@@ -367,8 +373,16 @@
 ;;;  _request_stage_parameters
 ;;;         isn't called by anything!
 
+(defmethod %update-background-color (object name new old)
+  (setf (parameters object) (list (cons "backgroundColor" new)))
+  (parameter-setter object (parameters object))
+  (values))
 
-
+(defmethod parameter-setter ((widget nglwidget) params)
+  (let ((params (camelize-dict params)))
+    (setf (%parameters widget) params)
+    (%remote-call widget "setParameters" :target "Widget" :args params))
+  (values))
 
 
 

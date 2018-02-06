@@ -313,11 +313,11 @@
         @button.on_click
         def on_click(button):
             self._view.center()
-        return button
+        return button((NGLV::CHILDREN T-SLIDERS (LIST NGLV::RESET-BUTTON (NGLV::CHILDREN (NGLV::MAKE-WIDGET-BOX))))
  |#
 
 (defmethod %make-button-theme ((self TrajectoryPlayer))
-  (let ((button make-instance 'cl-jupyter-widgets::Button :description "Oceans16"))
+  (let ((button (make-instance 'cl-jupyter-widgets::Button :description "Oceans16")))
     (error "Theme-ifying Jupyter notebooks is in experimental phase and should not be trusted.")
   button))
  #|
@@ -416,7 +416,7 @@
 	(flet ((click (reset-button)
 		 (setf (parameters (view self)) (original-stage-parameters (view self))
 		       (full-stage-parameters (view self)) (original-stage-parameters (view self))
-		       (children widget-sliders (list reset-button (children (make-widget-box)))))))
+		       (children widget-sliders) (list reset-button (children (make-widget-box))))))
 	  (cljw::on-click reset-button #'click))
       (setf (widget-preference self) (%relayout-master (widget-sliders :width width)))
     (widget-prefence self)))))
