@@ -30,9 +30,11 @@
 
 (defun remote-call-thread-run (registered-funcs)
   "Keep pulling callbacks out of the queue and evaluating them"
+  (cljw:widget-log "Starting remote-call-thread-run~%")
   (loop
     (let ((callback (clext.queue:dequeue *remote-call-thread-queue*))) ;; (nglv:remote-call-thread-queue widget())))
       ;; messages are sent within the dynamic environment of a specific *parent-msg*,*shell* and *kernel*
+      (cljw:widget-log "remote-call-thread-run callback: ~s~%" callback)
       (cond
         ((eq callback :shutdown)
          (return-from remote-call-thread-run nil))
@@ -48,7 +50,8 @@
          (cljw:widget-log "Callback finished~%"))
         (t
          (format t "Handle remote-call-thread-run callback: ~a~%" callback)
-         (cljw:widget-log "Handle remote-call-thread-run callback: ~a~%" callback))))))
+         (cljw:widget-log "Handle remote-call-thread-run callback: ~a~%" callback)))
+      (cljw:widget-log "remote-call-thread-run done handling callback: ~s~%" callback))))
 
 (defun remote-call-add (message-or-callback)
   (clext.queue:enqueue *remote-call-thread-queue* message-or-callback))

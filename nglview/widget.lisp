@@ -112,6 +112,8 @@
 		:initform (cljw:unicode "orthographic")
 		:metadata (:sync t :json-name "_camera_str"
                            :caseless-str-enum ( "perspective" "orthographic")))
+   (%representations :initarg :representations
+                     :accessor representations)
    (%repr-dict :initarg :repr-dict
 	       :accessor repr-dict
 	       :type cljw:dict
@@ -260,17 +262,21 @@
 	(structure
 	 (add-structure widget structure)))
       ;; call before setting representations
+      (cljw:widget-log "About to set representations -> ~a~%" representations)
       (if representations
 	  (progn
 	    (check-type representations array)
 	    (setf (init-representations widget) representations))
 	  (setf (init-representations widget)
-		#((("type" ."cartoon")
+                '(( "type" . "spacefill") ("params" . (( "sele" . "all"))))
+		#+(or)#((("type" ."cartoon")
 		   ("params" . (( "sele" . "polymer"))))
 		  (("type" . "ball+stick")
 		   ("params" . (( "sele" . "hetero OR mol"))))
 		  (("type" . "ball+stick")
 		   ("params" . (( "sele" . "not protein and not nucleic")))))))
+      (when structure
+        (setf (representations widget) (init-representations widget)))
       (%set-unsync-camera widget)
       (let ((selector (remove #\- (format nil "~W" (uuid:make-v4-uuid)))))
 	(%remote-call widget "setSelector" :target "Widget" :args (list selector)))
@@ -397,25 +403,40 @@
       ((string= msg-type "request_frame")
        (incf (frame widget) (step (player widget)))
        (if (>= (frame widget) (count widget))
-	   (setf (frame widget) 0)
-	   (if (< (frame widget) 0)
-	       (setf (frame widget) (1- (count widget))))))
+           (setf (frame widget) 0)
+           (if (< (frame widget) 0)
+               (setf (frame widget) (1- (count widget))))))
       ((string= msg-type "repr_parameters")
        (let* ((data-dict (dict-lookup "data" (ngl-msg widget))))
-	 (error "Finish implementing repr_parameters")))
+         (error "Finish implementing repr_parameters")))
+                                        ;
+                                        ;
+                                        ;
+                                        ;
+                                        ;
+                                        ;
+                                        ;
+                                        ;
+                                        ;
+                                        ;
+                                        ;
+                                        ;
+                                        ;
       ((string= msg-type "request_loaded")
        (cljw:widget-log "      handling request_loaded~%")
        (unless (loaded widget)
-	 (setf (loaded widget) nil))
+         (setf (loaded widget) nil))
        (setf (loaded widget) (eq (cljw:assoc-value "data" content) :true))
        (cljw:widget-log "(loaded widget) -> ~a    (cljw:assoc-value \"data\" content) -> ~s~%" (loaded widget) (cljw:assoc-value "data" content)))
-      ((string= msg-type "repr_dict")
+      ((string= msg-type "request_repr_dict")
        (setf (repr-dict widget) (dict-lookup "data" (ngl-msg widget))))
+      ((string= msg-type "stage_parameters")
+       (setf (full-stage-parameters widget) (dict-lookup "data" (ngl-msg widget))))
       ((string= msg-type "async_message")
        (cljw:widget-log "%ngl-handle-msg - received async_message~%")
        (when (string= (cljw:assoc-value "data" content) "ok")
-	 (cljw:widget-log "    setting event~%")
-	 (pythread:event-set (event widget))))
+         (cljw:widget-log "    setting event~%")
+         (pythread:event-set (event widget))))
       (t
        (cljw:widget-log "Handle ~a custom message with content: ~s~%" msg-type content))))
   (cljw:widget-log "Leaving %ngl-handle-msg~%"))
@@ -695,6 +716,7 @@
 				     (cljw:widget-send widget msg)
 				   (cljw:widget-log "    Done %remote-call method-name -> ~s~%" method-name)))
 		     :method-name method-name)))
+      (cljw:widget-log "About to enqueue remote-call method-name -> ~s msg -> ~s  widget -> ~s~%" method-name msg widget)
       (if (loaded widget)
 	  (progn
 	    (cljw:widget-log "enqueing remote-call ~a~%" callback)
@@ -973,7 +995,7 @@
 
 
 (defmethod color-by ((widget nglwidget) color-scheme &key (component 0))
-  (let ((repr-names (get-repr-names-from-dict (%repr-dict widget) component))
+  (let ((repr-names (get-repr-names-from-dict (repr-dict widget) component))
 	(index 0))
     (loop for _ in repr-names
        do
@@ -987,15 +1009,17 @@
 
 (defmethod update-representation ((widget nglwidget) &optional (component 0)
 				  (repr-index 0) &rest parameters)
-  (let ((parameters (%camelize-dict parameters))
-	(kwargs (list (cons "component_index" component)
-		      (cons "repr_index" repr-index))))
+  (let ((parameters (camelize-dict parameters))
+	(kwargs (append
+                 (list (cons "component_index" component)
+                       (cons "repr_index" repr-index))
+                 parameters)))
     (warn "How do we update kwargs")
-    (%remote-call "setParameters"
+    (%remote-call widget
+                  "setParameters"
 		  :target "Representation"
 		  :kwargs kwargs)
-    (%remote-call "requestReprsInfo"
-		  :target "Widget")
+    (%update-repr-dict widget)
     (values)))
 
 
@@ -1025,7 +1049,7 @@
   (let ((c (concatenate 'string "c" (write-to-string component)))
 	(r (write-to-string repr-index)))
     (warn "Figure out how to use handler-case")
-    (setf name (aref (aref (aref %repr-dict c) r) "name"))
+    (setf name (aref (aref (aref (repr-dict widget) c) r) "name"))
     (make-instance 'RepresentationsControl :view widget
 		   :component-index component
 		   :repr-index repr-index
@@ -1077,10 +1101,12 @@
 		:args (list component repr-index))
   (values))
 
-(defmethod %request-stage-parameters ((widget nglwidget))
-  (%remote-call widget
-		"requestUpdateStageParameters"
-		:target "Widget"))
+(defmethod %update-repr-dict ((self nglwidget))
+  "Send a request to the frontend to send representation parameters back"
+  (cljw:widget-log "Called %update-repr-dict~%")
+  (%remote-call self
+                "request_repr_dict"
+                :target "Widget"))
 
 (defmethod set-representations ((widget nglwidget) representations &key (component 0))
   (clear-representations widget :component component)
@@ -1094,7 +1120,7 @@
 	       (%remote-call widget
 			   "addRepresentations"
 			   :target "compList"
-			   :args (list (aref params "type"))
+			   :args (list (a params "type"))
 			   :kwargs kwargs))
 	     (error "Params must be a dict"))))
   (values))
@@ -1193,11 +1219,12 @@
   (setf repr-type (string-trim " " repr-type))
   ;; overwrite selection
   (setf selection (seq-to-string (string-trim " " selection)))
+  (format *debug-io* "kwargs -> ~s~%" kwargs)
   (let* ((kwargs2 (dict-from-plist kwargs))
-	 (comp-assoc (assoc :component kwargs))
+	 (comp-assoc (assoc :component kwargs2))
 	 (component (prog1
-			(getf kwargs :component 0)
-		      (remf kwargs :component))))
+			(getf kwargs2 :component 0)
+		      (remf kwargs2 :component))))
     #|for k, v in kwargs2.items():
     try:
     kwargs2[k] = v.strip()
@@ -1210,7 +1237,6 @@
       (push (cons "component_index" component) params)
 ;;;      (format t "kwargs -> ~s~%" params)
       (%remote-call self "addRepresentation"
-
 		    :target "compList"
 		    :args (list repr-type)
 		    :kwargs params))))
