@@ -23,4 +23,4 @@
 						 ("ball_and_stick" . "ball+stick")))
 ;;;(defparameter *REPRESENTATION_NAMES*
 ;REPRESENTATION_NAMES = list(sorted(set([name for pairs in REPRESENTATION_NAME_PAIRS for name in pairs])))
-;;;Representation_names needs to be an alist btw for _make_add_widget_repr in player.lisp
+;;;Representation_names needs to be an alist by the way for _make_add_widget_repr in player.lisp
