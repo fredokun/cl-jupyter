@@ -160,7 +160,6 @@
   ((value :initarg :value :accessor value
 	  :type tuple
 	  :initform (tuple 0 1)
-	  :validator validate-int-range
 	  :metadata (:sync t
 			   :json-name "value"
 			   :help "Tuple of (lower, upper) bounds"))
@@ -270,7 +269,7 @@
      when (getf (traitlets::metadata slot-def) :sync)
      collect (clos:slot-definition-name slot-def)))
     
-
+;;;Validator for changing value in a bounded int (make sure it's > min and < max.
 (defun validate-bounded-int (object val)
   (if (and (slot-boundp object 'min) (slot-boundp object 'max))
       (let ((min (min object)) (max (max object)))
@@ -279,6 +278,8 @@
 	      (t val)))
       val))
 
+;;;Validator for changing a min in a bounded int (make sure it's not above max)
+;;;If new min is above current value, set value to min.
 (defun validate-int-min (object val)
   (if (slot-boundp object 'min)
       (with-slots ((max max) (value value)) object
@@ -287,7 +288,8 @@
 	      (t val)))
       val))
 
-
+;;;Validator for changing a max in a bounded int (make sure it's not below min)
+;;;If new max is below current val, set value to max.
 (defun validate-int-max (object val)
   (if (slot-boundp object 'max)
       (with-slots ((min min) (value value)) object
@@ -296,7 +298,8 @@
 	      (t val)))
       val))
 
-
+;;;Validator for the range of a bounded int
+;;;Makes sure the first value is lower than the second value
 (defun validate-bounded-int-range (object val)
   (flet ((enforce-min (val min) (if (< val min) min val))
 	 (enforce-max (val max) (if (> val max) max val)))
@@ -313,9 +316,3 @@
 		      (vector low-val-min-max high-val-min-max))))
 		(vector low-val high-val)))))
   
-	
-(defun validate-int-range (object val)
-  (if (slot-boundp 'object value)
-      (when (> (aref val 0) (aref val 1))
-	(error "Setting lower > upper"))
-      val))
