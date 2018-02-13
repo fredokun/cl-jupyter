@@ -299,7 +299,7 @@ def _labels_to_values(k, obj):
     (loop for (k . v) in options
        do
 	  (vector-push-extend k options-labels) 
-	  (vector-push-extend v options-values))
+	 (vector-push-extend v options-values))
     (when (zerop (length value))
       (setf value (aref options-values 0)))
     (setf index (position value options :key #'cdr :test #'equal))))
@@ -355,16 +355,23 @@ def _labels_to_values(k, obj):
 
 
 (defun update-index (object name new old)
-  (when (slot-boundp (index object))
+  (print "inside update-index")
+  (when (slot-boundp object 'index)
     (unless (equal new old)
-      (setf (label object) (aref (options-labels object) new)
-	    (value object) (aref (options-values object) new))))
-      new)
+      (print "new does not equal old")
+      (let ((new-label (aref (options-labels object) new)))
+	(unless (string= (label object) new-label)
+	  (print "label does not equal new-label")
+	  (setf (label object) new-label)))
+      (let ((new-value (aref (options-values object) new)))
+	(unless (string= (value object) new-value)
+	  (print "value does not equal new-value")
+	  (setf (value object) new-value)))))
+  new)
 
 (defun update-options (object name new old)
-  (values))
+  new)
 
 (defun update-value (object name new old)
-  (setf (index object) (position (value object) (options object) :key #'cdr :test #'equal)
-	(label object) (aref (options-values object) (index object)))
+  (setf (index object) (position new (options object) :key #'cdr :test #'equal))
   new)
