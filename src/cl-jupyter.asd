@@ -53,6 +53,7 @@
                                                                        (:file "widget_string_7")
                                                                        (:file "widget_box_7")
 								       (:file "widget_output_7")
+								       (:file "cyjs")
                                                                        (:file "widget_selectioncontainer_7")))))))
 ;;; cl-jupyter stuff
                  (:file "utils")
