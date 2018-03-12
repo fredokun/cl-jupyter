@@ -482,7 +482,7 @@
 	  (frame widget) current-frame)))
 
 (defmethod sync-view ((widget nglwidget))
-  (%fire-callbacks widget (reverse (%ngl-displayed-callbacks-after-loaded-reversed widget))))
+  (%fire-callbacks widget (reverse (ngl-displayed-callbacks-after-loaded-reversed widget))))
 	
 
 (defmethod on-loaded ((widget nglwidget))

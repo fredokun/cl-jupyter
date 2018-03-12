@@ -46,7 +46,7 @@
          (fire-callback callback)
          (when (member (method-name callback) registered-funcs :test #'string=)
            (cljw:widget-log "method-name is one of ~s - waiting until callback is finished~%" registered-funcs)
-           (%wait-until-finished widget))
+           (nglv:wait-until-finished (widget callback)))
          (cljw:widget-log "Callback finished~%"))
         (t
          (format t "Handle remote-call-thread-run callback: ~a~%" callback)

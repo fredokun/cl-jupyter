@@ -17,7 +17,7 @@
     (when val
       (push :use-widget-log *features*))))
 ;;; Always turn it off for now
-(eval-when (:compile-toplevel :load-toplevel :execute)
+#+(or)(eval-when (:compile-toplevel :load-toplevel :execute)
      (pushnew :use-widget-log *features*))
 
 (eval-when (:execute :load-toplevel)
