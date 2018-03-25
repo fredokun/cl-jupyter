@@ -25,3 +25,9 @@
 
 (defmethod add ((self shape) &rest args)
   (%add-shape (view self) args))
+
+(defmethod add-buffer ((self shape) name &rest kwargs &key &allow-other-keys)
+  (%remote-call (view self) "addBuffer"
+		:target "Widget"
+		:args name
+		:kwargs kwargs))

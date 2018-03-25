@@ -23,24 +23,27 @@
                  :initform (cljw:unicode)
                  :metadata (:sync t :json-name "_ngl_version"))
    (%image-data :initarg :image-data
-                :type cljw:unicode
-                :initform (cljw:unicode "")
-                :metadata (:sync t :json-name "_image_data"))
+		:type cljw:unicode
+		:initform (cljw:unicode "")
+		:observers (%on-render-image)
+		:metadata (:sync t :json-name "_image_data"))
    (%frame :initarg :frame
-           :accessor frame
-           :type Integer
-           :initform 0
-           :metadata (:sync t :json-name "frame"))
+	   :accessor frame
+	   :type Integer
+	   :initform 0
+	   :observers (%on-frame-changed)
+	   :metadata (:sync t :json-name "frame"))
    (%count :initarg :count
            :accessor count
            :type Integer
            :initform 1
            :metadata (:sync t :json-name "count"))
    (%background :initarg :background
-                :accessor background
-                :type cljw:unicode
-                :initform (cljw:Unicode "white")
-                :metadata (:sync t :json-name "background")) ; I think this is deprecated
+		:accessor background
+		:type cljw:unicode
+		:observers (%update-background-color)
+		:initform (cljw:Unicode "white")
+		:metadata (:sync t :json-name "background")) ; I think this is deprecated
    (%loaded :initarg :loaded
             :accessor loaded
             :type boolean
@@ -331,13 +334,16 @@
 (defun parameters (widget)
   (%parameters widget))
 
+#|
 (defun (setf parameters) (params widget)
   (let ((params (camelize-dict params)))
-    (setf (%parameters widget) params)
+    (setf (parameters widget) params)
     (%remote-call widget "setParameters"
-                  :target "Widget"
-                  :args (vector params)))
+		  :target "Widget"
+		  :args params))
   params)
+|#
+
 
   #|
    if isinstance(structure, Trajectory):
@@ -430,8 +436,16 @@
 ;;;  _request_stage_parameters
 ;;;         isn't called by anything!
 
+(defmethod %update-background-color (object name new old)
+  (setf (parameters object) (list (cons "backgroundColor" new)))
+  (parameter-setter object (parameters object))
+  (values))
 
-
+(defmethod parameter-setter ((widget nglwidget) params)
+  (let ((params (camelize-dict params)))
+    (setf (%parameters widget) params)
+    (%remote-call widget "setParameters" :target "Widget" :args params))
+  (values))
 
 
 
@@ -1337,6 +1351,21 @@
   (%remote-call widget "addShape"
                 :target "Widget"
                 :args (list name shapes)))
+
+
+(defmethod %on-render-image (object name new old)
+  ;;;(setf (_b64value (widget-image object)) new)
+  (when (hold-image object)
+    (setf (image-array object) (concatenate 'string (image-array object) new))))
+
+(defmethod %on-frame-changed (object name new old)
+  (%set-coordinates object (frame object)))
+
+(defmethod %set-coordinates ((widget nglwidget) index)
+  (values))
+
+(defmethod set-coordinates ((widget nglwidget) arr-dict)
+  (values))
 
 
 (defclass ComponentViewer ()

@@ -22,6 +22,8 @@
    (:metaclass traitlets:traitlet-class))
 
 
+
+
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_string.py#L41
 (defclass-widget-register html (%string)
   ()
@@ -94,12 +96,24 @@
 		      :initform :true
 		      :metadata (:sync t
 				       :json-name "continuous_update"
-				       :help "Update the value as the user types. If False, update on submission, e.g., pressing Enter or navigating away.")))
+				       :help "Update the value as the user types. If False, update on submission, e.g., pressing Enter or navigating away."))
+   (%submission-callbacks :accessor submission-callbacks
+			  :initform (make-instance 'callback-dispatcher)))
   (:default-initargs
    :view-name (unicode "TextView")
     :model-name (unicode "TextModel")
     )
   (:metaclass traitlets:traitlet-class))
+
+(defmethod on-submit ((self text) callback &key (remove nil))
+  (register-callback (submission-callbacks self) callback :remove remove)
+  (values))
+
+(defmethod %handle-string-msg ((self text) _ content buffers)
+  (when (string= (cdr (assoc "event" content :test #'string=)) "submit")
+    (do-call (submission-callbacks self) self))
+  (values))
+
 
  
 (defclass-widget-register password (text)

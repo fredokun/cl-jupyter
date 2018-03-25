@@ -213,6 +213,8 @@
    )
   (:metaclass traitlets:traitlet-class))
 
+
+;;;Validator for range in a bounded float widget
 (defun validate-float-bounded-range (object val)
   (flet ((enforce-min (val min) (if (< val min) min val))
 	 (enforce-max (val max) (if (> val max) max val)))
@@ -273,7 +275,9 @@
     :model-name (unicode "FloatRangeSliderModel"))
   (:metaclass traitlets:traitlet-class))
 
-
+;;;Validator for min in a ranged float
+;;;Make sure the min doesn't exceed the max, and
+;;;if the value is below the min, set value to new min.
 (defun validate-float-min (object val)
   (if (slot-boundp object 'min)
       (with-slots ((max max) (value value)) object
@@ -282,7 +286,9 @@
 	      (t val))
 	val)))
 
-
+;;;Validator for max in a ranged float
+;;;Make sure the max doesn't go below the min, and
+;;;if the value is above the max, set value to new max.
 (defun validate-float-max (object val)
   (if (slot-boundp object 'max)
       (with-slots ((min min) (value value)) object

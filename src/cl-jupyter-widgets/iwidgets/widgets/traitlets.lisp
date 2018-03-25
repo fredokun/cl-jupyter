@@ -150,7 +150,7 @@
 	 class self slotd))
       (call-next-method)))
 
-(defmethod (setf clos:slot-value-using-class) :before
+(defmethod (setf clos:slot-value-using-class) :after
     (new-value (class traitlet-class) object (slotd effective-traitlet))
   (when (clos:slot-boundp-using-class class object slotd)
     (let ((old (clos:slot-value-using-class class object slotd)))

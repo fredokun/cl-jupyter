@@ -4,20 +4,24 @@
   ((parameters :initarg :parameters :accessor parameters
 	       :type list
 	       :initform ()
+	       :observers (%on-parameters-changed)
 	       :metadata (:sync nil
 				:json-name "parameters"))
    (name :initarg :name :accessor name
 	 :initform nil
+	 :observers (%on-name-changed)
 	 :metadata (:sync nil
 			  :json-name "name"))
    (repr-index :initarg :repr-index :accessor repr-index
 	       :type integer
 	       :initform 0
+	       :observers (%on-repr-index-changed)
 	       :metadata (:sync nil
 				:json-name "repr_index"))
    (component-index :initarg :component-index :accessor component-index
 		    :type integer
 		    :initform 0
+		    :observers (%on-component-index-changed)
 		    :metadata (:sync nil
 				     :json-name "component_index"))
    (%disable-update-parameters :initarg :%disabled-update-parameters :accessor %disabled-update-parameters
@@ -34,37 +38,45 @@
 (defmethod initialize-instance :after ((self RepresentationControl))
   (setf (children self) (children (%make-widget self))))
 
+;Not an observer
 (defmethod _on_change_widget_child_value ((self RepresentationControl) change)
   (let ((owner (aref change "owner"))
 	(new (aref change "new")))
     (setf (parameters self) (list (cons (camelize (ngl-description owner)) new))))
   (values))
-    
-(defmethod %on-parameters-changed ((self RepresentationControl) change)
-  (if (not (%disabled-update-parameters self))
-      (let ((parameters (aref change "new")))
-	(update-representation (%view self) :component (component-index self) :repr-index (repr-index self) &rest **parameters))))
 
-(defmethod %on-name-changed ((self RepresentationControl) change)
-  (let ((new-name (aref change "new")))
+;Observer for parameters
+(defmethod %on-parameters-changed (object name new old)
+  (unless (%disabled-update-parameters object)
+      (setf (parameters object)  new))
+  (update-representation (view object) :component (component-index object)
+			 :repr-index (repr-index object) &rest (parameters object))
+  (values))
+
+;Observer for name
+(defmethod %on-name-changed (object name new old)
+  (let ((new-name new))
     (if (string= new-name "surface")
-	(loop for kid in (children self)
+	(loop for kid across (children object)
+	   do
+	     (when (string= (%ngl-type kid) "surface")
+	       (setf (display (layout kid)) "flex")))
+	(loop for kid across (children object)
 	   do
 	     (if (string= (%ngl-type kid) "surface")
-		 (setf (display (layout kid)) "flex")))
-	(loop for kid in (children self)
-	   do
-	     (if (string= (%ngl-type kid) "surface")
-		 (setf (display (layout kid)) "none"))))))
+		 (setf (display (layout kid)) "none")))))
+  (values))
 
-(defmethod %on-repr-index-changed ((self RepresentationControl) change)
-  (let ((c-string (concatenate 'string "c" (write-to-string (component-index self))))
-	(r-string (write-to-string (aref change "new"))))
-    (%update self c-string r-string)))
+;Observer for repr-index
+(defmethod %on-repr-index-changed (object name new old)
+  (let ((c-string (concatenate 'string "c" (write-to-string (component-index object))))
+	(r-string (write-to-string new)))
+    (%update object c-string r-string)))
 
-(defmethod %on-component-index-changed ((self RepresentationControl) change)
-  (let ((c-string (concatenate 'string "c" (write-to-string (aref change "new"))))
-	(r-string (write-to-string (repr-index self))))
+;Observer for component-index
+(defmethod %on-component-index-changed (object name new old)
+  (let ((c-string (concatenate 'string "c" (write-to-string new)))
+	(r-string (write-to-string (repr-index object))))
     (%update self c-string r-string)))
 
 (defmethod %update ((self RepresentationControl) c-string r-string)
