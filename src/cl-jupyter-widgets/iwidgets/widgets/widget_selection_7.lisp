@@ -17,32 +17,33 @@
 	  :type integer
 	  :initform 0
 	  :observers (update-index)
-	 ; :validator validate-index
+                                        ; :validator validate-index
 	  :metadata (:sync t
-			   :json-name "index"
-			   :help "Selected index"))
+                     :json-name "index"
+                     :help "Selected index"))
    (options :initarg :options :accessor options
-	     :type list
-	     :initform ()
-	     :observers (update-options)
-	     :documentation "Iterable of values, (label, value) pairs, or a mapping of {label: value} pairs that the user can select. The labels are the strings that will be displayed in the UI, representing the actual Python choices, and should be unique.")
+            :type list
+            :initform ()
+            :observers (update-options)
+            :documentation "Iterable of values, (label, value) pairs, or a mapping of {label: value} pairs that the user can select. The labels are the strings that will be displayed in the UI, representing the actual Python choices, and should be unique.")
    (disabled :initarg :disabled :accessor disabled
-	      :type bool
-	      :initform :false
-	      :metadata (:sync t
-			       :json-name "disabled"
-			       :help "Enable or disable user changes."))
+             :type bool
+             :initform :false
+             :metadata (:sync t
+                        :json-name "disabled"
+                        :help "Enable or disable user changes."))
    (options-full :initarg :options-full :accessor options-full
-		  :initform nil)
+                 :initform nil)
+   ;; This being read-only means that it cannot be changed by the user
    (options-labels :initarg :options-labels :accessor options-labels
-		    :initform (make-array 0 :adjustable t :fill-pointer 0)
-		    :type vector
-		    :metadata (:sync t
-				     :json-name "_options_labels"
-				     :help "The labels for the options."))
+                   :initform (make-array 0 :adjustable t :fill-pointer 0)
+                   :type vector
+                   :metadata (:sync t
+                              :json-name "_options_labels"
+                              :help "The labels for the options."))
    (options-values :accessor options-values
-		    :initform  (make-array 0 :adjustable t :fill-pointer 0)
-		    :type vector))
+                   :initform  (make-array 0 :adjustable t :fill-pointer 0)
+                   :type vector))
   (:metaclass traitlets:traitlet-class))
 
 (defclass multiple-selection (description-widget value-widget core-widget)
@@ -75,13 +76,19 @@
                         :help "Enable or disable user changes.")))
   (:metaclass traitlets:traitlet-class))
 
-(defclass-widget-register toggle-buttons-style (style core-widget)
+(defclass-widget-register toggle-buttons-style (description-style core-widget)
   ((button-width :initarg :button-width :accessor button-width
+                 :type unicode
+                 :initform (unicode "")
+                 :metadata (:sync t
+                            :json-name "button_width"
+                            :help "The width of each button."))
+   (font-weight :initarg :button-width :accessor font-weight
 		:type unicode
 		:initform (unicode "")
 		:metadata (:sync t
-				 :json-name "button_width"
-				 :help "The width of each button.")))
+                           :json-name "button_width"
+                           :help "Text font weight of each button.")))
   (:default-initargs
    :model-name (unicode "ToggleButtonsStyleModel"))
   (:metaclass traitlets:traitlet-class))

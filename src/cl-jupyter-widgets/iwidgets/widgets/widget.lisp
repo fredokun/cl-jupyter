@@ -137,6 +137,23 @@
     (let ((new-state (%separate-buffers state nil buffer-paths buffers)))
       (values state buffer-paths buffers))))
 
+(defun %buffer-list-equal (buffera bufferb)
+  "Compare two lists of buffers for equality.
+
+Used to decide whether two sequences of buffers (binary-types)
+differ, such that a sync is needed.
+Return T if equal, NIL if unequal"
+  (cond
+    ((/= (length buffera) (length bufferb))
+     nil)
+    ((eq buffera bufferb)
+     t)
+    (loop for ia in buffera
+          for ib in bufferb
+          when (not (equal ia ib) (return nil))))
+  t)
+        
+           
 (defclass callback-dispatcher ()
   ((%callbacks :initarg :callbacks :initform nil :accessor callbacks)))
 
@@ -383,14 +400,15 @@
 *Arguments
 key : a key or a list of keys (optional)
       A property's name or a list of property names to sync with the front-end"
-  (let ((state (get-state self :key key)))
-    (multiple-value-bind (state buffer-paths buffers)
-	(%remove-buffers state)
-      (let ((msg (list (cons "method" "update")
-		       (cons "state" state)
-		       (cons "buffer_paths" buffer-paths))))
-	(widget-log "widget.send-state~%")
-	(%send self msg :buffers buffers)))))
+  (let ((fstate (get-state self :key key)))
+    (when (> (length state) 0)
+      (multiple-value-bind (state buffer-paths buffers)
+          (%remove-buffers fstate)
+        (let ((msg (list (cons "method" "update")
+                         (cons "state" state)
+                         (cons "buffer_paths" buffer-paths))))
+          (widget-log "widget.send-state~%")
+          (%send self msg :buffers buffers))))))
 
 
 (defmethod widget-send (self content &key (buffers #()))
@@ -410,29 +428,30 @@ buffers : list  - A list of binary buffers "
       (warn "%ipython-display callback is nil for widget ~a" widget)))
 
 
-(defmethod %ipython-display-callback ((widget widget) iopub parent-msg execution-count key)
+(defmethod %ipython-display-callback ((self widget) iopub parent-msg execution-count key)
   "This is called to display the widget"
   (widget-log "widget::%ipython-display-callback~%")
-  (when (view-name widget)
+  (when (view-name self)
     ;; The 'application/vnd.jupyter.widget-view+json' mimetype has not been registered yet.
     ;; See the registration process and naming convention at
     ;; http://tools.ietf.org/html/rfc6838
     ;; and the currently registered mimetypes at
     ;; http://www.iana.org/assignments/media-types/media-types.xhtml.
     (let ((data (list (cons "text/plain" "A Jupyter Widget")
+                      (cons "text/html" (%fallback-html self))
                       (cons "application/vnd.jupyter.widget-view+json"
                             (list (cons "version_major" 2)
                                   (cons "version_minor" 0)
-                                  (cons "model_id" (model-id widget)))))))
+                                  (cons "model_id" (model-id self)))))))
       (widget-log "Calling cl-jupyter:display with data -> ~s~%" data)
 ;;; Rather than mimicking 'display(data,raw=True) the way that ipywidgets does
 ;;;      as in https://github.com/jupyter-widgets/ipywidgets/blob/master/ipywidgets/widgets/widget.py#L698
 ;;; I am going to do what cl-jupyter:display would do - create a cl-jupyter::display-object
 ;;;     and then return that to the caller - that should publish it.
       #+(or)(cl-jupyter:display data #| raw=True ???? |#)
-      (let ((display-obj (make-instance 'cl-jupyter::display-object :value widget :data data)))
+      (let ((display-obj (make-instance 'cl-jupyter::display-object :value self :data data)))
         (cl-jupyter:send-execute-raw-display-object iopub parent-msg execution-count display-obj :key key)) 
-      (%handle-displayed widget))))
+      (%handle-displayed self))))
 
   
 (defmethod %handle-msg ((self widget) msg)
@@ -529,19 +548,35 @@ buffers : list  - A list of binary buffers "
 (defmethod %should-send-property ((widget widget) key value)
   (check-type key symbol)
   (widget-log "%should-send-property key -> ~s (property-lock widget) -> ~s~%" key (property-lock widget))
-  (let ((send (let* ((to-json (or (traitlets:traitlet-metadata (class-of widget) key :to-json)
-				  'widget-to-json))
-		     (lock-prop (assoc key (property-lock widget))))
-		(if (and lock-prop
-			 (equal (cdr lock-prop) (funcall to-json value widget)))
-		    nil
-		    (if (holding-sync widget)
-			(progn
-			  (push (states-to-send widget) key)
-			  nil)
-			t)))))
-    (widget-log "      send -> ~s~%" send)
-    send))
+  (block %should-send-property
+    (let ((send
+            (let* ((to-json (or (traitlets:traitlet-metadata (class-of widget) key :to-json)
+                                'widget-to-json))
+                   (key-in-property-lock (assoc key (property-lock widget))))
+              (when key-in-property-lock
+                (multiple-value-bind (split-value-state split-value-buffer-paths split-value-buffers)
+                    (%remove-buffers (list (cons key (funcall to-json value widget))))
+                  (multiple-value-bind (split-lock-state split-lock-buffer-paths split-lock-buffers)
+                      (%remove-buffers (list (cons key (cdr key-in-property-lock))))
+                    (widget-log "testing (and (equal split-value-state split-lock-state)
+                               (equal split-value-buffer-paths split-lock-buffer-paths)
+                               (%buffer-list-equal split-value-buffers split-lock-buffers))")
+                    (widget-log "split-value-state -> ~s~%" split-value-state)
+                    (widget-log "split-lock-state -> ~s~%" split-lock-state)
+                    (widget-log "split-value-buffer-paths -> ~s~%" split-value-buffer-paths)
+                    (widget-log "split-lock-buffer-paths -> ~s~%" split-lock-buffer-paths)
+                    (widget-log "(%buffer-list-equal split-value-buffers split-lock-buffers) -> ~s~%" (%buffer-list-equal split-value-buffers split-lock-buffers))
+                    (when (and (equal split-value-state split-lock-state)
+                               (equal split-value-buffer-paths split-lock-buffer-paths)
+                               (%buffer-list-equal split-value-buffers split-lock-buffers))
+                      (return-from %should-send-property nil)))))
+              (if (holding-sync widget)
+                  (progn
+                    (push (states-to-send widget) key)
+                    nil)
+                  t))))
+      (widget-log "      send -> ~s~%" send)
+      send)))
 
 ;;; This is different from the Python version because we don't
 ;;;   have the traitlet change[xxx] dictionary
@@ -624,3 +659,19 @@ Sends a message to the model in the front-end."
             True if the callback should be unregistered."
   (register-callback (display-callbacks self) callback :remove remove))
 
+
+(defmethod %fallback-html ((self widget))
+  "<p>Failed to display Jupyter Widget of type <code>{widget_type}</code>.</p>
+<p>
+  If you're reading this message in the Jupyter Notebook or JupyterLab Notebook, it may mean
+  that the widgets JavaScript is still loading. If this message persists, it
+  likely means that the widgets JavaScript library is either not installed or
+  not enabled. See the <a href=\"https://ipywidgets.readthedocs.io/en/stable/user_install.html\">Jupyter
+  Widgets Documentation</a> for setup instructions.
+</p>
+<p>
+  If you're reading this message in another frontend (for example, a static
+  rendering on GitHub or <a href=\"https://nbviewer.jupyter.org/\">NBViewer</a>),
+  it may mean that your frontend doesn't currently support widgets.
+</p>
+")

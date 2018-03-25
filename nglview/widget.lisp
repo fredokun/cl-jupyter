@@ -1,7 +1,12 @@
 (in-package :nglv)
 
 
-(defparameter *frontend-version* "0.5.4-dev.8") ;; must match to js/package.json and js/src/widget_ngl.js
+(defparameter *frontend-version* "1.1.2") ;; must match to js/package.json and js/src/widget_ngl.js
+
+(defparameter *excluded-callback-after-firing*
+  (list "setUnSyncCamera" "setSelector" "setUnSyncFrame"
+        "setDelay" "autoView" "_downloadImage" "_exportImage"
+        "set_representation_from_backend"))
 
 ;; Save up to 8 previous picks
 (defparameter *pick-history-depth* 16)
@@ -18,133 +23,154 @@
                  :initform (cljw:unicode)
                  :metadata (:sync t :json-name "_ngl_version"))
    (%image-data :initarg :image-data
-		:type cljw:unicode
-		:initform (cljw:unicode "")
-		:metadata (:sync t :json-name "_image_data"))
+                :type cljw:unicode
+                :initform (cljw:unicode "")
+                :metadata (:sync t :json-name "_image_data"))
    (%frame :initarg :frame
-	   :accessor frame
-	   :type Integer
-	   :initform 0
-	   :metadata (:sync t :json-name "frame"))
+           :accessor frame
+           :type Integer
+           :initform 0
+           :metadata (:sync t :json-name "frame"))
    (%count :initarg :count
-	   :accessor count
-	   :type Integer
-	   :initform 1
-	   :metadata (:sync t :json-name "count"))
+           :accessor count
+           :type Integer
+           :initform 1
+           :metadata (:sync t :json-name "count"))
    (%background :initarg :background
-		:accessor background
-		:type cljw:unicode
-		:initform (cljw:Unicode "white")
-		:metadata (:sync t :json-name "background")) ; I think this is deprecated
+                :accessor background
+                :type cljw:unicode
+                :initform (cljw:Unicode "white")
+                :metadata (:sync t :json-name "background")) ; I think this is deprecated
    (%loaded :initarg :loaded
-	    :accessor loaded
-	    :type boolean
-	    :initform nil)
+            :accessor loaded
+            :type boolean
+            :initform nil)
    (%picked :initarg :picked
-	    :accessor picked
-	    :type cljw:dict
-	    :initform nil
-	    :metadata (:sync t :json-name "picked"))
+            :accessor picked
+            :type cljw:dict
+            :initform nil
+            :metadata (:sync t :json-name "picked"))
    (%pick-history :initarg :pick-history
                   :accessor pick-history
                   :type list
                   :initform nil)
    (%n-components :initarg :n-components
-		  :accessor n-components
-		  :type integer
-		  :initform 0
-		  :metadata (:sync t :json-name "n_components"))
-   (%orientation :initarg :orientation
-		 :accessor orientation
-		 :type list
-		 :initform nil
-		 :metadata (:sync t :json-name "orientation"))
+                  :accessor n-components
+                  :type integer
+                  :initform 0
+                  :metadata (:sync t :json-name "n_components"))
    (%scene-position :initarg :scene-position
-		    :accessor scene-position
-		    :type cljw:dict
-		    :initform nil
-		    :metadata (:sync t :json-name "_scene_position"))
+                    :accessor scene-position
+                    :type cljw:dict
+                    :initform nil
+                    :metadata (:sync t :json-name "_scene_position"))
    (%scene-rotation :initarg :scene-rotation
-		    :accessor scene-rotation
-		    :type cljw:dict
-		    :initform nil
-		    :metadata (:sync t :json-name "_scene_rotation"))
+                    :accessor scene-rotation
+                    :type cljw:dict
+                    :initform nil
+                    :metadata (:sync t :json-name "_scene_rotation"))
    (%first-time-loaded :initarg :first-time-loaded
-		       :accessor first-time-loaded
-		       :type boolean
-		       :initform T)
+                       :accessor first-time-loaded
+                       :type boolean
+                       :initform T)
    ;; hack to always display movie
    (%n-dragged-files :initarg :n-dragged-files
-		     :accessor n-dragged-files
-		     :type integer
-		     :initform 0
-		     :metadata (:sync t :json-name "_n_dragged_files"))
+                     :accessor n-dragged-files
+                     :type integer
+                     :initform 0
+                     :metadata (:sync t :json-name "_n_dragged_files"))
    ;; TODO: remove %parameters?
    (%parameters :initarg :%parameters
-		:accessor %parameters
-		:type cljw:dict
-		:initform nil) ; not synchronized https://github.com/drmeister/spy-ipykernel/blob/master/nglview/widget.py#L124
-   (%full-stage-parameters :initarg :full-stage-parameters
-                           :accessor full-stage-parameters
-                           :type cljw:dict
-                           :initform nil
-                           :metadata (:sync t :json-name "_full_stage_parameters"))
-   (%original-stage-parameters :initarg :original-stage-parameters
-                               :accessor original-stage-parameters
+                :accessor %parameters
+                :type cljw:dict
+                :initform nil) ; not synchronized https://github.com/drmeister/spy-ipykernel/blob/master/nglview/widget.py#L124
+   (%ngl-full-stage-parameters :initarg :ngl-full-stage-parameters
+                               :accessor ngl-full-stage-parameters
                                :type cljw:dict
                                :initform nil
-                               :metadata (:sync t :json-name "_original_stage_parameters"))
+                               :metadata (:sync t :json-name "_ngl_full_stage_parameters"))
+   (%ngl-full-stage-parameters-embed :initarg :ngl-full-stage-parameters-embed
+                                     :accessor ngl-full-stage-parameters-embed
+                                     :type cljw:dict
+                                     :initform nil
+                                     :metadata (:sync t :json-name "_ngl_full_stage_parameters_embed"))
+   (%ngl-original-stage-parameters :initarg :ngl-original-stage-parameters
+                                   :accessor ngl-original-stage-parameters
+                                   :type cljw:dict
+                                   :initform nil
+                                   :metadata (:sync t :json-name "_original_stage_parameters"))
    ;; Not sync'd
    (%coordinates-dict :initarg :coordinates-dict
-		      :accessor coordinates-dict
-		      :type cljw:dict
-		      :initform nil)
+                      :accessor coordinates-dict
+                      :type cljw:dict
+                      :initform nil)
    (%camera-str :initarg :camera-str
-		:accessor camera-str
-		:type cunicode
-		:initform (cljw:unicode "orthographic")
-		:metadata (:sync t :json-name "_camera_str"
+                :accessor camera-str
+                :type cunicode
+                :initform (cljw:unicode "orthographic")
+                :metadata (:sync t :json-name "_camera_str"
                            :caseless-str-enum ( "perspective" "orthographic")))
-   (%representations :initarg :representations
-                     :accessor representations)
-   (%repr-dict :initarg :repr-dict
-	       :accessor repr-dict
-	       :type cljw:dict
-	       :initform nil)
+   (%camera-orientation :initarg :camera-orientation
+                        :accessor camera-orientation
+                        :type list
+                        :initform nil
+                        :metadata (:sync t :json-name "_camera_orientation"))
+   (%ngl-repr-dict :initarg :ngl-repr-dict
+                   :accessor ngl-repr-dict
+                   :type cljw:dict
+                   :initform nil
+                   :metadata (:sync t :json-name "_camera_orientation"))
    (%ngl-component-ids :initarg :ngl-component-ids
                        :accessor ngl-component-ids
                        :type list
                        :initform nil)
    (%ngl-component-names :initarg :ngl-component-names
-			 :accessor ngl-component-names
-			 :type list
-			 :initform nil)
+                         :accessor ngl-component-names
+                         :type list
+                         :initform nil)
    (%already-constructed :initarg :already-constructed
-			 :accessor already-constructed
-			 :type boolean
-			 :initform nil)
+                         :accessor already-constructed
+                         :type boolean
+                         :initform nil)
    (%ngl-msg :initarg :ngl-msg
-	     :accessor ngl-msg
-	     :type (or string null)
-	     :initform nil)
+             :accessor ngl-msg
+             :type (or string null)
+             :initform nil)
    (%send-binary :initarg :send-binary
-		 :accessor send-binary
-		 :type boolean
-		 :initform t)
+                 :accessor send-binary
+                 :type boolean
+                 :initform t)
    (%init-gui :initarg :init-gui
-	      :accessor init-gui
-	      :type boolean
-	      :initform nil)
+              :accessor init-gui
+              :type boolean
+              :initform nil)
    (%hold-image :initarg :hold-image
-		:accessor hold-image
-		:type cljw:bool
-		:initform :false)
+                :accessor hold-image
+                :type cljw:bool
+                :initform :false)
+   (%ngl-serialize :initarg :ngl-serialize
+                   :accessor ngl-serialize
+                   :type cljw:bool
+                   :initform :false
+                   :metadata (:sync t :json-name "_ngl_serialize"))
+   (%ngl-msg-archive :initarg :ngl-msg-archive
+                     :accessor ngl-msg-archive
+                     :type list
+                     :initform nil
+                     :metadata (:sync t :json-name "_ngl_msg_archive"))
+   (%ngl-coordinate-resource :initarg :ngl-coordinate-resource
+                             :accessor ngl-coordinate-resource
+                             :type cljw:dict
+                             :initform nil
+                             :metadata (:sync t :json-name "_ngl_coordinate_resource"))
+   (%representations :initarg :representations
+                     :accessor representations)
    ;; internal variables
    (%gui :initarg :%gui :accessor %gui :initform nil)
    (%init-gui :initarg :gui :accessor gui :initform nil) ;; WHY? does nglview does this
    (%theme :initarg :theme :accessor theme :initform "default")
    (%widget-image :initarg :widget-image :accessor widget-image
-		  :initform (make-instance 'cl-jupyter-widgets:image :width 900))
+                  :initform (make-instance 'cl-jupyter-widgets:image :width 900))
    (%image-array :initarg :image-array :accessor image-array :initform #())
    (%event :initarg :event :accessor event :initform (make-instance 'pythread:event))
    (%ngl-displayed-callbacks-before-loaded-reversed
@@ -156,7 +182,7 @@
     :accessor ngl-displayed-callbacks-after-loaded-reversed
     :initform nil)
    (%shape :initarg :shape :accessor shape
-	   :initform (make-instance 'shape))
+           :initform (make-instance 'shape))
    (%stage :initarg :stage :accessor stage)
    (%control :initarg :control :accessor control)
 ;;; FIXME:  Would this be a Clasp mp:PROCESS??
@@ -195,26 +221,29 @@
         self._already_constructed = True
    ||#
    (%trajlist :initform nil
-	      :accessor %trajlist)
+              :accessor trajlist)
 
    (%init-representations :initarg :init-representations
-		     :accessor init-representations
-		     :initform nil)
+                     :accessor init-representations
+                     :initform nil)
    )
   (:default-initargs
    :view-name (cljw:unicode "NGLView")
-    :view-module (cljw:unicode "nglview-js-widgets")
-    :view-module-version (cljw:unicode *frontend-version*))
+   :view-module (cljw:unicode "nglview-js-widgets")
+   :view-module-version (cljw:unicode *frontend-version*)
+   :model-name (cljw:unicode "NGLModel")
+   :model-module (cljw:unicode "nglview-js-widgets")
+   :model-module-version (cljw:unicode *frontend-version*))
   (:metaclass traitlets:traitlet-class))
 
 
 (defun make-nglwidget (&rest kwargs-orig
-		       &key (structure nil structure-p)
-			 (representations nil representations-p)
-			 (parameters nil parameters-p)
-			 (gui nil gui-p)
-			 (theme "default" theme-p)
-			 &allow-other-keys)
+                       &key (structure nil structure-p)
+                         (representations nil representations-p)
+                         (parameters nil parameters-p)
+                         (gui nil gui-p)
+                         (theme "default" theme-p)
+                         &allow-other-keys)
   (cljw:widget-log "make-nglwidget~%")
   (let ((kwargs (copy-list kwargs-orig)))
     (when structure-p (remf kwargs :structure))
@@ -248,35 +277,56 @@
                      cl-jupyter:*default-special-bindings*)))
       (when parameters-p (setf (parameters widget) parameters))
       (cond
-	((typep structure 'Trajectory)
-	 (warn "Handle trajectory"))
-	((consp structure)
-	 (warn "Handle list of structures"))
-	(structure
-	 (add-structure widget structure)))
+        ((typep structure 'Trajectory)
+         (warn "Handle trajectory"))
+        ((consp structure)
+         (warn "Handle list of structures"))
+        (structure
+         (add-structure widget structure)))
       ;; call before setting representations
       (cljw:widget-log "About to set representations -> ~a~%" representations)
-      (if representations
-	  (progn
-	    (check-type representations array)
-	    (setf (init-representations widget) representations))
-	  (setf (init-representations widget)
-                '(( "type" . "spacefill") ("params" . (( "sele" . "all"))))
-		#+(or)#((("type" ."cartoon")
-		   ("params" . (( "sele" . "polymer"))))
-		  (("type" . "ball+stick")
-		   ("params" . (( "sele" . "hetero OR mol"))))
-		  (("type" . "ball+stick")
-		   ("params" . (( "sele" . "not protein and not nucleic")))))))
-      (when structure
-        (setf (representations widget) (init-representations widget)))
+      (when representations
+        (check-type representations array)
+        (setf (init-representations widget) representations))
       (%set-unsync-camera widget)
       (let ((selector (remove #\- (format nil "~W" (uuid:make-v4-uuid)))))
-	(%remote-call widget "setSelector" :target "Widget" :args (list selector)))
+        (%remote-call widget "setSelector" :target "Widget" :args (list selector)))
       #+(or)(warn "Set the Trajectoryplayer")
       (setf (already-constructed widget) t)
       widget)))
 
+
+(defmethod %set-serialization ((self nglwidget) &optional frame-range)
+  (setf (ngl-serialize self) :true)
+  (setf (ngl-msg-archive
+         (mapcar (lambda (callback)
+                   (ngl-msg callback))
+                 (ngl-displayed-callbacks-after-loaded-reversed self))))
+  (let ((resource (ngl-coordinate-resource self)))
+    (when frame-range
+      #| ;; Finish set-serialization
+      (loop for t-index from 0
+      for traj in (trajlist self)
+      do (setf (elt resource t-index) (list))
+      (loop for 
+      for f_index in range(*frame_range):
+      if f_index < traj.n_frames:
+      resource[t_index].append(encode_base64(traj.get_coordinates(f_index)))
+      else:
+      resource[t_index].append(encode_base64(
+                            np.empty((0), dtype='f4')))
+            resource['n_frames'] = len(resource[0])
+
+        self._ngl_coordinate_resource = resource
+        self._ngl_full_stage_parameters_embed = self._ngl_full_stage_parameters
+      |#
+      )))
+
+(defmethod %unset-serialization ((self nglwidget))
+  (setf (ngl-serialize self) :false
+        (ngl-msg-archive self) nil
+        (ngl-coordinate-resource self) nil
+        (ngl-full-stage-parameters-embed self) nil))
 
 (defun parameters (widget)
   (%parameters widget))
@@ -285,11 +335,9 @@
   (let ((params (camelize-dict params)))
     (setf (%parameters widget) params)
     (%remote-call widget "setParameters"
-		  :target "Widget"
-		  :args (vector params)))
+                  :target "Widget"
+                  :args (vector params)))
   params)
-
-
 
   #|
    if isinstance(structure, Trajectory):
@@ -328,9 +376,9 @@
 (defmethod %fire-callbacks ((widget nglwidget) callbacks)
   (loop for callback in callbacks
      do (progn
-	  (funcall (car callback) widget)
-	  (when (string= (cdr callback) "loadFile")
-	    (%wait-until-finished widget)))))
+          (funcall (car callback) widget)
+          (when (string= (cdr callback) "loadFile")
+            (%wait-until-finished widget)))))
     
 (defmethod %wait-until-finished ((widget nglwidget) &optional (timeout 0.0001))
   (pythread:clear (event widget))
@@ -348,6 +396,11 @@
     (push value (pick-history widget))
     (setf (pick-history widget) (subseq (pick-history widget) 0 (min *pick-history-depth* (length (pick-history widget)))))))
 
+
+
+
+
+
 (defun camera (widget)
   (cond
     ((string= (camera-str widget) "orthographic")
@@ -360,12 +413,18 @@
   "Values:  :perspective or :orthographic"
   (checktype value (member :perspective :orthographic))
   (let ((camera-str (ecase value
-		      (:perspective "perspective")
-		      (:orthographic "orthographic"))))
+                      (:perspective "perspective")
+                      (:orthographic "orthographic"))))
     (setf (camera-str widget) camera-str)
     (%remote-call widget "setParameters"
-		  :target "Stage"
-		  :kwargs (plist-to-kwargs '(:camera-type camera-str)))))
+                  :target "Stage"
+                  :kwargs (plist-to-kwargs '(:camera-type camera-str)))))
+
+(defmethod ((self nglwidget) arr)
+  (%remote-call self "set_camera_orientation"
+                :target "Widget"
+                :args (list arr)))
+
 
 
 ;;;  _request_stage_parameters
@@ -413,9 +472,9 @@
        (setf (loaded widget) (eq (cljw:assoc-value "data" content) :true))
        (cljw:widget-log "(loaded widget) -> ~a    (cljw:assoc-value \"data\" content) -> ~s~%" (loaded widget) (cljw:assoc-value "data" content)))
       ((string= msg-type "request_repr_dict")
-       (setf (repr-dict widget) (dict-lookup "data" (ngl-msg widget))))
+       (setf (ngl-repr-dict widget) (dict-lookup "data" (ngl-msg widget))))
       ((string= msg-type "stage_parameters")
-       (setf (full-stage-parameters widget) (dict-lookup "data" (ngl-msg widget))))
+       (setf (ngl-full-stage-parameters widget) (dict-lookup "data" (ngl-msg widget))))
       ((string= msg-type "async_message")
        (cljw:widget-log "%ngl-handle-msg - received async_message~%")
        (when (string= (cljw:assoc-value "data" content) "ok")
@@ -434,8 +493,8 @@
     (cond
       ((eq slot-name '%loaded)
        (when new-value
-	 (cljw:widget-log "%loaded is true - firing callbacks~%")
-	 (%fire-callbacks object (reverse (ngl-displayed-callbacks-before-loaded-reversed object)))))
+         (cljw:widget-log "%loaded is true - firing callbacks~%")
+         (%fire-callbacks object (reverse (ngl-displayed-callbacks-before-loaded-reversed object)))))
       (t
        (call-next-method)))))
 
@@ -443,17 +502,17 @@
 (defmethod %fire-callbacks ((widget nglwidget) callbacks)
   (cljw:widget-log "%fire-callbacks entered in process ~s~%" mp:*current-process*)
   (flet ((_call ()
-	   (cljw:widget-log "%fire-callbacks _call entered in process ~s~%" mp:*current-process*)
-	   (loop for callback in callbacks
-	      do (progn
-		   (cljw:widget-log "      %fire-callback -> ~s in process ~s~%" (pythread:method-name callback) mp:*current-process*)
-		   (pythread:fire-callback callback widget)
-		   (when (string= (pythread:method-name callback) "loadFile")
-		     (cljw:widget-log "    Waiting until finished~%")
-		     (wait-until-finished widget))))))
+           (cljw:widget-log "%fire-callbacks _call entered in process ~s~%" mp:*current-process*)
+           (loop for callback in callbacks
+              do (progn
+                   (cljw:widget-log "      %fire-callback -> ~s in process ~s~%" (pythread:method-name callback) mp:*current-process*)
+                   (pythread:fire-callback callback widget)
+                   (when (string= (pythread:method-name callback) "loadFile")
+                     (cljw:widget-log "    Waiting until finished~%")
+                     (wait-until-finished widget))))))
     (mp:process-run-function 'fire-callbacks-thread
-			     (lambda () (_call))
-			     cl-jupyter:*default-special-bindings*))
+                             (lambda () (_call))
+                             cl-jupyter:*default-special-bindings*))
   (cljw:widget-log "Done %fire-callbacks~%"))
 
 
@@ -479,11 +538,11 @@
 (defmethod %refresh-render ((widget nglwidget))
   (let ((current-frame (frame widget)))
     (setf (frame widget) (expt 10 6)
-	  (frame widget) current-frame)))
+          (frame widget) current-frame)))
 
 (defmethod sync-view ((widget nglwidget))
   (%fire-callbacks widget (reverse (ngl-displayed-callbacks-after-loaded-reversed widget))))
-	
+        
 
 (defmethod on-loaded ((widget nglwidget))
   (setf (loaded widget) t)
@@ -496,18 +555,18 @@
 
 (defmacro pop-from-alist (key alist)
   (let ((k (gensym "KEY")) (a (gensym "ALIST"))
-	(pair (gensym "PAIR")))
+        (pair (gensym "PAIR")))
     `(let* ((,k ,key)
-	    (,a ,alist)
-	    (,pair (assoc ,k ,a)))
+            (,a ,alist)
+            (,pair (assoc ,k ,a)))
        (when ,pair
-	 (prog1 (cdr ,pair)
-	 (setf ,alist (remove ,pair ,a)))))))
+         (prog1 (cdr ,pair)
+         (setf ,alist (remove ,pair ,a)))))))
 (defmacro pop-from-hash-table (key table)
   (let ((k (gensym "KEY")) (tab (gensym "TABLE")))
     `(let ((,k ,key) (,tab ,table))
        (prog1 (gethash ,k ,tab)
-	 (remhash ,k ,tab)))))
+         (remhash ,k ,tab)))))
 
 
 
@@ -519,13 +578,13 @@
   (apply '%load-data self structure kwargs)
   (setf (ngl-component-ids self) (append (ngl-component-ids self) (list (id structure))))
   (when (> (n-components self) 1)
-    (center-view self :component (- (length (ngl-component-ids self)) 1)))
+    (center self :component (- (length (ngl-component-ids self)) 1)))
   (%update-component-auto-completion self)
   structure)
 
 (defmethod add-trajectory ((widget nglwidget) trajectory &rest kwargs)
   (let ((backends *BACKENDS*)
-	(package-name nil))
+        (package-name nil))
     (error " I want package-name to be all the characters of trajector.--module-- up until the first period. I do not know how to do that")
     ))
 
@@ -541,41 +600,41 @@
 (defmethod %load-data ((widget nglwidget) obj &key kwargs)
   (check-type kwargs list)
   (let* ((kwargs2 (camelize-dict kwargs))
-	 (is-url (is-url (make-instance 'file-manager :src obj)))
-	 passing-buffer binary use-filename blob
-	 args blob-type)
+         (is-url (is-url (make-instance 'file-manager :src obj)))
+         passing-buffer binary use-filename blob
+         args blob-type)
     (unless (dict-entry "defaultRepresentation" kwargs2)
       (setf kwargs2 (dict-set-or-push "defaultRepresentation" kwargs2 :true)))
     (if (null is-url)
-	(let ((structure-string (get-structure-string obj)))
-	  (if structure-string
-	      (setf blob structure-string
-		    kwargs2 (dict-set-or-push "ext" kwargs2 (ext obj))
-		    passing-buffer t
-		    use-filename nil
-		    binary :false)
-	      (error "Handle file-manager loads"))
-	  (if (and (eq binary :true) (not use-filename))
-	      (error "Handle blob decoding of base64 files"))
-	  (setf blob-type (if passing-buffer "blob" "path"))
-	  (setf args (list (list (cons "type" blob-type)
-				   (cons "data" blob)
-				   (cons "binary" binary)))))
-	(setf blob-type "url"
-	      url obj
-	      args (list (list (cons "type" blob-type)
-				 (cons "data" url)
-				 (cons "binary" :false)))))
+        (let ((structure-string (get-structure-string obj)))
+          (if structure-string
+              (setf blob structure-string
+                    kwargs2 (dict-set-or-push "ext" kwargs2 (ext obj))
+                    passing-buffer t
+                    use-filename nil
+                    binary :false)
+              (error "Handle file-manager loads"))
+          (if (and (eq binary :true) (not use-filename))
+              (error "Handle blob decoding of base64 files"))
+          (setf blob-type (if passing-buffer "blob" "path"))
+          (setf args (list (list (cons "type" blob-type)
+                                   (cons "data" blob)
+                                   (cons "binary" binary)))))
+        (setf blob-type "url"
+              url obj
+              args (list (list (cons "type" blob-type)
+                                 (cons "data" url)
+                                 (cons "binary" :false)))))
     (let ((name (get-name obj :dictargs kwargs2)))
       (setf (ngl-component-names widget) (append (ngl-component-names widget) (cons name nil)))
       (cljw:widget-log "About to %remote-call widget loadFile~%")
       (cljw:widget-log "  args: ~a~%" args)
       (cljw:widget-log "  kwargs: ~a~%" kwargs)
       (%remote-call widget "loadFile"
-		    :target "Stage"
-		    :args args
-		    :kwargs kwargs2))))
-	  
+                    :target "Stage"
+                    :args args
+                    :kwargs kwargs2))))
+          
 #|    def _load_data(self, obj, **kwargs):
    '''
 
@@ -636,18 +695,18 @@
 
 (defmethod remove-component ((widget nglwidget) component-id)
   (%clear-component-auto-completion widget)
-  (if (%trajlist widget)
-      (loop for traj in (%trajlist widget)
-	 do (if (equal (id traj) component-id)
-		(remove traj (%trajlist widget) :test #'equal))))
+  (if (trajlist widget)
+      (loop for traj in (trajlist widget)
+         do (if (equal (id traj) component-id)
+                (remove traj (trajlist widget) :test #'equal))))
   (let ((component-index (aref (ngl-component-ids widget) component-id)))
     (remove component-id (ngl-component-ids widget) :test #'equal)
     (remove component-index (ngl-component-names))
     (error "Should that have been pop not remove???")
     (%remote-call widget
-		  "removeComponent"
-		  :target "Stage"
-		  :args (list component-index))))
+                  "removeComponent"
+                  :target "Stage"
+                  :args (list component-index))))
 
 (defmethod %remote-call ((widget nglwidget) method-name &key (target "Widget") args kwargs)
   "call NGL's methods from Common Lisp
@@ -679,12 +738,12 @@
   (let (msg)
     (let ((component-index (assoc "component_index" kwargs :test #'string=)))
       (when component-index
-	(push component-index msg)
-	(setf kwargs (remove component-index kwargs))))
+        (push component-index msg)
+        (setf kwargs (remove component-index kwargs))))
     (let ((repr-index (assoc "repr_index" kwargs :test #'string=)))
       (when repr-index
-	(push repr-index msg)
-	(setf kwargs (remove repr-index kwargs))))
+        (push repr-index msg)
+        (setf kwargs (remove repr-index kwargs))))
     (push (cons "target" target) msg)
     (push (cons "type" "call_method") msg)
     (push (cons "methodName" method-name) msg)
@@ -692,48 +751,48 @@
     (push (cons "kwargs" kwargs) msg)
     (let ((callback (pythread:make-remote-call-callback
                      :widget widget
-		     :callback (lambda (widget)
-				 (cljw:widget-log "%remote-call method-name -> ~s~%" method-name)
-				 (cljw:widget-log "     %remote-call widget -> ~s~%" widget)
-				 (cljw:widget-log "     %remote-call msg -> ~s~%" msg)
-				 (prog1
-				     (cljw:widget-send widget msg)
-				   (cljw:widget-log "    Done %remote-call method-name -> ~s~%" method-name)))
-		     :method-name method-name)))
+                     :callback (lambda (widget)
+                                 (cljw:widget-log "%remote-call method-name -> ~s~%" method-name)
+                                 (cljw:widget-log "     %remote-call widget -> ~s~%" widget)
+                                 (cljw:widget-log "     %remote-call msg -> ~s~%" msg)
+                                 (prog1
+                                     (cljw:widget-send widget msg)
+                                   (cljw:widget-log "    Done %remote-call method-name -> ~s~%" method-name)))
+                     :method-name method-name)))
       (cljw:widget-log "About to enqueue remote-call method-name -> ~s msg -> ~s  widget -> ~s~%" method-name msg widget)
       (if (loaded widget)
-	  (progn
-	    (cljw:widget-log "enqueing remote-call ~a~%" callback)
-	    (pythread:remote-call-add callback))
-	  (push callback (ngl-displayed-callbacks-before-loaded-reversed widget)))
+          (progn
+            (cljw:widget-log "enqueing remote-call ~a~%" callback)
+            (pythread:remote-call-add callback))
+          (push callback (ngl-displayed-callbacks-before-loaded-reversed widget)))
       (push callback (ngl-displayed-callbacks-after-loaded-reversed widget))))
   t)
 
 (defmethod %get-traj-by-id ((widget nglwidget) itsid)
-  (loop for traj in (%trajlist widget)
+  (loop for traj in (trajlist widget)
      do
        (if (equal (id traj) itsid)
-	   (return traj)))
+           (return traj)))
   nil)
 
 #|
 (defmethod hide ((widget nglwidget) indices)
   (let ((traj-ids (loop for traj in (%trajlist widget) collect (id traj)))
-	(comp-id nil)
-	(traj nil))
+        (comp-id nil)
+        (traj nil))
     (loop for index in indices
        do
-	 (setf comp-id (aref (ngl-component-ids widget) index))
-	 (if t
-	     (progn
-	       (error "the above line is wrong. Should be 'if comp-id in traj-ids'")
-	       (setf traj (%get-traj-by-id widget comp-id)
-		     (shown traj nil))))
-	 (%remote-call widget
-		       "setVisibility"
-		       :target "compList"
-		       :args '(nil)
-		       :kwargs (list (cons "component_index" index)))))
+         (setf comp-id (aref (ngl-component-ids widget) index))
+         (if t
+             (progn
+               (error "the above line is wrong. Should be 'if comp-id in traj-ids'")
+               (setf traj (%get-traj-by-id widget comp-id)
+                     (shown traj nil))))
+         (%remote-call widget
+                       "setVisibility"
+                       :target "compList"
+                       :args '(nil)
+                       :kwargs (list (cons "component_index" index)))))
   (values))
 
 (defmethod show ((widget nglwidget) &rest kwargs &key &allow-other-keys)
@@ -743,45 +802,45 @@
 #|
 (defmethod show-only ((widget nglwidget) &key (indices "all"))
   (let ((traj-ids (loop for traj in (%trajlist widget) collect (id traj)))
-	(indices% "")
-	(index 0)
-	(traj nil)
-	(args '(nil)))
+        (indices% "")
+        (index 0)
+        (traj nil)
+        (args '(nil)))
     (setf traj-ids (remove-duplicates traj-ids :test #'equal))
     (if (string= indices "all")
-	(setf indices% (loop for i from 0 below (n-components widget) collect i))
-	(progn
-	  (setf indices% (loop for index in indices collect index)
-		indices% (remove-duplicates indices% :test #'equal))))
+        (setf indices% (loop for i from 0 below (n-components widget) collect i))
+        (progn
+          (setf indices% (loop for index in indices collect index)
+                indices% (remove-duplicates indices% :test #'equal))))
     (loop for comp-id in (ngl-component-ids widget)
        do
-	 (if t
-	     (progn
-	       (error "the line above is wrong and should be 'if comp-id in traj-ids")
-	       (setf traj (%get-traj-by-id widget comp-id)))
-	     (setf traj nil))
-	 (if t
-	     (progn
-	       (error "the line above is wrong and should be 'if index in indices%")
-	       (setf args '(t))
-	       (if traj
-		   (setf (shown traj) t)))
-	     (progn
-	       (setf args '(nil))
-	       (if traj
-		   (setf (shown traj) nil))))
-	 (%remote-call widget
-		       "setVisiblity"
-		       :target "compList"
-		       :args args
-		       :kwargs (list (cons "component_index" index)))))
+         (if t
+             (progn
+               (error "the line above is wrong and should be 'if comp-id in traj-ids")
+               (setf traj (%get-traj-by-id widget comp-id)))
+             (setf traj nil))
+         (if t
+             (progn
+               (error "the line above is wrong and should be 'if index in indices%")
+               (setf args '(t))
+               (if traj
+                   (setf (shown traj) t)))
+             (progn
+               (setf args '(nil))
+               (if traj
+                   (setf (shown traj) nil))))
+         (%remote-call widget
+                       "setVisiblity"
+                       :target "compList"
+                       :args args
+                       :kwargs (list (cons "component_index" index)))))
   (error "Figure out 'if index in indices%' in show-only in  widget.lisp")
   (values))
 
 |#
 
-	     
-	     
+             
+             
    
     
 
@@ -814,9 +873,9 @@
   (let ((index 0))
     (loop for id in (ngl-component-ids widget)
        do
-	 (let ((name (concatenate 'string "component_" (write-to-string index))))
-	   (incf index)
-	   (error "WE NEED A DELATTR IN %clear-component-auto-completion in widget.lisp")))))
+         (let ((name (concatenate 'string "component_" (write-to-string index))))
+           (incf index)
+           (error "WE NEED A DELATTR IN %clear-component-auto-completion in widget.lisp")))))
 #|
    def _clear_component_auto_completion(self):
    for index, _ in enumerate(self._ngl_component_ids):
@@ -827,14 +886,14 @@
 
 (defmethod %update-component-auto-completion ((self NGLWidget))
   #+(or)(warn "Do something for %update-component-auto-completion")
-  #+(or)(let ((trajids (loop for traj in (%trajlist self) collect (id traj)))
-	      (index 0))
-	  (loop for cid in (ngl-component-ids widget)
-	     do (let ((comp (make-instance 'ComponentViewer :%view widget :%index index))
-		      (name (concatenate 'string "component_" (write-to-string index))))
-		  (incf index)
-		  (error "We need a setattr function!!!!")
-		  (error "we need an in function! Maybe we have one. %update-component-auto-completion in widget.lisp")))))
+  #+(or)(let ((trajids (loop for traj in (trajlist self) collect (id traj)))
+              (index 0))
+          (loop for cid in (ngl-component-ids widget)
+             do (let ((comp (make-instance 'ComponentViewer :%view widget :%index index))
+                      (name (concatenate 'string "component_" (write-to-string index))))
+                  (incf index)
+                  (error "We need a setattr function!!!!")
+                  (error "we need an in function! Maybe we have one. %update-component-auto-completion in widget.lisp")))))
 
 #|
    def _update_component_auto_completion(self):
@@ -870,7 +929,7 @@
         """
    for i, _ in enumerate(self._ngl_component_ids):
    yield self[i]
-   |#	 
+   |#    
 
 (defmethod detach ((widget nglwidget) &key (split nil))
   "detach player from its original container."
@@ -892,14 +951,14 @@
 (defmethod display ((widget nglwidget) &key (gui nil) (use-box nil))
   (if gui
       (if use-box
-	  (let ((box (apply #'make-instance 'BoxNGL widget (%display (player widget)))))
-	    (setf (%gui-style box) "row")
-	     box)
-	  (progn
-	    (display widget)
-	    (display (%display (player widget)))
-	    (display (%place-proxy widget))
-	    (values)))
+          (let ((box (apply #'make-instance 'BoxNGL widget (%display (player widget)))))
+            (setf (%gui-style box) "row")
+             box)
+          (progn
+            (display widget)
+            (display (%display (player widget)))
+            (display (%place-proxy widget))
+            (values)))
       widget))
 
 (defmethod %update-component-auto-completions ((widget nglwidget))
@@ -913,34 +972,34 @@
         view.center_view(selection='1-4')
   "
   (%remote-call widget "autoView"
-		:target "compList"
-		:args (list zoom selection)
-		:kwargs (list (cons "component_index" component))))
+                :target "compList"
+                :args (list zoom selection)
+                :kwargs (list (cons "component_index" component))))
 
 (defmethod %update-component-auto-completions ((widget nglwidget))
   #+(or)(warn "What do I do in %update-component-auto-completions?"))
 
 
-(defmethod center-view ((widget nglwidget) &key (selection "*") (duration 0) (component 0))
+(defmethod center ((widget nglwidget) &key (selection "*") (duration 0) (component 0))
   "center view for given atom selection
 
         Examples
         --------
-        view.center_view(selection='1-4')
+        view.center(selection='1-4')
   "
   (%remote-call widget "autoView"
-		:target "compList"
-		:args (list selection duration)
-		:kwargs (list (cons "component_index" component))))
+                :target "compList"
+                :args (list selection duration)
+                :kwargs (list (cons "component_index" component))))
   
 (defmethod %set-draggable ((widget nglwidget) &key (yes t))
   (if yes
       (%remote-call widget "setDraggable"
-		    :target "Widget"
-		    :args '(""))
+                    :target "Widget"
+                    :args '(""))
       (%remote-call widget "setDraggable"
-		    :target "Widget"
-		    :args '("destroy"))))
+                    :target "Widget"
+                    :args '("destroy"))))
 
 (defmethod %set-sync-frame ((widget nglwidget))
   (%remote-call widget "setSyncFrame" :target "Widget"))
@@ -958,86 +1017,86 @@
   "unit of millisecond
   "
   (%remote-call widget "setDelay" :target "Widget"
-		:args (list delay)))
+                :args (list delay)))
 
 (defmethod %set-spin ((widget nglwidget) axis angle)
   (%remote-call widget "setSpin"
-		:target "Stage"
-		:args (list axis angle)))
+                :target "Stage"
+                :args (list axis angle)))
 
 (defmethod %set-selection ((widget nglwidget) &key selection (component 0) (repr-index 0))
   (%remote-call widget "setSelection"
-		:target "Representation"
-		:args (list selection)
-		:kwargs (list (cons "component_index" component)
-			      (cons "repr_index" repr-index))))
+                :target "Representation"
+                :args (list selection)
+                :kwargs (list (cons "component_index" component)
+                              (cons "repr_index" repr-index))))
 
 (defmethod %set-color-by-residue ((widget nglwidget) &key colors (component-index 0) (repr-index 0))
   (%remote-call widget "setColorByResidue"
-		:target "Widget"
-		:args (list colors component-index repr-index)))
+                :target "Widget"
+                :args (list colors component-index repr-index)))
 
 
 (defmethod color-by ((widget nglwidget) color-scheme &key (component 0))
-  (let ((repr-names (get-repr-names-from-dict (repr-dict widget) component))
-	(index 0))
+  (let ((repr-names (get-repr-names-from-dict (ngl-repr-dict widget) component))
+        (index 0))
     (loop for _ in repr-names
        do
-	 (update-representation widget
-				:component component
-				:repr-index index
-				:color-scheme color-scheme)
-	 (incf index)))
+         (update-representation widget
+                                :component component
+                                :repr-index index
+                                :color-scheme color-scheme)
+         (incf index)))
   (values))
 
 
 (defmethod update-representation ((widget nglwidget) &optional (component 0)
-				  (repr-index 0) &rest parameters)
+                                  (repr-index 0) &rest parameters)
   (let ((parameters (camelize-dict parameters))
-	(kwargs (append
+        (kwargs (append
                  (list (cons "component_index" component)
                        (cons "repr_index" repr-index))
                  parameters)))
     (warn "How do we update kwargs")
     (%remote-call widget
                   "setParameters"
-		  :target "Representation"
-		  :kwargs kwargs)
-    (%update-repr-dict widget)
+                  :target "Representation"
+                  :kwargs kwargs)
+    (%update-ngl-repr-dict widget)
     (values)))
 
 
 (defmethod remove-representation ((widget nglwidget) &key (component 0) (repr-index 0))
   (%remote-call widget
-		"removeRepresentation"
-		:target "Widget"
-		:args (list component repr-index)))
+                "removeRepresentation"
+                :target "Widget"
+                :args (list component repr-index)))
 
 (defmethod %remove-representations-by-name ((widget nglwidget) repr-name &key (component 0))
   (%remote-call widget
-		"removeRepresentationsByName"
-		:target "Widget"
-		:args (list repr-name component))
+                "removeRepresentationsByName"
+                :target "Widget"
+                :args (list repr-name component))
   (values))
 
 (defmethod %update-representations-by-name ((widget nglwidget) repr-name &optional (component 0) &rest kwargs)
   (setf kwargs (%camelize-dict kwargs))
   (%remote-call widget
-		"updateRepresentationsByName"
-		:target "Widget"
-		:args (list repr-name component)
-		:kwargs kwargs)
+                "updateRepresentationsByName"
+                :target "Widget"
+                :args (list repr-name component)
+                :kwargs kwargs)
   (values))
 
 (defmethod %display-repr ((widget nglwidget) &key (component 0) (repr-index 0) (name nil))
   (let ((c (concatenate 'string "c" (write-to-string component)))
-	(r (write-to-string repr-index)))
+        (r (write-to-string repr-index)))
     (warn "Figure out how to use handler-case")
-    (setf name (aref (aref (aref (repr-dict widget) c) r) "name"))
+    (setf name (aref (aref (aref (ngl-repr-dict widget) c) r) "name"))
     (make-instance 'RepresentationsControl :view widget
-		   :component-index component
-		   :repr-index repr-index
-		   :name name)))
+                   :component-index component
+                   :repr-index repr-index
+                   :name name)))
 
 #|
 (defmethod clear ((widget nglwidget) #|uh oh|# &rest kwargs &key &allow-other-keys)
@@ -1046,48 +1105,48 @@
 
 (defmethod clear-representations ((widget nglwidget) &key (component 0))
   (%remote-call widget "clearRepresentations" :target "compList"
-		:kwargs (list (cons "component_index" component)))
+                :kwargs (list (cons "component_index" component)))
   (values))
-						       
+                                                       
 (defmethod render-image ((widget nglwidget) &key (frame nil) (factor 4) (antialias t) (trim nil) (transparent nil))
   (when frame
     (setf (frame widget) frame))
   (let ((params (list (cons "factor" factor)
-		      (cons "antialias" antialias)
-		      (cons "trim" trim)
-		      (cons "transparent" transparent))))
+                      (cons "antialias" antialias)
+                      (cons "trim" trim)
+                      (cons "transparent" transparent))))
     (%remote-call widget
-		  "_exportImage"
-		  :target "Widget"
-		  :kwargs params))
+                  "_exportImage"
+                  :target "Widget"
+                  :kwargs params))
   (values))
 
 (defmethod download-image ((widget nglwidget) &key (filename "screenshot.png")
-						(factor 4)
-						(antialias t)
-						(trim nil)
-						(transparent nil))
+                                                (factor 4)
+                                                (antialias t)
+                                                (trim nil)
+                                                (transparent nil))
   (let ((params (list (cons "factor" factor)
-		      (cons "antialias" antialias)
-		      (cons "trim" trim)
-		      (cons "transparent" transparent))))
+                      (cons "antialias" antialias)
+                      (cons "trim" trim)
+                      (cons "transparent" transparent))))
     (%remote-call widget
-		  "_downloadImage"
-		  :target "Widget"
-		  :args (list filename)
-		  :kwargs params))
+                  "_downloadImage"
+                  :target "Widget"
+                  :args (list filename)
+                  :kwargs params))
   (values))
 
 (defmethod %request-repr-parameters ((widget nglwidget) &key (component 0) (repr-index 0))
   (%remote-call widget
-		"requestReprParameters"
-		:target "Widget"
-		:args (list component repr-index))
+                "requestReprParameters"
+                :target "Widget"
+                :args (list component repr-index))
   (values))
 
-(defmethod %update-repr-dict ((self nglwidget))
+(defmethod %update-ngl-repr-dict ((self nglwidget))
   "Send a request to the frontend to send representation parameters back"
-  (cljw:widget-log "Called %update-repr-dict~%")
+  (cljw:widget-log "Called %update-ngl-repr-dict~%")
   (%remote-call self
                 "request_repr_dict"
                 :target "Widget"))
@@ -1097,16 +1156,16 @@
   (let ((kwargs ""))
     (loop for params in representations
        do
-	 (if (typep params 'cljw:dict)
-	     (progn
-	       (setf kwargs (aref params "params"))
-	       (warn "What to do about update kwargs")
-	       (%remote-call widget
-			   "addRepresentations"
-			   :target "compList"
-			   :args (list (a params "type"))
-			   :kwargs kwargs))
-	     (error "Params must be a dict"))))
+         (if (typep params 'cljw:dict)
+             (progn
+               (setf kwargs (aref params "params"))
+               (warn "What to do about update kwargs")
+               (%remote-call widget
+                           "addRepresentations"
+                           :target "compList"
+                           :args (list (a params "type"))
+                           :kwargs kwargs))
+             (error "Params must be a dict"))))
   (values))
 
 (defmethod representations-setter ((widget nglwidget) reps)
@@ -1133,9 +1192,9 @@
             You need to keep track how many components you added.
    "
   (%remote-call self
-		"removeAllRepresentations"
-		:target "compList"
-		:kwargs (list (cons "component_index" component))))
+                "removeAllRepresentations"
+                :target "compList"
+                :kwargs (list (cons "component_index" component))))
 
 
 (defmethod add-shape ((self nglwidget) shapes &key (name "shape"))
@@ -1164,8 +1223,8 @@
         (nglv::add-shape *v* (vector *sphere* *arrow*) :name "my_shape")
         "
   (%remote-call self "addShape"
-		:target "Widget"
-		:args (list name shapes)))
+                :target "Widget"
+                :args (list name shapes)))
 
 (defmethod add-representation ((self nglwidget) repr-type &rest kwargs &key (use-worker nil use-worker-p) (selection "all"))
   "Add structure representation (cartoon, licorice, ...) for given atom selection.
@@ -1205,10 +1264,10 @@
   (setf selection (seq-to-string (string-trim " " selection)))
   (format *debug-io* "kwargs -> ~s~%" kwargs)
   (let* ((kwargs2 (dict-from-plist kwargs))
-	 (comp-assoc (assoc :component kwargs2))
-	 (component (prog1
-			(getf kwargs2 :component 0)
-		      (remf kwargs2 :component))))
+         (comp-assoc (assoc :component kwargs2))
+         (component (prog1
+                        (getf kwargs2 :component 0)
+                      (remf kwargs2 :component))))
     #|for k, v in kwargs2.items():
     try:
     kwargs2[k] = v.strip()
@@ -1221,9 +1280,9 @@
       (push (cons "component_index" component) params)
 ;;;      (format t "kwargs -> ~s~%" params)
       (%remote-call self "addRepresentation"
-		    :target "compList"
-		    :args (list repr-type)
-		    :kwargs params))))
+                    :target "compList"
+                    :args (list repr-type)
+                    :kwargs params))))
 
 (defmethod %ipython-display ((widget nglwidget) &rest key &key &allow-other-keys)
   (if (first-time-loaded widget)
@@ -1240,15 +1299,15 @@
   (values))
 
 (defmethod %update-count ((widget nglwidget))
-  (setf (count widget) (max (loop for traj in (%trajlist widget) collect (n-frames traj))))
+  (setf (count widget) (max (loop for traj in (trajlist widget) collect (n-frames traj))))
   (values))
 
 (defmethod camera-setter ((widget nglwidget) value)
   (setf (camera-str widget) value)
   (%remote-call widget
-		"setParameters"
-		:target "Stage"
-		:kwargs (list (cons "cameraType" (camera-str wiget))))
+                "setParameters"
+                :target "Stage"
+                :kwargs (list (cons "cameraType" (camera-str wiget))))
   (values))
 
 (defmethod %add-shape ((widget nglwidget) shapes &key (name "shape"))
@@ -1276,29 +1335,29 @@
         >>> arrow = ('arrow', [1, 2, 7 ], [30, 3, 3], [1, 0, 1], 1.0)
         >>> view._add_shape([sphere, arrow], name='my_shape')"
   (%remote-call widget "addShape"
-		:target "Widget"
-		:args (list name shapes)))
+                :target "Widget"
+                :args (list name shapes)))
 
 
 (defclass ComponentViewer ()
   ((%view :initarg :%view :accessor %view
-	 :initform nil)
+         :initform nil)
    (%index :initarg :%index :accessor %index
-	  :initform nil)))
+          :initform nil)))
 
 #+(or)
 (defmethod initialize-instance :after ((self ComponentViewer))
   (%add-repr-method-shortcut self (%view self))
   (%borrow-attribute self (%view self) (list "clear_representations"
-					     "_remove_representations_by_name"
-					     "_update_representations_by_name"
-					     "center_view"
-					     "center"
-					     "clear"
-					     "set_representations")
-		     (list "get-structure-string"
-			   "get_coodinates"
-			   "n_frames")))
+                                             "_remove_representations_by_name"
+                                             "_update_representations_by_name"
+                                             "center_view"
+                                             "center"
+                                             "clear"
+                                             "set_representations")
+                     (list "get-structure-string"
+                           "get_coodinates"
+                           "n_frames")))
 
 (defmethod id ((self ComponentViewer))
   (aref (ngl-component-ids (%view self)) (%index self)))
@@ -1306,26 +1365,26 @@
 (defmethod hide ((self ComponentViewer))
   "set invisibility for given components (by their indices)"
   (%remote-call (%view self)
-		"setVisibility"
-		:target "compList"
-		:args (list nil)
-		:kwargs (list (cons "component_index" (%index self))))
+                "setVisibility"
+                :target "compList"
+                :args (list nil)
+                :kwargs (list (cons "component_index" (%index self))))
   (let ((traj (%get-traj-by-id (%view self) (id self))))
     (if traj
-	(setf (shown traj) nil))
+        (setf (shown traj) nil))
     (values)))
 
 
 (defmethod show ((self ComponentViewer))
   "set invisibility for given components (by their indices)"
   (%remote-call (%view self)
-		"setVisiblity"
-		:target "compList"
-		:args (list t)
-		:kwargs (list (cons "component_index" (%index self))))
+                "setVisiblity"
+                :target "compList"
+                :args (list t)
+                :kwargs (list (cons "component_index" (%index self))))
   (let ((traj (%get-traj-by-id (%view self) (id self))))
     (if traj
-	(setf (shown traj) t))
+        (setf (shown traj) t))
     (values)))
 
 
@@ -1338,6 +1397,6 @@
   (let ((traj (%get-traj-by-id view (id self))))
     (loop for attname in attributes
        do
-	 (let ((view-att nil)))))
+         (let ((view-att nil)))))
   (error "Help me!!!"))
 

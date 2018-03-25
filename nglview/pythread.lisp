@@ -6,6 +6,7 @@
 
 (defclass remote-call-callback ()
   ((%callback :initarg :callback :accessor callback)
+   (%ngl-msg :initarg :ngl-msg :accessor ngl-msg)
    (%widget :initarg :widget :accessor widget)
    (%method-name :initarg :method-name :accessor method-name)
    (%special-variables :initarg :special-variables :accessor special-variables)
