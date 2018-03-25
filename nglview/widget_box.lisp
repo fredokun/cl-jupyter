@@ -35,20 +35,19 @@
       (setf (%is-beautified self) t)))
 
 
-#+or
 (defclass DraggableBox(cljw::box)
   ((%dialog :initarg :%dialog :accessor %dialog
-	    :type unicode
-	    :initform (unicode "off")
-	    :metadata (:sync t
-			     :json-name "_dialog"))
+            :type unicode
+            :initform (unicode "off")
+            :metadata (:sync t
+                             :json-name "_dialog"))
    (%ngl-command :initarg :%ngl-command :accessor %ngl-command
-		 :type unicode
-		 :initform (unicode)
-		 :metadata (:sync t
-				  :json-name "_ngl_command")))
+                 :type unicode
+                 :initform (unicode)
+                 :metadata (:sync t
+                                  :json-name "_ngl_command")))
   (:default-initargs
    :view-name (unicode "NGLBox")
    :view-module (unicode "nglview"))
   (:metaclass traitlets:traitlet-class))
-	   
+           
