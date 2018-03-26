@@ -9,16 +9,23 @@
 
 
 ;;; Use widget-log to log messages to a file
+(defvar *widget-log-on* nil)
 (defvar *widget-log* nil)
 (defvar *widget-log-lock* nil)
 
-(eval-when (:compile-toplevel)
-  (let ((val (ext:getenv "USE_WIDGET_LOG")))
-    (when val
-      (push :use-widget-log *features*))))
-;;; Always turn it off for now
+;;; Enable the :use-widget-log feature if you
+;;;   want (cljw:widget-log ...) compiled into the code
+;;;   If :use-widget-log is a feature - then you can adjust
+;;;   the verbosity using the WIDGET_LOG_ON feature
+#+(or)
 (eval-when (:compile-toplevel :load-toplevel :execute)
      (pushnew :use-widget-log *features*))
+
+(eval-when (:compile-toplevel)
+  (when (ext:getenv "WIDGET_LOG_ON")
+    (setf *widget-log-on* t)
+    (unless (member :use-widget-log *features*)
+      (warn "*widget-log-on* has been requested (using WIDGET_LOG_ON environment variable) - but :use-widget-log is not in *features* - so not much logging will happen.  Turn on the :use-widget-log feature and recompile cl-jupyter-widgets"))))
 
 (eval-when (:execute :load-toplevel)
   (let ((log-file-name (cond
@@ -44,7 +51,8 @@
 
 #+use-widget-log
 (defmacro widget-log (fmt &rest args)
-  `(always-widget-log ,fmt ,@args))
+  `(when *widget-log*
+     (always-widget-log ,fmt ,@args)))
 #-use-widget-log
 (defmacro widget-log (fmt &rest args)
   nil)
