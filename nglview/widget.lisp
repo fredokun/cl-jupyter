@@ -451,9 +451,9 @@
   (cljw::widget-log "%on-picked called with name: ~s new: ~s old: ~s~%" name new old)
   (when (and new
              (dict-entry "atom" new)
-             (slot-boundp widget '%pick-history))
-    (push new (pick-history widget))
-    (setf (pick-history widget) (subseq (pick-history widget) 0 (min *pick-history-depth* (length (pick-history widget)))))))
+             (slot-boundp self '%pick-history))
+    (push new (pick-history self))
+    (setf (pick-history self) (subseq (pick-history self) 0 (min *pick-history-depth* (length (pick-history self)))))))
 
 
 (@observe background %update-background-color)
@@ -808,6 +808,8 @@
                    :component-index component
                    :repr-index repr-index
                    :name name)))
+
+(defmacro [] (table key) `(cdr (assoc ,table ,key :test #'equal)))
 
 (defmethod %set-coordinates ((widget nglwidget) index)
   (warn "Finish %set-coordinates")
