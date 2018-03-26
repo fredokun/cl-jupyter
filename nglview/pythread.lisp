@@ -13,13 +13,12 @@
    (%special-values :initarg :special-values :accessor special-values)))
 
 
-(defun make-remote-call-callback (&key widget method-name callback)
-  (make-instance 'remote-call-callback
-                 :widget widget
-                 :method-name method-name
-                 :callback callback
-                 :special-variables cl-jupyter:*special-variables*
-                 :special-values (mapcar #'symbol-value cl-jupyter:*special-variables*)))
+(defun make-remote-call-callback (&rest args)
+  (apply 'make-instance
+         'remote-call-callback
+       :special-variables cl-jupyter:*special-variables*
+       :special-values (mapcar #'symbol-value cl-jupyter:*special-variables*)
+       args))
 
                  
 (defun fire-callback (callback &optional passed-widget)

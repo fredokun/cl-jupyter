@@ -1,5 +1,7 @@
 (in-package :nglv)
 
+(cljw:widget-log "Loading widget.lisp~%")
+
 (defmacro @observe (slot observer)
   nil)
 
@@ -107,7 +109,7 @@
                                    :accessor ngl-original-stage-parameters
                                    :type cljw:dict
                                    :initform nil
-                                   :metadata (:sync t :json-name "_original_stage_parameters"))
+                                   :metadata (:sync t :json-name "_ngl_original_stage_parameters"))
    ;; Not sync'd
    (%coordinates-dict :initarg :coordinates-dict
                       :accessor coordinates-dict
@@ -308,10 +310,10 @@
 
 (defmethod %set-serialization ((self nglwidget) &optional frame-range)
   (setf (ngl-serialize self) :true)
-  (setf (ngl-msg-archive
+  (setf (ngl-msg-archive self)
          (mapcar (lambda (callback)
                    (ngl-msg callback))
-                 (ngl-displayed-callbacks-after-loaded-reversed self))))
+                 (ngl-displayed-callbacks-after-loaded-reversed self)))
   (let ((resource (ngl-coordinate-resource self)))
     (when frame-range
       #| ;; Finish set-serialization
@@ -445,6 +447,7 @@
 
 (@observe %picked %on-picked)
 (defmethod %on-picked ((self nglwidget) name new old)
+  (cljw::widget-log "%on-picked called with name: ~s new: ~s old: ~s~%" name new old)
   (when (and new
              (dict-entry "atom" new)
              (slot-boundp widget '%pick-history))
@@ -554,7 +557,7 @@
 
 
 (@observe %ngl-repr-dict %handle-repr-dict-changed)
-(defmethod %handle-repr-dict-changed ((size nglview) name new old)
+(defmethod %handle-repr-dict-changed ((size nglwidget) name new old)
   (when (widget-repr (player self))
     (let* ((repr-slider (get-widget-by-name (widget-repr (player self)) "repr_slider"))
            (component-slider (get-widget-by-name (widget-repr (player self)) "component_slider"))
@@ -654,7 +657,7 @@
   (let (new-callbacks)
     (loop for c in (reverse (ngl-displayed-callbacks-after-loaded-reversed widget))
           do (let (ngl-msg-kwargs-default-representation)
-               (when (and (string= (method-name c) "loadFile")
+               (when (and (string= (pythread:method-name c) "loadFile")
                           (setf ngl-msg-kwargs-default-representation (assoc "defaultRepresentation" (cdr (assoc "kwargs" (ngl-msg c) :test #'string=)) :test #'string=)))
                  (rplacd ngl-msg-kwargs-default-representation :false)))
              (let ((msg (cons (cons "last_child" :true) (ngl-msg c))))
@@ -1273,7 +1276,7 @@ kwargs=kwargs2)
             (cljw:widget-log "enqueing remote-call ~a~%" callback)
             (pythread:remote-call-add callback))
           (push callback (ngl-displayed-callbacks-before-loaded-reversed widget)))
-      (when (not (member (method-name callback) *excluded-callback-after-firing* :test #'string=))
+      (when (not (member (pythread:method-name callback) *excluded-callback-after-firing* :test #'string=))
         (push callback (ngl-displayed-callbacks-after-loaded-reversed widget)))))
   t)
 

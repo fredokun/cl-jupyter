@@ -151,11 +151,14 @@ Return T if equal, NIL if unequal"
   (cond
     ((/= (length buffera) (length bufferb))
      nil)
+    ((= (length buffera) (length bufferb) 0)
+     t)
     ((eq buffera bufferb)
      t)
-    (loop for ia in buffera
-          for ib in bufferb
-          when (not (equal ia ib) (return nil))))
+    (t (loop for ia across buffera
+             for ib across bufferb
+             when (not (equal ia ib))
+                  do (return-from %buffer-list-equal nil))))
   t)
         
            
@@ -406,7 +409,7 @@ Return T if equal, NIL if unequal"
 key : a key or a list of keys (optional)
       A property's name or a list of property names to sync with the front-end"
   (let ((fstate (get-state self :key key)))
-    (when (> (length state) 0)
+    (when (> (length fstate) 0)
       (multiple-value-bind (state buffer-paths buffers)
           (%remove-buffers fstate)
         (let ((msg (list (cons "method" "update")

@@ -1,4 +1,6 @@
 (in-package :nglv)
+
+(cljw:widget-log "adaptor.lisp~%")
 ;;;Register backend is something python does but we don't need
 #|
 (defclass register-backend ()
