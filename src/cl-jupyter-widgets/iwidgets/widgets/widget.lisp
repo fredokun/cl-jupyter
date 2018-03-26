@@ -586,16 +586,6 @@ buffers : list  - A list of binary buffers "
       (widget-log "      send -> ~s~%" send)
       send)))
 
-;;; This is different from the Python version because we don't
-;;;   have the traitlet change[xxx] dictionary
-;;;   Accept the slot-name and new value
-(defmethod notify-change ((widget widget) slot-name &optional value)
-  (check-type slot-name symbol)
-  (when *send-updates*
-    (when (and (comm widget) (assoc slot-name (key-map widget)))
-      (when (%should-send-property widget slot-name value)
-	(send-state widget :key slot-name)))))
-
 #|
 
     # Event handlers

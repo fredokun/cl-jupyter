@@ -234,7 +234,7 @@
    ||#
    (%trajlist :initform nil
               :accessor trajlist)
-
+   (%player :accessor player)
    (%init-representations :initarg :init-representations
                      :accessor init-representations
                      :initform nil)
@@ -304,6 +304,7 @@
       (let ((selector (remove #\- (format nil "~W" (uuid:make-v4-uuid)))))
         (%remote-call widget "setSelector" :target "Widget" :args (list selector)))
       #+(or)(warn "Set the Trajectoryplayer")
+      (setf (player widget) (make-instance 'TrajectoryPlayer :view widget))
       (setf (already-constructed widget) t)
       widget)))
 
@@ -407,7 +408,7 @@
 
 
 
-(defmethod parameter-setter ((widget nglwidget) params)
+(defmethod (setf parameters) (params (widget nglwidget))
   (let ((params (camelize-dict params)))
     (setf (%parameters widget) params)
     (%remote-call widget "setParameters" :target "Widget" :args params))
@@ -457,18 +458,17 @@
 
 (@observe background %update-background-color)
 (defmethod %update-background-color ((object nglwidget) name new old)
-  (setf (parameters object) (list (cons "backgroundColor" new)))
-  (parameter-setter object (parameters object))
+  (setf (%parameters object) (list (cons "backgroundColor" new)))
   (values))
 
 (@observe %n-dragged-files on-update-dragged-file)
 (defmethod on-update-dragged-file ((self nglwidget) name new old)
-  (when (= (- new old) 1)
+  (when (and (= (- new old) 1) (slot-boundp self '%ngl-component-ids))
     (setf (ngl-component-ids self) (append (ngl-component-ids self) (uuid:make-v4-uuid)))))
 
 (@observe %n-components %handle-n-components-changed)
 (defmethod %handle-n-components-changed ((self nglwidget) name new old)
-  (error "Finish %handle-n-components-changed")
+  (warn "Finish %handle-n-components-changed")
 #|
         if self.player.widget_repr is not None:
             component_slider = widget_utils.get_widget_by_name(
@@ -503,62 +503,10 @@
                 repr_selection.value = ' '
 |#  )
 
+
 (@observe %ngl-repr-dict %handle-repr-dict-changed)
 (defmethod %handle-repr-dict-changed ((self nglwidget) name new old)
-  (error "Finish %handle-repr-dict-changed")
-  #|
-  def _handle_repr_dict_changed(self, change):
-  if self.player.widget_repr is not None:
-  repr_slider = widget_utils.get_widget_by_name(
-                self.player.widget_repr, 'repr_slider')
-            component_slider = widget_utils.get_widget_by_name(
-                self.player.widget_repr, 'component_slider')
-            repr_name_text = widget_utils.get_widget_by_name(
-                self.player.widget_repr, 'repr_name_text')
-            repr_selection = widget_utils.get_widget_by_name(
-                self.player.widget_repr, 'repr_selection')
-            reprlist_choices = widget_utils.get_widget_by_name(
-                self.player.widget_repr, 'reprlist_choices')
-            repr_names = get_repr_names_from_dict(self._ngl_repr_dict,
-                                                  component_slider.value)
-
-            if change['new'] == {0: {}}:
-                repr_selection.value = ''
-            else:
-                options = tuple(
-                    str(i) + '-' + name for (i, name) in enumerate(repr_names))
-                reprlist_choices.options = options
-
-                try:
-                    value = reprlist_choices.options[repr_slider.value]
-                    if isinstance(value, tuple):
-                        # https://github.com/jupyter-widgets/ipywidgets/issues/1512
-                        value = value[0]
-                    reprlist_choices.value = value
-                except IndexError:
-                    if repr_slider.value == 0:
-                        # works fine with ipywidgets 5.2.2
-                        reprlist_choices.options = tuple([
-                            ' ',
-                        ])
-                        reprlist_choices.value = ' '
-                    else:
-                        reprlist_choices.value = reprlist_choices.options[
-                            repr_slider.value - 1]
-
-                # e.g: 0-cartoon
-                repr_name_text.value = reprlist_choices.value.split('-')[-1].strip()
-
-                repr_slider.max = len(repr_names) - 1 if len(
-                    repr_names) >= 1 else len(repr_names)
-
-|#  
-)
-
-
-(@observe %ngl-repr-dict %handle-repr-dict-changed)
-(defmethod %handle-repr-dict-changed ((size nglwidget) name new old)
-  (when (widget-repr (player self))
+  (when (and (slot-boundp self '%player) (widget-repr (player self)))
     (let* ((repr-slider (get-widget-by-name (widget-repr (player self)) "repr_slider"))
            (component-slider (get-widget-by-name (widget-repr (player self)) "component_slider"))
            (repr-name-text (get-widget-by-name (widget-repr (player self)) "repr_name_text"))
@@ -626,8 +574,9 @@
 
 (@observe %loaded on-loaded)
 (defmethod on-loaded ((widget nglwidget) name new old)
-  (setf (loaded widget) t)
-  (%fire-callbacks widget (ngl-displayed-callbacks-before-loaded-reversed widget))
+  ;;;(setf (loaded widget) t)
+  (when (slot-boundp widget '%ngl-displayed-callbacks-before-loaded-reversed)
+    (%fire-callbacks widget (ngl-displayed-callbacks-before-loaded-reversed widget)))
   (values))
 
 (defmethod %fire-callbacks ((widget nglwidget) callbacks)
@@ -861,16 +810,17 @@
                    :name name)))
 
 (defmethod %set-coordinates ((widget nglwidget) index)
-  (error "Finish %set-coordinates")
+  (warn "Finish %set-coordinates")
   (values))
 
 (defmethod set-coordinates ((widget nglwidget) arr-dict)
-  (error "Finish set-coordinates")
+  (warn "Finish set-coordinates")
   (values))
 
 
 (defmethod %on-frame-changed (object name new old)
-  (%set-coordinates object (frame object)))
+  (when (slot-boundp object '%frame)
+    (%set-coordinates object (frame object))))
 
 
 (defmethod clear ((self nglwidget) &rest args)
@@ -985,7 +935,7 @@
   
 (defmethod %on-render-image (object name new old)
   ;;;(setf (_b64value (widget-image object)) new)
-  (when (hold-image object)
+  (when (and (slot-boundp object '%hold-image) (hold-image object))
     (setf (image-array object) (concatenate 'string (image-array object) new))))
 
 (defmethod render-image ((widget nglwidget) &key (frame nil) (factor 4) (antialias t) (trim nil) (transparent nil))
@@ -1271,13 +1221,17 @@ kwargs=kwargs2)
                      :method-name method-name
                      :ngl-msg msg)))
       (cljw:widget-log "About to enqueue remote-call method-name -> ~s msg -> ~s  widget -> ~s~%" method-name msg widget)
-      (if (loaded widget)
+      (if (and (slot-boundp widget '%loaded) (loaded widget))
           (progn
             (cljw:widget-log "enqueing remote-call ~a~%" callback)
             (pythread:remote-call-add callback))
-          (push callback (ngl-displayed-callbacks-before-loaded-reversed widget)))
+          (if (slot-boundp widget '%ngl-displayed-callbacks-before-loaded-reversed)
+              (push callback (ngl-displayed-callbacks-before-loaded-reversed widget))
+              (setf (ngl-displayed-callbacks-before-loaded-reversed widget) (list callback))))
       (when (not (member (pythread:method-name callback) *excluded-callback-after-firing* :test #'string=))
-        (push callback (ngl-displayed-callbacks-after-loaded-reversed widget)))))
+        (if (slot-boundp widget '%ngl-displayed-callbacks-after-loaded-reversed)
+            (push callback (ngl-displayed-callbacks-after-loaded-reversed widget))
+            (setf (ngl-displayed-callbacks-after-loaded-reversed widget) (list callback))))))
   t)
 
 
@@ -1608,10 +1562,6 @@ do
   (dolist (ngl-component-ids widget)
     (set-representations widget reps))
   (values))
-
-(defmethod parameters-setter ((widget nglwidget) params)
-  (setf params (%camelize-dict params))
-  (warn "idk what i did in parameters-setter"))
 
 (defmethod camera-setter ((widget nglwidget) value)
   (setf (camera-str widget) value)

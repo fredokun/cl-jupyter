@@ -10,7 +10,6 @@
    #:*handle-comm-msg-hook*
    #:*handle-comm-close-hook*
    #:*send-updates*
-   #:notify-change
    #:ipython-display
    #:widget
    #:widget-open
