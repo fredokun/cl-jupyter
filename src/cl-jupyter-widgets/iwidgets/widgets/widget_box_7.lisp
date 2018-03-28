@@ -3,38 +3,38 @@
 
 (defclass-widget-register Box (domwidget core-widget)
   ((children :initarg :children :accessor children
-	     :type vector
-	     :initform (vector)
-	      :metadata (:sync t
-			       :json-name "children"
-			       :help "Child widgets in the container. Using tuple to force
+             :type vector
+             :initform (vector)
+             :metadata (:sync t
+                        :json-name "children"
+                        :help "Child widgets in the container. Using tuple to force
                                      reassignment to update the list. When a proper 
                                      notifying-list trait exists, that is what should be used."
-			       :to-json json-to-widget
-			       :from-json widget-to-json
-			       ))
+                        :to-json json-to-widget
+                        :from-json widget-to-json
+                              ))
    (box_style :initarg :box_style :accessor box_style
-	       :type unicode
-	       :initform (unicode "")
-	       :metadata (:sync t
-				:json-name "box_style"
-				:help "Use a predefined styling for the box. Options include: \"success\", \"info\", \"warning\", \"danger\", and \"\".")))
+              :type unicode
+              :initform (unicode "")
+              :metadata (:sync t
+                         :json-name "box_style"
+                         :help "Use a predefined styling for the box. Options include: \"success\", \"info\", \"warning\", \"danger\", and \"\".")))
   (:default-initargs
-   ;;:model-module (unicode "jupyter-js-widgets")
-   ;; :view-module (unicode "jupyter-js-widgets")
-    :model-name (unicode "BoxModel")
-    :view-name (unicode "BoxView"))
+    ;;:model-module (unicode "jupyter-js-widgets")
+    ;; :view-module (unicode "jupyter-js-widgets")
+   :model-name (unicode "BoxModel")
+   :view-name (unicode "BoxView"))
   (:metaclass traitlets:traitlet-class))
 #|
 (defclass proxy (domwidget)
  ((child :initarg :child :accessor child
-	  :initform (make-instance 'domwidget)
-	  :metadata (:sync t
-			   :json-name "child"
-			   :help "Child widget of the Proxy"
-			   :to-json json-to-widget
-			   :from-json widget-to-json
-			   )))
+          :initform (make-instance 'domwidget)
+          :metadata (:sync t
+                           :json-name "child"
+                           :help "Child widget of the Proxy"
+                           :to-json json-to-widget
+                           :from-json widget-to-json
+                           )))
   (:default-initargs
    :model-module (unicode "jupyter-js-widgets")
     :view-module (unicode "jupyter-js-widgets")
@@ -44,10 +44,10 @@
 
 (defclass place-proxy (proxy)
   ((selector :initarg :selector :accessor selector
-	     :type unicode
-	     :initform (unicode "")
-	     :metadata (:sync t
-			      :json-name "selector")))
+             :type unicode
+             :initform (unicode "")
+             :metadata (:sync t
+                              :json-name "selector")))
   (:default-initargs
    :view-name (unicode "PlaceProxyView")
     :model-name (unicode "PlaceProxyModel"))

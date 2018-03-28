@@ -1,7 +1,7 @@
 (in-package :cl-jupyter-widgets)
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_controller.py#L17
-(defclass-widget-register button (value-widget core-widget)
+(defclass-widget-register button (domwidget value-widget core-widget)
   ((value :initarg :value :reader value
 	  :type (float 0.0 1.0)
 	  :metadata (:sync t
@@ -22,7 +22,7 @@
   (:metaclass traitlets:traitlet-class))
 
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_controller.py#L29
-(defclass-widget-register axis (value-widget core-widget)
+(defclass-widget-register axis (domwidget value-widget core-widget)
   ((value :initarg :value :reader value
 	  :type (float -1.0 1.0)
 	  :metadata (:sync t

@@ -1,5 +1,7 @@
 (in-package :nglv)
 
+(cljw:widget-log "base_adaptor.lisp~%")
+
 (defclass Structure ()
   ((ext :accessor ext :initform "pdb")
    (params :accessor params :initform nil)

@@ -6,19 +6,19 @@
 
 (defclass remote-call-callback ()
   ((%callback :initarg :callback :accessor callback)
+   (%ngl-msg :initarg :ngl-msg :accessor ngl-msg)
    (%widget :initarg :widget :accessor widget)
    (%method-name :initarg :method-name :accessor method-name)
    (%special-variables :initarg :special-variables :accessor special-variables)
    (%special-values :initarg :special-values :accessor special-values)))
 
 
-(defun make-remote-call-callback (&key widget method-name callback)
-  (make-instance 'remote-call-callback
-                 :widget widget
-                 :method-name method-name
-                 :callback callback
-                 :special-variables cl-jupyter:*special-variables*
-                 :special-values (mapcar #'symbol-value cl-jupyter:*special-variables*)))
+(defun make-remote-call-callback (&rest args)
+  (apply 'make-instance
+         'remote-call-callback
+       :special-variables cl-jupyter:*special-variables*
+       :special-values (mapcar #'symbol-value cl-jupyter:*special-variables*)
+       args))
 
                  
 (defun fire-callback (callback &optional passed-widget)
@@ -46,7 +46,7 @@
          (fire-callback callback)
          (when (member (method-name callback) registered-funcs :test #'string=)
            (cljw:widget-log "method-name is one of ~s - waiting until callback is finished~%" registered-funcs)
-           (%wait-until-finished widget))
+           (nglv:wait-until-finished (widget callback)))
          (cljw:widget-log "Callback finished~%"))
         (t
          (format t "Handle remote-call-thread-run callback: ~a~%" callback)

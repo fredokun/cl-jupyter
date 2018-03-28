@@ -3,6 +3,11 @@
 (defun strip (string)
   (string-trim #(#\Space #\Newline #\Return) string))
 
+(defun javascript-true-p (v)
+  (when (eq v :true)
+    t)
+  nil)
+
 (defclass TrajectoryPlayer (cljw::domwidget)
   ((%step :initarg :%step :accessor %step
 	 :type integer
@@ -40,12 +45,12 @@
    (%interpolation-t :initarg :%interpolation-t :accessor %interpolation-t
 		     :type float
 		     :initform 0.5 ;Original default is nil but init makes it 0.5
-		     :observers (%interpolation_t_changed)
+		     :observers (%interpolation-t-changed)
 		     :metadata (:sync t
 				      :json-name "_interpolation_t"))
    (%iterpolation-type :initarg :%iterpolation-type :accessor %iterpolation-type
 			:type unicode
-			:initform (unicode "linear");Original default is "" but init makes it "linear"
+			:initform (cljw:unicode "linear");Original default is "" but init makes it "linear"
 			:metadata (:sync t
 					 :json-name "_iterpolation_type"
 					 :caseless-str-enum '("linear" "spline")
@@ -81,7 +86,7 @@
 				 :json-name "_spin_speed"))
    (camera :initarg :camera :accessor trajectory-player-camera
 	   :type unicode
-	   :initform (unicode "perspective")
+	   :initform (cljw:unicode "perspective")
 	   :observers (on-camera-changed)
 	   :metadata (:sync t
 			    :json-name "camera"
@@ -194,13 +199,13 @@
   (:metaclass traitlets:traitlet-class))
    
 (defmethod initialize-instance :after ((player TrajectoryPlayer) &key)
-  (setf (iparams player) (list (cons :t (%interpolation-t player))
-			       (cons :step 1)
-			       (cons :type (%iterpolation-type player)) ))
-  (setf (render-params player) (list (cons :factor 4)
-				    (cons :antialias :true)
-				    (cons :trim :false)
-				    (cons :transparent :false))))
+  (setf (iparams player) (list (cons "t" (%interpolation-t player))
+			       (cons "step" 1)
+			       (cons "type" (%iterpolation-type player)) ))
+  (setf (%render-params player) (list (cons "factor" 4)
+                                      (cons "antialias" :true)
+                                      (cons "trim" :false)
+                                      (cons "transparent" :false))))
   ;; the following doesn't appear to be used anywhere correct
   ;; https://github.com/drmeister/spy-ipykernel/blob/master/nglview/player.py#L80
   ;; self._widget_names = [w for w in dir(self) if w.startswith('wiget_')]
@@ -233,52 +238,60 @@
   (setf (interpolate self) t))
 
 (defmethod on-camera-changed (object name new old)
-  (%remote-call (%view object) "setParameters" :target "Stage" :kwargs (cljw:dict :cameraType new)))
+  (when (slot-boundp object 'view)
+    (%remote-call (view object) "setParameters" :target "Stage" :kwargs (cljw:dict :cameraType new))))
 
 (defmethod frame-setter ((self TrajectoryPlayer) value)
-  (setf (frame (%view self)) value))
+  (setf (frame (view self)) value))
 
 (defmethod update-sync-frame (object name new old)
-  (if new
-      (%set-sync-frame (%view object))
-      (%set-unsync-frame (%view object))))
+  (when (slot-boundp object 'view)
+    (if new
+        (%set-sync-frame (view object))
+        (%set-unsync-frame (view object)))))
 
 (defmethod %update-delay (object name new old)
-  (%set-delay (%view object) new))
+  (when (slot-boundp object 'view)
+    (%set-delay (view object) new)))
 
-(defmethod update-parameters (object name new old)
-  (setf (sync-frame object) (get params "sync_frame" (sync-frame object))
-	(delay object) (get params "delay" (delay object))
-	(step object) (get params "step" (step object))))
+(defmethod update-parameters (object name params old)
+  (when (slot-boundp object 'sync-frame)
+    (setf (sync-frame object) (get params "sync_frame" (sync-frame object))))
+  (when (slot-boundp object 'delay)
+    (setf (delay object) (get params "delay" (delay object))))
+  (when (slot-boundp object '%step)
+    (setf (%step object) (get params "step" (%step object)))))
 
 (defmethod %interpolation-t-changed (object name new old)
-  (setf (aref (iparams object) "t") (new)))
+  (let ((entry (assoc "t" (iparams object) :test #'string=)))
+    (if entry
+        (setf (cdr entry) new)
+        (setf (iparams object) (cons "t" new)))))
 
 (defmethod on-spin-changed (object name new old)
-  (setf (spin object) new)
-  (if (javascript-true-p (spin object))
-      (%set-spin (%view object) (list (%spin-x object) (%spin-y object) (%spin-z object)) (%spin-speed object))
-      (%set-spin (%view object) nil nil)))
+  (when (slot-boundp object 'view)
+    (if (javascript-true-p (spin object))
+        (%set-spin (view object) (list (%spin-x object) (%spin-y object) (%spin-z object)) (%spin-speed object))
+        (%set-spin (view object) nil nil))))
 
 (defmethod on-spin-x-changed (object name new old)
-  (setf (%spin-x object) new)
-  (if (javascript-true-p (spin object))
-      (%set-spin (%view object) (list (%spin-x object) (%spin-y object) (%spin-z object)) (%spin-speed object))))
+  (when (slot-boundp object 'view)
+    (if (javascript-true-p (spin object))
+        (%set-spin (view object) (list (%spin-x object) (%spin-y object) (%spin-z object)) (%spin-speed object)))))
 
 (defmethod on-spin-y-changed (object name new old)
-  (setf (%spin-y object) new)
-  (if (javascript-true-p (spin object))
-      (%set-spin (%view object) (list (%spin-x object) (%spin-y object) (%spin-z object)) (%spin-speed object))))
+  (when (slot-boundp object 'view)
+    (if (javascript-true-p (spin object))
+        (%set-spin (view object) (list (%spin-x object) (%spin-y object) (%spin-z object)) (%spin-speed object)))))
 
-(defmethod on-spin-z-changed ((self TrajectoryPlayer) change)
-  (setf (%spin-z self) (aref change "new"))
-  (if (javascript-true-p (spin self))
-      (%set-spin (%view self) (list (%spin-x self) (%spin-y self) (%spin-z self)) (%spin-speed self))))
+(defmethod on-spin-z-changed ((self TrajectoryPlayer) name new old)
+  (when (slot-boundp self 'view)
+    (if (javascript-true-p (spin self))
+        (%set-spin (view self) (list (%spin-x self) (%spin-y self) (%spin-z self)) (%spin-speed self)))))
 
-(defmethod on-spin-speed-changed ((self TrajectoryPlayer) change)
-  (setf (%spin-speed self) (aref change "new"))
+(defmethod on-spin-speed-changed ((self TrajectoryPlayer) name new old)
   (if (javascript-true-p (spin self))
-      (%set-spin (%view self) (list (%spin-x self) (%spin-y self) (%spin-z self)) (%spin-speed self))))
+      (%set-spin (view self) (list (%spin-x self) (%spin-y self) (%spin-z self)) (%spin-speed self))))
 
 (defmethod %display ((self TrajectoryPlayer))
   (let* ((box-factory (list
@@ -298,7 +311,7 @@
   (%display self))
 
 (defmethod %make-hide-tab-with-place-proxy ((self TrajectoryPlayer))
-  (apply #'make-instance 'cljw::Box (%place-proxy (%view self))))
+  (apply #'make-instance 'cljw::Box (%place-proxy (view self))))
 
 (defmethod %make-button-center ((self TrajectoryPlayer))
   (let ((button (make-instance 'cljw::button :description " Center" :icon "fa-bullseye")))
@@ -360,7 +373,7 @@
 
 (defmethod %make-widget-preference ((self TrajectoryPlayer) &optional (width "100%"))
   (flet ((make-func ()
-	   (let ((parameters (%full-stage-parameters (%view self))))
+	   (let ((parameters (%full-stage-parameters (view self))))
 	     (flet ((func (&key (pan-speed (get parameters "panSpeed" 0.8))
 				(rotate-speed (get parameters "rotateSpeed" 2))
 				(zoom-speed (get parameters "zoomSpeed" 1.2))
@@ -374,7 +387,7 @@
 				(light-intensity (get parameters "lightIntensity" 1))
 				(quality (get parameters "quality" "medium"))
 				(sample-level (get parameters "sampleLevel" 1)))
-		      (setf (parameters (%view self)) (list (cons "panSpeed" pan-speed)
+		      (setf (parameters (view self)) (list (cons "panSpeed" pan-speed)
 							    (cons "rotateSpeed" rotate-speed)
 							    (cons "zoomSpeed" zoom-speed)
 							    (cons "clipDist" clip-dist)
@@ -460,14 +473,14 @@
       button))
 
 (defmethod %make-text-picked ((self TrajectoryPlayer))
-  (let ((ta (Textarea :value (funcall dumps json (picked (%view self))) :description "Picked atom")))
+  (let ((ta (Textarea :value (funcall dumps json (picked (view self))) :description "Picked atom")))
     (setf (width (layout ta)) "300px")
     ta))
 
 (defmethod %refresh ((self TrajectoryPlayer) component-slider repr-slideR)
-  (%request-repr-parameters (%view self) :component (value component-slider) :repr-index (value repr-slider))
-  (%update-repr-dict (%view self))
-  (%handle-repr-dict-changed (%view self) :change (list (cons "new" (%repr-dict (%view self))))))
+  (%request-repr-parameters (view self) :component (value component-slider) :repr-index (value repr-slider))
+  (%update-repr-dict (view self))
+  (%handle-repr-dict-changed (view self) :change (list (cons "new" (%repr-dict (view self))))))
 
 
 (defmethod %make-button-repr-control ((self TrajectoryPlayer) component-slider repr-slider repr-selection)
@@ -527,7 +540,7 @@
     (setf (ngl-name repr-selection) "repr-selection"
 	  (width repr-selection) *DEFAULT-TEXT-WIDTH*
 	  (width (widget-repr-name self)) *DEFAULT-TEXT-WIDTH*)
-    (let ((max-n-components (max (% (n-components (%view self)) 1) 0)))
+    (let ((max-n-components (max (% (n-components (view self)) 1) 0)))
       (setf (widget-component-slider self) (make-instance 'cl-jupyter-widgets::int-slider :value 0 :max max-n-components :min 0 :description "component")
 	    (%ngl-name (widget-component-slider self)) "component-slider")
       (let ((cvalue " "))
@@ -652,7 +665,7 @@
   (let ((name " "))
     (if repr-name-text
 	(setf name (value repr-name-text)))
-    (let ((widget (%display-repr (%view self)
+    (let ((widget (%display-repr (view self)
 		 :component (value component-slider)
 		 :repr-index (value repr-slider)
 		 :name name)))
@@ -685,7 +698,7 @@
 				   :value 0
 				   :description "start"))
 	(stop-text (make-instance 'cl-jupyter-widgets::int-text
-				  :value (count (%view self))
+				  :value (count (view self))
 				  :description "stop"))
 	(step-text (make-instance 'cl-jupyter-widgets::int-text
 				  :value 1
@@ -698,7 +711,7 @@
     (let ((button-movie-images (make-instance 'cl-jupyter-widgets::button
 					      :description "Export Images")))
       (flet ((download-image (filename)
-	       (download-image (%view self)
+	       (download-image (view self)
 			       :factor (value slider-factor)
 			       :antialias (value checkbox-antialias)
 			       :trim (value checkbox-trim)
@@ -735,7 +748,7 @@
   (let ((resize-notebook-slider (make-instance 'cl-jupyter-widgets::int-slider :min 300 :max 2000 :description "resize notebook")))
     (flet ((on-resize-notebook(change)
 	     (let ((width (aref change "new")))
-	       (remote-call (%view self) "resizeNotebook" :target "Widget" :args (list width))
+	       (remote-call (view self) "resizeNotebook" :target "Widget" :args (list width))
 	       (values))))
       (observe resize-notebook-slider on-resize-notebook :names "value")
       resize-notebook-slider)))
@@ -758,7 +771,7 @@
 	  (width (layout dropdown-repr-name)) *DEFAULT-TEXT-WIDTH*
 	  (width (layout repr-selection)) *DEFAULT-TEXT-WIDTH*)
     (flet ((on-click-or-submit (button-or-text-area)
-	     (add-representation (%view self)
+	     (add-representation (view self)
 				 :selection (strip (value repr-selection))
 				 :repr-type (value dropdown-repr-name)
 				 :component (value component-slider))

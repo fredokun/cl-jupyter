@@ -155,12 +155,9 @@
   (when (clos:slot-boundp-using-class class object slotd)
     (let ((old (clos:slot-value-using-class class object slotd)))
       (loop for observer in (observers slotd)
+            do (cljw:widget-log "Calling observer ~s~%" observer)
             do (funcall (coerce observer 'function)
                         object (clos:slot-definition-name slotd) new-value old)))))
-
-(defmethod (setf clos:slot-value-using-class) :after
-    (new-value (class traitlet-class) object (slotd effective-traitlet))
-  (cljw:notify-change object (clos:slot-definition-name slotd) new-value))
 
 
 (defmacro with-shared-lock (shared-mutex &body body)

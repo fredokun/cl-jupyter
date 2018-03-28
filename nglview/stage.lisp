@@ -1,5 +1,7 @@
 (in-package :nglv)
 
+(cljw:widget-log "stage.lisp~%")
+
 (defclass stage ()
   ((%view :initarg :view
 	  :accessor view)))
@@ -11,3 +13,4 @@
 
 
   
+(cljw:widget-log "end of stage.lisp~%")
