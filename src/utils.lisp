@@ -10,6 +10,10 @@
             default
             (error "Could not find key ~a in dict ~a" key table)))))
 
+(defun []-contains (table key)
+  (let ((pair (assoc key table :test #'equal)))
+    pair))
+
 
 #|
 

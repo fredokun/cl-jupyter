@@ -2,6 +2,7 @@
   (:nicknames #:fredo-utils)
   (:use #:cl)
   (:export #:[]
+           #:[]-contains
            #:*example-enabled*
            #:*example-equal-predicate*
            #:example
@@ -48,7 +49,8 @@
    #:*default-special-bindings*
    #:*special-variables*
    #:kernel-start
-   #:[]))
+   #:[]
+   #:[]-contains))
 
 (defpackage #:cl-jupyter-user
   (:use #:cl #:fredo-utils #:cl-jupyter #:common-lisp-user)

@@ -28,7 +28,7 @@
    #:on-msg
    #:on-displayed
    )
-  (:import-from :fredokun-utilities #:[]))
+  (:import-from :fredokun-utilities #:[] #:[]-contains))
 
 (defpackage #:traitlets
   (:use #:cl)

@@ -23,7 +23,7 @@
    #:wait-until-finished
    #:show-aggregate
    )
-  )
+  (:import-from :fredokun-utilities #:[] #:[]-contains))
 
 (defpackage #:pythread
   (:use #:cl)

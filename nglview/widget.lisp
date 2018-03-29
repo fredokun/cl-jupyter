@@ -809,8 +809,6 @@
                    :repr-index repr-index
                    :name name)))
 
-(defmacro [] (table key) `(cdr (assoc ,table ,key :test #'equal)))
-
 (defmethod %set-coordinates ((widget nglwidget) index)
   (warn "Finish %set-coordinates")
   (values))
