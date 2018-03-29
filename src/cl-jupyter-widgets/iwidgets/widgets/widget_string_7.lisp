@@ -109,7 +109,8 @@
   (register-callback (submission-callbacks self) callback :remove remove)
   (values))
 
-(defmethod %handle-string-msg ((self text) _ content buffers)
+(defmethod %handle-string-msg ((self text) content buffers)
+  ;; I took out the _ argument in ((self text) _ content buffers)
   (when (string= (cdr (assoc "event" content :test #'string=)) "submit")
     (do-call (submission-callbacks self) self))
   (values))

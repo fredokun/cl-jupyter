@@ -27,8 +27,8 @@
    #:instance
    #:on-msg
    #:on-displayed
-   #:assoc-value
-   ))
+   )
+  (:import-from :fredokun-utilities #:[]))
 
 (defpackage #:traitlets
   (:use #:cl)

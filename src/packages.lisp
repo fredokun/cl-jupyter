@@ -1,7 +1,8 @@
 (defpackage #:fredokun-utilities
   (:nicknames #:fredo-utils)
   (:use #:cl)
-  (:export #:*example-enabled*
+  (:export #:[]
+           #:*example-enabled*
            #:*example-equal-predicate*
            #:example
            #:example-progn
@@ -46,7 +47,8 @@
    #:*parent-msg*
    #:*default-special-bindings*
    #:*special-variables*
-   #:kernel-start))
+   #:kernel-start
+   #:[]))
 
 (defpackage #:cl-jupyter-user
   (:use #:cl #:fredo-utils #:cl-jupyter #:common-lisp-user)

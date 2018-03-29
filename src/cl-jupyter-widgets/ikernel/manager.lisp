@@ -56,8 +56,8 @@
   (widget-log "In manager.lisp comm-open - msg -> ~s~%" msg)
   (let ((content (extract-message-content msg)))
     (widget-log "In manager.lisp content -> ~s~%" content)
-    (let* ((comm-id (assoc-value "comm_id" content))
-	   (target-name (assoc-value "target_name" content))
+    (let* ((comm-id ([] content "comm_id"))
+	   (target-name ([] content "target_name"))
 	   (func (gethash target-name (targets self)))
 	   (comm (progn
 		   (widget-log "[comm-open]   About to make-instance 'comm :comm-id ~a~%" comm-id)
@@ -81,7 +81,7 @@
 (defmethod comm-msg ((self comm-manager) stream ident msg)
   (widget-log "[comm-msg] msg -> ~a~%" msg)
   (let* ((content (extract-message-content msg))
-	 (comm-id (assoc-value "comm_id" content))
+	 (comm-id ([] content "comm_id"))
 	 (comm (get-comm self comm-id)))
     (widget-log "Message for comm_id ~a  -> comm: ~a~%" comm-id comm)
     (widget-log "     *parent-msg* -> ~s~%" cl-jupyter:*parent-msg*)
@@ -92,7 +92,7 @@
 
 (defmethod comm-close ((self comm-manager) stream ident msg)
   (let* ((content (extract-message-content msg))
-	 (comm-id (assoc-value "comm_id" content))
+	 (comm-id ([] content "comm_id"))
 	 (comm (get-comm self comm-id)))
     (unless comm (return-from comm-close nil))
     (remhash comm-id (comms self))

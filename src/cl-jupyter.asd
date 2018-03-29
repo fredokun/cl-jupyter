@@ -57,6 +57,7 @@
                                                                        (:file "widget_selectioncontainer_7")))))))
 ;;; cl-jupyter stuff
                  (:file "utils")
+                 (:file "completion")
                  (:file "myjson")
                  (:file "config")
                  (:file "message")
