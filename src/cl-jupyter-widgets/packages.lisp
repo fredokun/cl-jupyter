@@ -27,7 +27,6 @@
    #:instance
    #:on-msg
    #:on-displayed
-   #:assoc-value
    ;;;begin kevin symbols
    ;;;from widget_bool_7
    #:checkbox
@@ -71,7 +70,8 @@
    #:textarea
    #:text
    #:password
-   ))
+   )
+  (:import-from :fredokun-utilities #:[] #:[]-contains))
 
 (defpackage #:traitlets
   (:use #:cl)

@@ -17,9 +17,12 @@
 ;;;   want (cljw:widget-log ...) compiled into the code
 ;;;   If :use-widget-log is a feature - then you can adjust
 ;;;   the verbosity using the WIDGET_LOG_ON feature
-#+(or)
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
-     (pushnew :use-widget-log *features*))
+  (pushnew :use-widget-log *features*)
+  (setf *widget-log-on* t)
+  ;;
+  )
 
 (eval-when (:compile-toplevel)
   (when (ext:getenv "WIDGET_LOG_ON")
@@ -120,20 +123,7 @@
 (defun extract-message-content (msg)
   (myjson:parse-json-from-string (cl-jupyter:message-content msg)))
 
-(defun assoc-contains (key-string alist)
-  (assoc key-string alist :test #'string=))
-
-(defun assoc-value (key-string alist &optional (default nil default-p))
-  (or (listp alist) (error "alist must be a list"))
-  (let ((pair (assoc key-string alist :test #'string=)))
-    (if pair
-	(cdr pair)
-	(if default-p
-	    default
-	    (error "Could not find key ~a in dict ~a" key-string alist)))))
-
 (defparameter *python-indent* 0)
-
 (defparameter *sort-encoded-json* nil)
 
 (defun print-as-python (object stream &key indent)

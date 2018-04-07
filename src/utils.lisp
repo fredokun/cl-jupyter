@@ -1,6 +1,20 @@
 
 (in-package #:fredokun-utilities)
 
+(declaim (inline []))
+(defun [] (table key &optional (default nil defaultp))
+  (let ((pair (assoc key table :test #'equal)))
+    (if pair
+        (cdr pair)
+        (if defaultp
+            default
+            (error "Could not find key ~a in dict ~a" key table)))))
+
+(defun []-contains (table key)
+  (let ((pair (assoc key table :test #'equal)))
+    pair))
+
+
 #|
 
 # CommonTypes: Utilities #

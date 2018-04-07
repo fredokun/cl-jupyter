@@ -77,7 +77,9 @@
                                       ((equal msg-type "comm_close")
                                        (when cl-jupyter-widgets:*handle-comm-close-hook*
                                          (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg)))
-                                      (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping..." msg-type))))))))))
+                                      ((equal msg-type "complete_request")
+                                       (complete-request shell identities msg))
+                                      (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping... msg: ~s" msg-type msg))))))))))
     (mp:giveup-lock *session-receive-lock*)))
 
 
@@ -86,6 +88,32 @@
 ### Message type: kernel_info_reply ###
 
 |#
+
+
+(defun complete-request (shell identities msg)
+  (let* ((json (parse-json-from-string (message-content msg)))
+         (text ([] json "code"))
+         (cursor-end ([] json "cursor_pos"))
+         (sep-pos (position-if (lambda (c) (or (char<= c #\space)
+                                               (char= c #\()
+                                               (char= c #\))
+                                               (char= c #\#)
+                                               (char= c #\')
+                                               (char= c #\`)))
+                               text
+                               :start 0
+                               :end cursor-end
+                               :from-end t))
+         (cursor-start (if sep-pos (1+ sep-pos) 0))
+         (partial-token (subseq text cursor-start cursor-end))
+         (completions (simple-completions partial-token *package*)))
+    (let* ((data `(("status" . "ok")
+                   ("metadata" . ())
+                   ("cursor_start" . ,cursor-start)
+                   ("cursor_end" . ,cursor-end)
+                   ("matches" . ,(make-array (length (car completions)) :initial-contents (car completions)))))
+           (reply (make-message msg "complete_reply" nil data)))
+      (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell)))))
 
 ;; for protocol version 5  
 (defclass content-kernel-info-reply (message-content)

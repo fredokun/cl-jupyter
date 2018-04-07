@@ -809,8 +809,6 @@
                    :repr-index repr-index
                    :name name)))
 
-(defmacro [] (table key) `(cdr (assoc ,table ,key :test #'equal)))
-
 (defmethod %set-coordinates ((widget nglwidget) index)
   (warn "Finish %set-coordinates")
   (values))
@@ -975,7 +973,7 @@
   (cljw:widget-log  "%ngl-handle-message in process ~s received content: ~s~%" mp:*current-process* content)
   (setf (ngl-msg widget) content)
   (cljw:widget-log "Just set ngl-msg to content~%")
-  (let ((msg-type (cljw:assoc-value "type" content)))
+  (let ((msg-type ([] content "type")))
     (cljw:widget-log "    custom message msg-type -> ~s~%" msg-type)
     (cond
       ((string= msg-type "request_frame")
@@ -1004,15 +1002,15 @@
        (cljw:widget-log "      handling request_loaded~%")
        (unless (loaded widget)
          (setf (loaded widget) nil))
-       (setf (loaded widget) (eq (cljw:assoc-value "data" content) :true))
-       (cljw:widget-log "(loaded widget) -> ~a    (cljw:assoc-value \"data\" content) -> ~s~%" (loaded widget) (cljw:assoc-value "data" content)))
+       (setf (loaded widget) (eq ([] content "data") :true))
+       (cljw:widget-log "(loaded widget) -> ~a    ([] content \"data\") -> ~s~%" (loaded widget) ([] content "data")))
       ((string= msg-type "request_repr_dict")
        (setf (ngl-repr-dict widget) (dict-lookup "data" (ngl-msg widget))))
       ((string= msg-type "stage_parameters")
        (setf (ngl-full-stage-parameters widget) (dict-lookup "data" (ngl-msg widget))))
       ((string= msg-type "async_message")
        (cljw:widget-log "%ngl-handle-msg - received async_message~%")
-       (when (string= (cljw:assoc-value "data" content) "ok")
+       (when (string= ([] content "data") "ok")
          (cljw:widget-log "    setting event~%")
          (pythread:event-set (event widget))))
       (t
