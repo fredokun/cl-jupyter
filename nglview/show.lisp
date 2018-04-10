@@ -32,7 +32,7 @@
 
 (defun show-file (path &rest kwargs &key &allow-other-keys)
   (let ((view (make-nglwidget)))
-    (apply #'add-omponent view kwargs)
+    (apply #'add-component view kwargs)
     view))
 
 (defun show-aggregate (aggregate &rest kwargs &key &allow-other-keys)
