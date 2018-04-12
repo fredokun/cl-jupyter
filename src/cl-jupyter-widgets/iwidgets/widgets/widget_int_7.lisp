@@ -54,6 +54,7 @@
        
 (defclass-widget-register bounded-int-text (%bounded-int)
   ((%continuous-update :accessor continuous-update
+		       :initarg :continuous-update
 		       :type bool
 		       :initform :false
 		       :metadata (:sync t
@@ -99,7 +100,7 @@
             :initform :true
             :metadata (:sync t
                        :json-name "readout"
-                       :help "Dispaly the current value of the slider next to it."))
+                       :help "Display the current value of the slider next to it."))
    (readout_format :initarg :readout_format :accessor readout_format
                    :type unicode
                    :initform (number-format :format "d")

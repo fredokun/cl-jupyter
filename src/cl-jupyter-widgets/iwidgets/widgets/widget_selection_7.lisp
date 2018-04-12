@@ -362,23 +362,22 @@ def _labels_to_values(k, obj):
 
 
 (defun update-index (object name new old)
-  (print "inside update-index")
   (when (slot-boundp object 'index)
     (unless (equal new old)
-      (print "new does not equal old")
       (let ((new-label (aref (options-labels object) new)))
 	(unless (string= (label object) new-label)
-	  (print "label does not equal new-label")
 	  (setf (label object) new-label)))
       (let ((new-value (aref (options-values object) new)))
 	(unless (string= (value object) new-value)
-	  (print "value does not equal new-value")
 	  (setf (value object) new-value)))))
   new)
 
+
+;;;TODO: Finish options updater.
 (defun update-options (object name new old)
   new)
 
 (defun update-value (object name new old)
-  (setf (index object) (position new (options object) :key #'cdr :test #'equal))
-  new)
+  (when (slot-boundp object 'options)
+    (setf (index object) (position new (options object) :key #'cdr :test #'equal)))
+  new) 
