@@ -18,6 +18,7 @@
 ;;;   If :use-widget-log is a feature - then you can adjust
 ;;;   the verbosity using the WIDGET_LOG_ON feature
 
+;;#+(or)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew :use-widget-log *features*)
   (setf *widget-log-on* t)
@@ -31,14 +32,17 @@
       (warn "*widget-log-on* has been requested (using WIDGET_LOG_ON environment variable) - but :use-widget-log is not in *features* - so not much logging will happen.  Turn on the :use-widget-log feature and recompile cl-jupyter-widgets"))))
 
 (eval-when (:execute :load-toplevel)
-  (let ((log-file-name (cond
-			 ((probe-file "/home/app/logs/")
-			  "/home/app/logs/cl-jupyter.log")
-			 (t "/tmp/cl-jupyter.log"))))
-    (setf *widget-log* (cl:open log-file-name
-				:direction :output
-				:if-exists :append
-				:if-does-not-exist :create))
+  (let* ((log-file-name (make-pathname :name (format nil "cl-jupyter-~a" (core:getpid))
+                                       :type "log"))
+         (log-path-name (cond
+                          ((probe-file "/home/app/logs/")
+                           (merge-pathnames log-file-name #P"/home/app/logs/"))
+                          (t (merge-pathnames log-file-name #P"/tmp/")))))
+    (setf *widget-log* (cl:open log-path-name
+                                :direction :output
+                                :if-exists :append
+                                :if-does-not-exist :create))
+    (setf ext:+process-error-output+ *widget-log*)
     (format *widget-log* "Log started up~%")
     (setf *widget-log-lock* (mp:make-lock :name 'widget-log))
     (format *widget-log* "About to start widget-log process~%")

@@ -51,7 +51,12 @@
 	      (and cl-jupyter:*parent-msg*
 		   (myjson::encode-json-to-string (cl-jupyter::message-header cl-jupyter::*parent-msg*))))
   (widget-log "ident/topic -> ~a~%" (topic self))
-  (widget-log "buffers -> ~a~%" buffers)
+  (widget-log "byte8 translated buffers -> ~s~%" (loop for i from 0 below (length buffers)
+                                                       for buffer = (elt buffers i)
+                                                       collect (core:coerce-to-byte8-vector buffer)))
+  (widget-log "byte8 translated buffers lengths -> ~s~%" (loop for i from 0 below (length buffers)
+                                                               for buffer = (elt buffers i)
+                                                               collect (length (core:coerce-to-byte8-vector buffer))))
   (widget-log "++++++++++++++ contents >>>>>>>>>~%")
   (let ((cleaned-json (json-clean (list* (cons "data" data)
 					 (cons "comm_id"  (comm-id self))

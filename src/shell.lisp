@@ -54,7 +54,7 @@
                             (cljw:widget-log "  | identities: ~A~%" identities)
                             (cljw:widget-log "  | signature: ~W~%" sig)
                             (cljw:widget-log "  | message: ~A~%" (encode-json-to-string (message-header msg)))
-                            (cljw:widget-log "  | buffers: ~W~%" (message-buffers msg)))
+                            (cljw:widget-log "  | number of buffers: ~W~%" (length (message-buffers msg))))
                           ;; TODO: check the signature (after that, sig can be forgotten)
                           (let* ((msg-type (header-msg-type (message-header msg))))
                             (let ((*parent-msg* msg)

@@ -189,6 +189,38 @@
         return pdb_string
 |#
 
+(defclass cando-trajectory (trajectory structure)
+  ((trajectory :initarg :trajectory :accessor trajectory
+               :initform (make-array 16 :fill-pointer 0 :adjustable t))
+   (number-of-atoms :initarg :number-of-atoms :accessor number-of-atoms)
+   (matter :initarg :matter :accessor matter)))
+
+(defmethod initialize-instance :after ((self cando-trajectory) &key)
+  (setf (gethash "cando" *BACKENDS*) 'cando-trajectory)
+  (values))
+
+(defmethod ext ((self cando-trajectory))
+  "mol2")
+
+(defmethod get-structure-name ((self cando-trajectory))
+  (chem:get-name (matter self)))
+
+(defun make-cando-trajectory (structure)
+  (make-instance 'cando-trajectory :matter structure
+                 :number-of-atoms (chem:number-of-atoms structure)))
+
+(defmethod append-coordinates ((self cando-trajectory) coordinates)
+  (vector-push-extend coordinates (trajectory self)))
+
+(defmethod get-coordinates ((self cando-trajectory) index)
+  (aref (trajectory self) index))
+
+(defmethod n-frames ((self cando-trajectory))
+  (length (trajectory self)))
+
+(defmethod get-structure-string ((self cando-trajectory))
+  (chem:aggregate-as-mol2-string (matter self) t))
+
 (defclass PyTrajTrajectory (Trajectory Structure)
   ((trajectory :initarg :trajectory :accessor trajectory
 	       :initform nil)

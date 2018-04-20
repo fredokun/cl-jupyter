@@ -54,7 +54,7 @@
 (deftype instance () T)
 (deftype dict () T) ;; alist?
 
-(deftype binary-types () '(simple-array ext:byte8 *))
+(deftype binary-types () '(or clasp-ffi:foreign-data (simple-array ext:byte8 *)))
 
 (defclass instance-dict ()
   ())

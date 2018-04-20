@@ -27,6 +27,19 @@
    #:instance
    #:on-msg
    #:on-displayed
+   #:button
+   #:text
+   #:int-slider
+   #:dropdown
+   #:tab
+   #:checkbox
+   #:float-text
+   #:int-text
+   #:toggle-button
+   #:color-picker
+   #:box
+   #:vbox
+   #:hbox
    )
   (:import-from :fredokun-utilities #:[] #:[]-contains))
 

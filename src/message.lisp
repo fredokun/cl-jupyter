@@ -196,11 +196,12 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
 
 (defmethod wire-serialize ((msg message) &key (identities nil) (key nil))
   (cljw:widget-log "  in wire-serialize~%")
-  (with-slots (header parent-header metadata content) msg
+  (with-slots (header parent-header metadata content buffers) msg
     (cljw:widget-log "header -> ~s~%" header)
     (cljw:widget-log "parent-header -> ~s~%" parent-header)
     (cljw:widget-log "metadata -> ~s~%" metadata)
     (cljw:widget-log "content -> ~s~%" content)
+    (cljw:widget-log "Number of buffers  -> ~d~%" (length buffers))
     (let ((header-json (encode-json-to-string header))
           (parent-header-json (if parent-header
                                   (encode-json-to-string parent-header)
@@ -222,7 +223,8 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
                       header-json
                       parent-header-json
                       metadata-json
-                      content-json))))))
+                      content-json)
+                (coerce buffers 'list))))))
 
 (example-progn
  (defparameter *wire1* (wire-serialize *msg1* :identities '("XXX-YYY-ZZZ-TTT" "AAA-BBB-CCC-DDD"))))
@@ -258,28 +260,29 @@ The wire-deserialization part follows.
 
 
 (defun wire-deserialize (parts)
+  (cljw:widget-log "  in wire-deserialize (length parts) -> ~d~%" (length parts))
   (let ((delim-index (position +WIRE-IDS-MSG-DELIMITER+ parts :test  #'equal)))
     (when (not delim-index)
       (error "no <IDS|MSG> delimiter found in message parts"))
     (let ((identities (subseq parts 0 delim-index))
           (signature (nth (1+ delim-index) parts)))
-      (let ((msg (destructuring-bind (header parent-header metadata content)
-                     (subseq parts (+ 2 delim-index) (+ 6 delim-index))
+      (let ((msg (destructuring-bind (header parent-header metadata content &rest buffers)
+                     (subseq parts (+ 2 delim-index) #+(or)(+ 6 delim-index)) ; the buffers are destructured
                    (make-instance 'message
                                   :header (wire-deserialize-header header)
                                   :parent-header (wire-deserialize-header parent-header)
                                   :metadata metadata
-                                  :content content))))
+                                  :content content
+                                  :buffers (coerce buffers 'vector)))))
         (values identities
                 signature
-                msg
-                (subseq parts (+ 6 delim-index)))))))
+                msg)))))
 
 
 (example-progn
- (defparameter *dewire-1* (multiple-value-bind (ids sig msg raw)
+ (defparameter *dewire-1* (multiple-value-bind (ids sig msg)
                               (wire-deserialize *wire1*)
-                            (list ids sig msg raw))))
+                            (list ids sig msg))))
 
 (example
  (header-username (message-header (third *dewire-1*)))
@@ -302,9 +305,17 @@ The wire-deserialization part follows.
            (mp:get-lock *message-send-lock*)
            (dolist (part wire-parts)
 ;;; FIXME: Try converting all base strings to character strings - does it make any difference?
-             (let ((part-character-string (make-array (length part) :element-type 'character :initial-contents part)))
+             #+(or)(let ((part-character-string (make-array (length part) :element-type 'character :initial-contents part)))
                (cl-jupyter-widgets:widget-log "pzmq:send socket part-character-string=|~s|~%" part)
-               (pzmq:send socket part-character-string :sndmore t)))
+                     (pzmq:send socket part-character-string :sndmore t))
+             (progn
+               (cl-jupyter-widgets:widget-log "pzmq:About to send socket part: ~s~%" part)
+               (cl-jupyter-widgets:widget-log "pzmq:      --->    as bytes: ~s~%" (if (typep part 'simple-base-string)
+                                                                                      (core:coerce-to-byte8-vector part)
+                                                                                      :NOT-A-SIMPLE-BASE-STRING))
+               (if (typep part 'clasp-ffi:foreign-data)
+                   (pzmq:send socket part :len (clasp-ffi:foreign-data-size part) :sndmore t)
+                   (pzmq:send socket part :sndmore t))))
            (prog1
                (pzmq:send socket nil)
              (cl-jupyter-widgets:widget-log "Leaving message-send~%")))

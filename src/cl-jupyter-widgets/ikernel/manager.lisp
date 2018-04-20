@@ -51,7 +51,7 @@
 	  (warn "No such comm: ~a" comm-id)
 	  nil))))
 
-(defmethod comm-open ((self comm-manager) stream ident msg)
+(defmethod comm-open ((self comm-manager) stream identities msg)
   "Handle comm_open messages"
   (widget-log "In manager.lisp comm-open - msg -> ~s~%" msg)
   (let ((content (extract-message-content msg)))
@@ -78,7 +78,7 @@
 
 (defvar *send-updates* t)
 
-(defmethod comm-msg ((self comm-manager) stream ident msg)
+(defmethod comm-msg ((self comm-manager) stream identities msg)
   (widget-log "[comm-msg] msg -> ~a~%" msg)
   (let* ((content (extract-message-content msg))
 	 (comm-id ([] content "comm_id"))
@@ -90,7 +90,7 @@
       (handle-msg comm msg))))
 
 
-(defmethod comm-close ((self comm-manager) stream ident msg)
+(defmethod comm-close ((self comm-manager) stream identities msg)
   (let* ((content (extract-message-content msg))
 	 (comm-id ([] content "comm_id"))
 	 (comm (get-comm self comm-id)))

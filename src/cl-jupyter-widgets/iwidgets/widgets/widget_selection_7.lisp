@@ -157,10 +157,12 @@
   (:metaclass traitlets:traitlet-class))
 
 (defclass %selection-nonempty (%selection)
-  ())
+  ()
+  (:metaclass traitlets:traitlet-class))
 
 (defclass %multiple-selection-nonempty (multiple-selection)
-  ())
+  ()
+  (:metaclass traitlets:traitlet-class))
 
 ;;;FIXME: Do we need those? They seem meaningless.
 

@@ -8,6 +8,8 @@
     :serial t
     :components (
                  (:file "packages")
+                 (:file "config")
+                 (:file "ngl-widgets")
                  (:file "queue")
                  (:file "utils")
                  (:file "shape")
@@ -21,5 +23,4 @@
                  (:file "player")
                  (:file "parameters")
                  (:file "default")
-                 (:file "config")
                  ))

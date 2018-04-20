@@ -102,7 +102,7 @@
     (widget-log "           (message-header parent) -> ~s~%" (cl-jupyter:message-header parent))
     (widget-log "                  (header-msg-type (message-header parent)) -> ~s~%" (cl-jupyter::header-msg-type (cl-jupyter::message-header parent)))
     (widget-log "            ident -> ~s~%" ident)
-    (widget-log "          buffers -> ~s~%" buffers)
+    (widget-log " (length buffers) -> ~s~%" (length buffers))
     (widget-log "            track -> ~s~%" track)
     (widget-log "           header -> ~s~%" header)
     (widget-log "         metadata -> ~s~%" metadata))

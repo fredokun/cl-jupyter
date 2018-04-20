@@ -6,11 +6,13 @@
 
 (defclass remote-call-callback ()
   ((%callback :initarg :callback :accessor callback)
+   (%description :initarg :description :initform nil :accessor description)
    (%ngl-msg :initarg :ngl-msg :accessor ngl-msg)
    (%widget :initarg :widget :accessor widget)
    (%method-name :initarg :method-name :accessor method-name)
    (%special-variables :initarg :special-variables :accessor special-variables)
    (%special-values :initarg :special-values :accessor special-values)))
+
 
 
 (defun make-remote-call-callback (&rest args)
@@ -20,7 +22,10 @@
        :special-values (mapcar #'symbol-value cl-jupyter:*special-variables*)
        args))
 
-                 
+(defmethod print-object ((object remote-call-callback) stream)
+  (print-unreadable-object (object stream)
+    (format stream "~a ~a ~a" (class-name (class-of object)) (method-name object) (description object))))
+
 (defun fire-callback (callback &optional passed-widget)
   (when passed-widget
     (unless (eq passed-widget (widget callback))
@@ -54,6 +59,7 @@
       (cljw:widget-log "remote-call-thread-run done handling callback: ~s~%" callback))))
 
 (defun remote-call-add (message-or-callback)
+  (cljw:widget-log "remote-call-add ~s~%" message-or-callback)
   (clext.queue:enqueue *remote-call-thread-queue* message-or-callback))
 
 (cljw:widget-log "defclass event  pythread.lisp~%")
