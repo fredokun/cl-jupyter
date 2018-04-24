@@ -179,7 +179,7 @@
                      :accessor representations)
    ;; internal variables
    (%gui :initarg :%gui :accessor %gui :initform nil)
-   (%init-gui :initarg :gui :accessor gui :initform nil) ;; WHY? does nglview does this
+;;   (%init-gui :initarg :gui :accessor gui :initform nil) ;; WHY? does nglview does this
    (%theme :initarg :theme :accessor theme :initform "default")
    (%widget-image :initarg :widget-image :accessor widget-image
                   :initform (make-instance 'cl-jupyter-widgets:image :width 900))

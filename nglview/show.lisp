@@ -35,6 +35,9 @@
     (apply #'add-component view kwargs)
     view))
 
+(defun show-cando-trajectory (trajectory &rest kwargs &key &allow-other-keys)
+  (apply #'make-nglwidget :structure trajectory kwargs))
+
 (defun show-aggregate (aggregate &rest kwargs &key &allow-other-keys)
   (let ((structure (make-instance 'cando-structure :matter aggregate)))
     (apply #'make-nglwidget :structure structure kwargs)))
