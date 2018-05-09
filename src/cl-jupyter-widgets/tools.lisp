@@ -40,16 +40,16 @@
 				:if-exists :append
 				:if-does-not-exist :create))
     (format *widget-log* "Log started up~%")
-    (setf *widget-log-lock* (mp:make-lock :name 'widget-log))
+    (setf *widget-log-lock* (bordeaux:make-lock 'widget-log))
     (format *widget-log* "About to start widget-log process~%")
     (defun always-widget-log (fmt &rest args)
       (let ((msg (apply #'format nil fmt args)))
         (unwind-protect
              (progn
-               (mp:lock *widget-log-lock* t)
+               (bordeaux:acquire-lock *widget-log-lock* t)
                (princ msg *widget-log*)
                (finish-output *widget-log*))
-          (mp:unlock *widget-log-lock*))))
+          (bordeaux:release-lock *widget-log-lock*))))
     (format *widget-log* "===================== new run =======================~%")))
 
 #+use-widget-log
