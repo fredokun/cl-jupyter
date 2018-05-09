@@ -322,6 +322,8 @@ def _labels_to_values(k, obj):
 	    val
 	    (error "New value for ~a is invalid: ~a" object val)))
 	val))
+
+
 #|
 (defun validate-index (object val)
   (if (slot-boundp object 'value)
