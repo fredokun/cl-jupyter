@@ -59,7 +59,7 @@
 (cljw:widget-log "defclass event  pythread.lisp~%")
 
 (defclass event ()
-  ((%shared-mutex :initform (mp:make-shared-mutex 'event)
+  ((%shared-mutex :initform (bordeaux-threads:make-lock 'event)
 		  :accessor shared-mutex)
    (%event-value  :initform nil
 		  :accessor event-value)))
@@ -69,17 +69,17 @@
 (defmethod is-set ((event event))
   (unwind-protect
        (progn
-	 (mp:shared-lock (shared-mutex event))
+	 (bordeaux-threads:acquire-lock (shared-mutex event))
 	 (event-value event))
-    (mp:shared-unlock (shared-mutex event))))
+    (bordeaux-threads:release-lock (shared-mutex event))))
 
 
 (defmethod event-set ((event event))
   (unwind-protect
        (progn
-	 (mp:write-lock (shared-mutex event))
+	 (bordeaux-threads:acquire-lock (shared-mutex event))
 	 (setf (event-value event) t))
-    (mp:write-unlock (shared-mutex event))))
+    (bordeaux-threads:release-lock (shared-mutex event))))
 
 
 (cljw:widget-log "defmethod clear  pythread.lisp~%")
@@ -87,19 +87,19 @@
 (defmethod clear ((event event))
   (unwind-protect
        (progn
-	 (mp:write-lock (shared-mutex event))
+	 (bordeaux-threads:acquire-lock (shared-mutex event))
 	 (setf (event-value event) nil))
-    (mp:write-unlock (shared-mutex event))))
+    (bordeaux-threads:release-lock (shared-mutex event))))
 
 (cljw:widget-log "done  pythread.lisp~%")
 
 
 (defparameter *remote-call-thread-queue* (clext.queue:make-queue 'remote-call-thread-queue))
 
-(defparameter *remote-call-thread* (mp:process-run-function
-                                    'remote-call-thread
+(defparameter *remote-call-thread* (bordeaux-threads:make-thread 
                                     (lambda () (remote-call-thread-run
-                                                (list "loadFile" "replaceStructure")))))
+                                                (list "loadFile" "replaceStructure")))
+                                    :name 'remote-call-thread))
 
 
 

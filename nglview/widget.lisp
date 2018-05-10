@@ -52,7 +52,7 @@
             :accessor loaded
             :observers (on-loaded)
             :type boolean
-            :initform nil)
+s            :initform nil)
    (%picked :initarg :picked
             :accessor picked
             :observers (%on-picked)
@@ -590,9 +590,9 @@
                    (when (string= (pythread:method-name callback) "loadFile")
                      (cljw:widget-log "    Waiting until finished~%")
                      (wait-until-finished widget))))))
-    (mp:process-run-function 'fire-callbacks-thread
-                             (lambda () (_call))
-                             cl-jupyter:*default-special-bindings*))
+    (bordeaux-threads:make-thread (lambda () (_call))
+                             cl-jupyter:*default-special-bindings*
+                             :name 'fire-callbacks-thread))
   (cljw:widget-log "Done %fire-callbacks~%"))
 
 (defmethod %refresh-render ((widget nglwidget))
@@ -1545,7 +1545,7 @@ do
   (call-next-method)
   ;; (mp:process-kill (remote-call-thread widget))
   (when (handle-msg-thread widget)
-    (mp:process-kill (handle-msg-thread widget)))
+    (bordeaux-threads:destroy-thread (handle-msg-thread widget)))
   ;;; FIXME: Kill handle-msg-thread 
   )
 
