@@ -35,12 +35,12 @@
           (pzmq:bind socket endpoint)
           shell)))))
 
-(defparameter *session-receive-lock* (bordeaux:make-lock 'session-receive-lock))
+(defparameter *session-receive-lock* (bordeaux-threads:make-lock 'session-receive-lock))
 
 (defun shell-loop (shell)
   (unwind-protect
        (progn
-         (bordeaux:acquire-lock *session-receive-lock*)
+         (bordeaux-threads:acquire-lock *session-receive-lock*)
          (let ((active t))
            (format t "[Shell] loop started~%")
            (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
@@ -80,7 +80,7 @@
                                       ((equal msg-type "complete_request")
                                        (complete-request shell identities msg))
                                       (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping... msg: ~s" msg-type msg))))))))))
-    (bordeaux:release-lock *session-receive-lock*)))
+    (bordeaux-threads:release-lock *session-receive-lock*)))
 
 
 #|

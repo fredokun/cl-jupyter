@@ -52,7 +52,7 @@
             :accessor loaded
             :observers (on-loaded)
             :type boolean
-s            :initform nil)
+            :initform nil)
    (%picked :initarg :picked
             :accessor picked
             :observers (%on-picked)

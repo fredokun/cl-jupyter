@@ -291,7 +291,7 @@ The wire-deserialization part follows.
 
 |#
 
-(defparameter *message-send-lock* (bordeaux:make-lock 'message-send-lock)
+(defparameter *message-send-lock* (bordeaux-threads:make-lock 'message-send-lock))
 
 (defun message-send (socket msg &key (identities nil) (key nil))
   (let ((wire-parts (wire-serialize msg :identities identities :key key)))
@@ -299,7 +299,7 @@ The wire-deserialization part follows.
     (cl-jupyter-widgets:widget-log "Entering message-send~%")
     (unwind-protect
          (progn
-           (bordeaux:acquire-lock *message-send-lock*)
+           (bordeaux-threads:acquire-lock *message-send-lock*)
            (dolist (part wire-parts)
 ;;; FIXME: Try converting all base strings to character strings - does it make any difference?
              (let ((part-character-string (make-array (length part) :element-type 'character :initial-contents part)))
@@ -308,7 +308,7 @@ The wire-deserialization part follows.
            (prog1
                (pzmq:send socket nil)
              (cl-jupyter-widgets:widget-log "Leaving message-send~%")))
-      (bordeaux:release-lock *message-send-lock*))))
+      (bordeaux-threads:release-lock *message-send-lock*))))
 
 (defun recv-string (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
   "Receive a message part from a socket as a string."

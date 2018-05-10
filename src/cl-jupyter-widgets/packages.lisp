@@ -28,6 +28,9 @@
    #:on-msg
    #:on-displayed
    ;;;begin kevin symbols
+   ;;;For all widgets
+   #:value
+   #:description
    ;;;from widget_bool_7
    #:checkbox
    #:toggle-button
