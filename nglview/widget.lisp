@@ -273,16 +273,16 @@
       ;;; Handle messages - in Python they start a daemon - WHY????
       (cljw:on-msg widget '%ngl-handle-msg)
       #+(or)(progn
-              (cljw:widget-log "Starting handle-msg-thread from process ~s~%" mp:*current-process*)
+              (cljw:widget-log "Starting handle-msg-thread from process ~s~%" (bordeaux-threads:current-thread))
               (setf (handle-msg-thread widget)
                     (mp:process-run-function
                      'handle-msg-thread
                      (lambda ()
                        (cljw:on-msg widget '%ngl-handle-msg)
-                       (cljw:widget-log "Calling cljw:on-msg widget with #'%ngl-handle-msg in process: ~s~%" mp:*current-process*)
+                       (cljw:widget-log "Calling cljw:on-msg widget with #'%ngl-handle-msg in process: ~s~%" (bordeaux-threads:current-thread))
                        (loop
                          ;; yield while respecting callbacks to ngl-handle-msg
-                         (mp:process-yield)
+                         (bordeaux-threads:thread-yield)
                          (sleep 1) ;; I don't want to sleep here - do I?   Will it slow down callbacks to %ngl-handle-msg
                          (format t "handle-msg-thread in process-yield loop ~s~%" (get-internal-real-time ) ))
                        (cljw:widget-log "Leaving handle-msg-thread - but this shouldn't happen - this thread should be killed!!!!!~%"))
@@ -580,12 +580,12 @@
   (values))
 
 (defmethod %fire-callbacks ((widget nglwidget) callbacks)
-  (cljw:widget-log "%fire-callbacks entered in process ~s~%" mp:*current-process*)
+  (cljw:widget-log "%fire-callbacks entered in process ~s~%" (bordeaux-threads:current-thread))
   (flet ((_call ()
-           (cljw:widget-log "%fire-callbacks _call entered in process ~s~%" mp:*current-process*)
+           (cljw:widget-log "%fire-callbacks _call entered in process ~s~%" (bordeaux-threads:current-thread))
            (loop for callback in callbacks
               do (progn
-                   (cljw:widget-log "      %fire-callback -> ~s in process ~s~%" (pythread:method-name callback) mp:*current-process*)
+                   (cljw:widget-log "      %fire-callback -> ~s in process ~s~%" (pythread:method-name callback) (bordeaux-threads:current-thread))
                    (pythread:fire-callback callback widget)
                    (when (string= (pythread:method-name callback) "loadFile")
                      (cljw:widget-log "    Waiting until finished~%")
@@ -970,7 +970,7 @@
 
 (defmethod %ngl-handle-msg ((widget nglwidget) content buffers)
   (check-type buffers array)
-  (cljw:widget-log  "%ngl-handle-message in process ~s received content: ~s~%" mp:*current-process* content)
+  (cljw:widget-log  "%ngl-handle-message in process ~s received content: ~s~%" (bordeaux-threads:current-thread) content)
   (setf (ngl-msg widget) content)
   (cljw:widget-log "Just set ngl-msg to content~%")
   (let ((msg-type ([] content "type")))
@@ -1543,7 +1543,7 @@ do
     
 (defmethod cl-jupyter-widgets:widget-close ((widget nglwidget))
   (call-next-method)
-  ;; (mp:process-kill (remote-call-thread widget))
+  ;; (bordeaux-threads:destroy-thread (remote-call-thread widget))
   (when (handle-msg-thread widget)
     (bordeaux-threads:destroy-thread (handle-msg-thread widget)))
   ;;; FIXME: Kill handle-msg-thread 
