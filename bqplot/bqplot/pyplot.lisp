@@ -58,10 +58,59 @@
 	(progn
 	  (setf (cdr assoc "figure" %context :test #'string=) fig)
 	  (when key
-	    (setf (nth key (cdr (assoc "figure_registry" %context :test #'string=))) fig))
+	    (setf (cdr (assoc key (cdr (assoc "figure_registry" %context :test #'string=)))) fig))
 	  (loop for arg in kwargs));;;Python wants to add slots to the figure class...
       ;;;setattr(%context['figure'], arg, kwargs[arg])
 	;;Else clause of the if fig
 	(progn
-	  
-      
+	  (if (not key)
+              (setf (cdr (assoc "figure" %context :test #'string=)) (make-instance 'figure kwargs))
+              (progn
+                (unless (member key (assoc "figure_registry" %context :test #'string=))
+                  (unless (getf kwargs :title)
+                    (push (concatenate 'string "Figure" " " key) kwargs)
+                    (push :title kwargs))
+                  (setf (cdr (assoc key (cdr (assoc "figure_registry" %context :test #'string=)))) fig)
+                (setf (cdr (assoc "figure" %context :test #'string=)) (cdr (assoc key (cdr (assoc "figure_registry" %context :test #'string=)))))
+                (warn "How to Add a slot for each argument in kwargs"))))))
+    (scales key :scales scales-arg)
+        (loop for arg in kwargs)
+    #|
+    if(getattr(%context['figure'], 'axist_registry', None) is None):
+         setattr(%context['figure'], 'axis_registry', {})
+    |#
+    ;;;Return the figure in context.
+    (cdr (assoc "figure" %context :test #'string=))))
+        
+(defun close (key)
+  (let ((figure-registry (cdr (assoc "figure_registry" %context)))
+        (fig nil))
+    (unless (member key figure-registry)
+      (return-from close))
+    (when (eq (cdr (assoc "figure" %context :test #'string=)) (cdr (assoc key figure-registry)))
+      (figure))
+    (setf fig (cdr (assoc key figure-registry)))
+    ;;;if hasattr(fig, 'pyplot')
+         ;;;fig.pyplot.close()
+    ;;;del figure_registry[key]
+    ;;;del _context['scale_registry'][key]
+    (values)))
+
+(defun %process-data (&rest kwarg-names &key &allow-other-keys)
+  (warn "TODO: Make %process data"))
+
+(defun scales (&key (key nil) (scales nil))
+  (warn "TODO: Make scales"))
+
+(defun xlim (low high)
+  (set-lim low high "x"))
+
+(defun ylim (low high)
+  (set-lim low high "y"))
+
+(defun set-lim (low high name)
+  (let ((scale (cdr (assoc (%get-attribute-dimension name) (cdr (assoc "scales" %context :test #'string=))))))
+    (setf (min scale) low) (max scale) high)
+  scale)
+
+;;;TODO: Pickup where we left off at axes
