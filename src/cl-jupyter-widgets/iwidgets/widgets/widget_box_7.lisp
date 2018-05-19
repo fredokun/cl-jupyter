@@ -20,39 +20,9 @@
                          :json-name "box_style"
                          :help "Use a predefined styling for the box. Options include: \"success\", \"info\", \"warning\", \"danger\", and \"\".")))
   (:default-initargs
-    ;;:model-module (unicode "jupyter-js-widgets")
-    ;; :view-module (unicode "jupyter-js-widgets")
    :model-name (unicode "BoxModel")
    :view-name (unicode "BoxView"))
   (:metaclass traitlets:traitlet-class))
-#|
-(defclass proxy (domwidget)
- ((child :initarg :child :accessor child
-          :initform (make-instance 'domwidget)
-          :metadata (:sync t
-                           :json-name "child"
-                           :help "Child widget of the Proxy"
-                           :to-json json-to-widget
-                           :from-json widget-to-json
-                           )))
-  (:default-initargs
-   :model-module (unicode "jupyter-js-widgets")
-    :view-module (unicode "jupyter-js-widgets")
-    :model-name (unicode "ProxyModel")
-    :view-name (unicode "ProxyView"))
-  (:metaclass traitlets:traitlet-class))
-
-(defclass place-proxy (proxy)
-  ((selector :initarg :selector :accessor selector
-             :type unicode
-             :initform (unicode "")
-             :metadata (:sync t
-                              :json-name "selector")))
-  (:default-initargs
-   :view-name (unicode "PlaceProxyView")
-    :model-name (unicode "PlaceProxyModel"))
-  (:metaclass traitlets:traitlet-class))
-|#
 
 (defclass-widget-register vbox (Box)
   ()

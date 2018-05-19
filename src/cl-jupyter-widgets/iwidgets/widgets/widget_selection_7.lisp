@@ -106,11 +106,6 @@
 	  :metadata (:sync t
 			   :json-name "icons"
 			   :help "Font-awesome icon. Styles we know about include: check, bullseye, camera, refresh, eye-slash, trash, eraser. Syntax: :icons (vector \"refresh\" \"check\" \"camera\"). This would give you three icons if you have three buttons."))
-  #| (style :initarg :style :accessor style
-	  :initform (make-instance 'instance-dict :instance (make-instance 'toggle-buttons-style))
-	  :metadata (:sync t
-			   :to-json json-to-widget
-			   :from-json widget-to-json))|#
    (button_style :initarg :button_style :accessor button_style
 		 :type unicode
 		 :initform (unicode)
@@ -156,13 +151,6 @@
    :model-name (unicode "SelectMultipleModel"))
   (:metaclass traitlets:traitlet-class))
 
-(defclass %selection-nonempty (%selection)
-  ())
-
-(defclass %multiple-selection-nonempty (multiple-selection)
-  ())
-
-;;;FIXME: Do we need those? They seem meaningless.
 
 (defclass-widget-register selection-slider (%selection)
   ((orientation :initarg :orientation :accessor orientation
@@ -190,15 +178,15 @@
 
 (defclass-widget-register selection-range-slider (%multiple-selection-nonempty)
   ((value :initarg :value :accessor value
-	  :type vector                  ;?
+	  :type vector                 
 	  :initform nil
 	  :documentation "Min and max selected values")
    (label :initarg :label :accessor label
-	  :type vector                  ;also ?
+	  :type vector                  
 	  :initform nil
 	  :documentation "Min and max selected labels")
    (index :initarg :index :accessor index
-	  :type vector                  ;?
+	  :type vector                 
 	  :initform nil
 	  :validator validate-range-index
 	  :metadata (:sync t
@@ -228,75 +216,7 @@
     :model-name (unicode "SelectionRangeSliderModel"))
     (:metaclass traitlets:traitlet-class))
 
-;FIXME: Get some validators in this jawn!
 
-#|
-def _value_to_label(value, obj):
-    """Convert a value to a label, given a _Selection object.
-
-    Raises a KeyError if the value is not found."""
-    # We can't rely on _options_labels and _options_values since we
-    # might be called before the options are validated and those are filled.
-    # TODO: make a separate validation function so this doesn't have
-    # to redo the work of parsing the options object.
-    options = obj._make_options(obj.options)
-    if len(obj.options) == 0 and value is None:
-        return ''
-    else:
-        try:
-            # return the first label whose value is equal to the desired value
-            return next(l for (l, v) in options if obj.equals(v, value))
-        except StopIteration:
-            raise KeyError(value)
-
-def _label_to_value(label, obj):
-    """Convert a label to a value, given a _Selection object."""
-    if len(obj._options_dict) == 0 and label == '':
-        return None
-    else:
-        return obj._options_dict[label]
-
-|#
-#|
-(defun %label-to-value (k object)
-      (gethash 'k (slot-value object '_options_dict)))
-
-
-#|
-def _values_to_labels(values, obj):
-    "Convert values to labels from a _MultipleSelection object"
-    return tuple(_value_to_label(v, obj) for v in values)
-
-def _labels_to_values(k, obj):
-    "Convert labels to values from a _MultipleSelection object"
-    return tuple(_label_to_value(l, obj) for l in k)
-|#
-
- (defun %labels-to-values (k obj)
-   (loop for o across k collect (%label-to-value o obj)))
-
-(defun %value-to-label (value obj)
-	(car (rassoc value (options obj) :test #'equal)))
-
-;;; This implements
-;;; https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget_selection.py#L106
-(defun %values-to-labels (values obj)
-  (map 'vector (lambda (v) (%value-to-label v obj)) values))
-
-(defmethod initialize-instance :after ((%selection %selection) &key)
-  (with-slots (value _options_labels _options_values _options_dict options) %selection
-    (loop for (k . v) in options
-	 do (setf (gethash k _options_dict) v))
-    (setf _options_labels (map 'vector #'car options))
-    (setf _options_values (map 'vector #'cdr options))
-    (if (not value)
-	(setf value (aref _options_values 0))))) 
-(defmethod initialize-instance :after ((%selection select-multiple) &key)
-  (with-slots (value _options_values) %selection
-    (if (zerop (length value))
-	(vector-push-extend (aref _options_values 0) value))))
-
-|#
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
 

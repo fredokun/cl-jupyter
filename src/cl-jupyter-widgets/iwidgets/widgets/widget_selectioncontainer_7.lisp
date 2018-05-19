@@ -24,9 +24,7 @@
     (if a
 	(setf (cdr a) title)
 	(push (cons index title) (titles self)))))
-;;;self.send_state('_titles')?????
-;;;https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget_selectioncontainer.py#L23
-;;;I am trying to copy this functionality. I don't know what self.send_state('_titles') is doing.Does the unicode function work properly with numbers?? Find out when we test it!
+
 
 (defun get-title (self index)
   (setf index (unicode index))

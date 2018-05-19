@@ -15,9 +15,7 @@
 				  :json-name "placeholder"
 				  :help "Placeholder text to display when nothing has been typed")))
    (:default-initargs
-      ; :model-module (unicode "jupyter-js-widgets")
      :model-name (unicode "StringModel")
-     ;:view-module (unicode "jupyter-js-widgets")
    )
    (:metaclass traitlets:traitlet-class))
 
@@ -80,8 +78,6 @@
   (:metaclass traitlets:traitlet-class))
 
 
-;;are these methods for text class needed?
-;;How would we go about translating these?
 ;;https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_string.py#L81
 
 (defclass-widget-register text (%string)

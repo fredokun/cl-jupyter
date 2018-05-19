@@ -146,10 +146,6 @@
 	       :metadata (:sync t
 				:json-name "bar_style"
 				:help "Use a predefined styling for the progress bar. Options: \"success\", \"info\", \"warning\", and \"danger\". Default: \"\"."))
-      #|(style :accessor style :initform (make-instance 'slider-style)
-	  :metadata (:sync t
-			   :json-name "style"
-   ,@*widget-serialization*))|#
    )
   (:default-initargs
    :view-name (unicode "ProgressView")
