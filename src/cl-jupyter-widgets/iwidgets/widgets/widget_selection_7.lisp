@@ -7,12 +7,13 @@
 (defclass %selection (description-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	  :initform nil
-	  :validator validate-selection
+	  :validator validate-value
 	  :observers (update-value))
    (label :initarg :label :accessor label
 	  :type unicode
 	  :initform (unicode "")
-	  :validator validate-label)
+	  :validator validate-label
+          :observers (update-label)))
    (index :initarg :index :accessor index
 	  :type integer
 	  :initform 0
@@ -24,6 +25,7 @@
    (options :initarg :options :accessor options
             :type list
             :initform ()
+            :validator validate-options
             :observers (update-options)
             :documentation "Iterable of values, (label, value) pairs, or a mapping of {label: value} pairs that the user can select. The labels are the strings that will be displayed in the UI, representing the actual Python choices, and should be unique.")
    (disabled :initarg :disabled :accessor disabled
@@ -32,10 +34,10 @@
              :metadata (:sync t
                         :json-name "disabled"
                         :help "Enable or disable user changes."))
-   (options-full :initarg :options-full :accessor options-full
+   (options-full  :accessor options-full
                  :initform nil)
    ;; This being read-only means that it cannot be changed by the user
-   (options-labels :initarg :options-labels :accessor options-labels
+   (options-labels  :accessor options-labels
                    :initform (make-array 0 :adjustable t :fill-pointer 0)
                    :type vector
                    :metadata (:sync t
@@ -227,24 +229,28 @@
        do
 	  (vector-push-extend k options-labels) 
 	 (vector-push-extend v options-values))
+    ;;;If no initial value is supplied, choose the first option by default
     (when (zerop (length value))
       (setf value (aref options-values 0)))
     (setf index (position value options :key #'cdr :test #'equal))))
 
 
-
-;;;FIXME: Make validators -_- ....and propagators?
-
-(defun validate-selection (object val)
-  (if (slot-boundp object 'options) 
-      (let ((valid (member val (options object) :test #'string= :key #'car)))
-	(if valid
-	    val
-	    (error "New value for ~a is invalid: ~a" object val)))
-	val))
+;;;TODO: Finish validate-options
+;;;@validate('options')
+(defun validate-options (object val)
+  (if (slot-boundp object 'options)
+      val
+      val))
 
 
-#|
+
+;;;TODO: Finish options updater.
+;;;@observe('options')
+(defun update-options (object name new old)
+  new)
+
+
+;;;@validate('index')
 (defun validate-index (object val)
   (if (slot-boundp object 'value)
       (let ((valid (length (options object))))
@@ -252,15 +258,52 @@
 	    val
 	    (error "New value for ~a is invalid: ~a" object val))
 	val)))
-|#
-(defun validate-label (object val)
-  (if (slot-boundp object 'label)
-      (let ((valid (assoc val (label object) :test #'string=)))
+
+;;;@observe('index')
+(defun update-index (object name new old)
+  (when (slot-boundp object 'index)
+    (unless (equal new old)
+      (let ((new-label (aref (options-labels object) new)))
+	(unless (string= (label object) new-label)
+	  (setf (label object) new-label)))
+      (let ((new-value (aref (options-values object) new)))
+	(unless (string= (value object) new-value)
+	  (setf (value object) new-value)))))
+  new)
+
+;;;@validate('value')
+(defun validate-value (object val)
+  (if (slot-boundp object 'options) 
+      (let ((valid (member val (options object) :test #'string= :key #'car)))
 	(if valid
 	    val
 	    (error "New value for ~a is invalid: ~a" object val)))
 	val))
 
+;;;@observe('value')
+(defun update-value (object name new old)
+  (when (slot-boundp object 'options)
+    (setf (index object) (position new (options object) :key #'cdr :test #'equal)))
+  new) 
+
+;;;@validate('label')
+(defun validate-label (object val)
+  (if (slot-boundp object 'label)
+      (let ((valid (find val (options-labels object) :test #'string=)))
+	(if valid
+	    val
+	    (error "New value for ~a is invalid: ~a" object val)))
+	val))
+
+;;;@observe('label')
+(defun update-label (object name new old)
+  (let ((index (position new (options-labels object) :test #'string=)))
+    (unless (= (index object) index)
+      (setf (index object) index))
+  new)
+
+  
+;;;validate('index') for ranged selection widgets
 (defun validate-range-index (object val)
   (if (slot-boundp object 'value)
       (let ((valid (length (value object))))
@@ -273,6 +316,7 @@
 	))
       val))
 
+;;;@validate('index') for multiple-selection widgets
 (defun validate-multiple-indexes (object val)
   (if (slot-boundp object 'options)
       (let ((valid (length (options object))))
@@ -283,23 +327,5 @@
       val))
 
 
-(defun update-index (object name new old)
-  (when (slot-boundp object 'index)
-    (unless (equal new old)
-      (let ((new-label (aref (options-labels object) new)))
-	(unless (string= (label object) new-label)
-	  (setf (label object) new-label)))
-      (let ((new-value (aref (options-values object) new)))
-	(unless (string= (value object) new-value)
-	  (setf (value object) new-value)))))
-  new)
 
 
-;;;TODO: Finish options updater.
-(defun update-options (object name new old)
-  new)
-
-(defun update-value (object name new old)
-  (when (slot-boundp object 'options)
-    (setf (index object) (position new (options object) :key #'cdr :test #'equal)))
-  new) 
