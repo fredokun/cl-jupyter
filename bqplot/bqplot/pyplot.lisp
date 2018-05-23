@@ -44,10 +44,10 @@
 
 (defun figure (&rest kwargs &key (key nil) (fig nil) &allow-other-keys)
   ;;;We don't want key and fig to actually be in the kwargs plist
-  (remove key kwargs)
-  (remove ':key kwargs)
-  (remove ':fig kwargs)
-  (remove fig kwargs)
+  (setf kwargs (remove key kwargs)
+        kwargs (remove ':key kwargs)
+        kwargs (remove ':fig kwargs)
+        kwargs (remove fig kwargs))
   ;;;Now begins the translation of python code.
   (let ((scales-arg (getf kwargs ':scales)))
     ;;Make getf an effective pop of the (:scales value)
@@ -113,4 +113,52 @@
     (setf (min scale) low) (max scale) high)
   scale)
 
-;;;TODO: Pickup where we left off at axes
+(defun axes (&rest kwargs &key (mark nil) (options nil) &allow-other-keys)
+  ;;;Remove mark and options from kwargs
+  (setf kwargs (remove mark kwargs)
+        kwargs (remove ':mark kwargs)
+        kwargs (remove options kwargs)
+        kwargs (remove ':options kwargs))
+  (unless mark
+    (let ((new_mark (cdr (assoc "last_mark" %context :test #'string=))))
+      (if new_mark
+          (setf mark (cdr (assoc "last_mark" %context :test #'string=)))
+          (return-from axes nil))))
+  (let ((fig (getf ':figure kwargs)))
+    (unless fig
+      (setf fig (current-figure)))
+    (let ((scales (scales mark))
+          (fig-axes (loop for axis in (axes fig) collect axis))
+          (axes nil))
+      )))
+;;;FINISH AXES
+    
+(defun %set-label (label mark dim &rest kwargs &key &allow-other-keys)
+  (unless (or mark (cdr (assoc "last_mark" %context :test #'string=)))
+    (return-from %set-label nil))
+  (unless mark
+    (setf mark (cdr (assoc "last_mark" %context :test #'string=))))
+  (let ((fig nil)
+        (fig-val (getf ':figure kwargs))
+        (scales (scales mark))
+        (scale-metadata nil)
+        (scale-metadata-val (getf dim (scales-metadata mark)))
+        (scale nil))
+    (if fig-val
+        (setf fig fig-val)
+        (setf fig (current-figure)))
+    (when scale-metadata-val
+      (setf scale-metadata scale-metadata-val))
+    (if (getf dim scales)
+        (setf scale (getf dim scales))
+        (return-from %set-label))
+    (let ((dimension nil)
+          (val (getf ':dimension scale-metadata))
+          (axis nil))
+      (if val
+          (setf dimension val)
+          (setf dimension (cdr (assoc dim scales :test #'string=))))
+      (setf axis (%fetch-axis fig dimension (cdr (assoc dim scales :test #'string=))))
+      (when axis
+        (%apply-properties axis (list (cons "label" label))))))
+  (values))
