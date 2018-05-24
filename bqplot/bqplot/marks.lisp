@@ -5,6 +5,7 @@
                :initform nil)
    (scales :initarg :scales :accessor scales
            :initform nil
+           :validator %validate-scales
            :metadata (:sync t
                             :json-name "scales"
                             *widget-serialization*))
@@ -48,3 +49,9 @@
                     (= (getf (assoc k (scales-metadata self) :test #'string=) ':dimension) dimension))
                (push k ret))))
     ret))
+
+;;;@validate('scales')
+(defmethod %validate-scales (object val)
+  (let ((scales val))
+    (warn "Scales validator doesn't actually validate anything"))
+  val)
