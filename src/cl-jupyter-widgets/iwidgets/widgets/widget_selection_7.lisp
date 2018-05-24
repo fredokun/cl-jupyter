@@ -7,12 +7,13 @@
 (defclass %selection (description-widget value-widget core-widget)
   ((value :initarg :value :accessor value
 	  :initform nil
-	  :validator validate-selection
+	  :validator validate-value
 	  :observers (update-value))
    (label :initarg :label :accessor label
 	  :type unicode
 	  :initform (unicode "")
-	  :validator validate-label)
+	  :validator validate-label
+          :observers (update-label)))
    (index :initarg :index :accessor index
 	  :type integer
 	  :initform 0
@@ -24,6 +25,7 @@
    (options :initarg :options :accessor options
             :type list
             :initform ()
+            :validator validate-options
             :observers (update-options)
             :documentation "Iterable of values, (label, value) pairs, or a mapping of {label: value} pairs that the user can select. The labels are the strings that will be displayed in the UI, representing the actual Python choices, and should be unique.")
    (disabled :initarg :disabled :accessor disabled
@@ -32,10 +34,10 @@
              :metadata (:sync t
                         :json-name "disabled"
                         :help "Enable or disable user changes."))
-   (options-full :initarg :options-full :accessor options-full
+   (options-full  :accessor options-full
                  :initform nil)
    ;; This being read-only means that it cannot be changed by the user
-   (options-labels :initarg :options-labels :accessor options-labels
+   (options-labels  :accessor options-labels
                    :initform (make-array 0 :adjustable t :fill-pointer 0)
                    :type vector
                    :metadata (:sync t
@@ -106,11 +108,6 @@
 	  :metadata (:sync t
 			   :json-name "icons"
 			   :help "Font-awesome icon. Styles we know about include: check, bullseye, camera, refresh, eye-slash, trash, eraser. Syntax: :icons (vector \"refresh\" \"check\" \"camera\"). This would give you three icons if you have three buttons."))
-  #| (style :initarg :style :accessor style
-	  :initform (make-instance 'instance-dict :instance (make-instance 'toggle-buttons-style))
-	  :metadata (:sync t
-			   :to-json json-to-widget
-			   :from-json widget-to-json))|#
    (button_style :initarg :button_style :accessor button_style
 		 :type unicode
 		 :initform (unicode)
@@ -156,16 +153,6 @@
    :model-name (unicode "SelectMultipleModel"))
   (:metaclass traitlets:traitlet-class))
 
-(defclass %selection-nonempty (%selection)
-  ()
-  (:metaclass traitlets:traitlet-class))
-
-(defclass %multiple-selection-nonempty (multiple-selection)
-  ()
-  (:metaclass traitlets:traitlet-class))
-
-;;;FIXME: Do we need those? They seem meaningless.
-
 (defclass-widget-register selection-slider (%selection)
   ((orientation :initarg :orientation :accessor orientation
 		 :type unicode
@@ -192,15 +179,15 @@
 
 (defclass-widget-register selection-range-slider (%multiple-selection-nonempty)
   ((value :initarg :value :accessor value
-	  :type vector                  ;?
+	  :type vector                 
 	  :initform nil
 	  :documentation "Min and max selected values")
    (label :initarg :label :accessor label
-	  :type vector                  ;also ?
+	  :type vector                  
 	  :initform nil
 	  :documentation "Min and max selected labels")
    (index :initarg :index :accessor index
-	  :type vector                  ;?
+	  :type vector                 
 	  :initform nil
 	  :validator validate-range-index
 	  :metadata (:sync t
@@ -230,75 +217,7 @@
     :model-name (unicode "SelectionRangeSliderModel"))
     (:metaclass traitlets:traitlet-class))
 
-;FIXME: Get some validators in this jawn!
 
-#|
-def _value_to_label(value, obj):
-    """Convert a value to a label, given a _Selection object.
-
-    Raises a KeyError if the value is not found."""
-    # We can't rely on _options_labels and _options_values since we
-    # might be called before the options are validated and those are filled.
-    # TODO: make a separate validation function so this doesn't have
-    # to redo the work of parsing the options object.
-    options = obj._make_options(obj.options)
-    if len(obj.options) == 0 and value is None:
-        return ''
-    else:
-        try:
-            # return the first label whose value is equal to the desired value
-            return next(l for (l, v) in options if obj.equals(v, value))
-        except StopIteration:
-            raise KeyError(value)
-
-def _label_to_value(label, obj):
-    """Convert a label to a value, given a _Selection object."""
-    if len(obj._options_dict) == 0 and label == '':
-        return None
-    else:
-        return obj._options_dict[label]
-
-|#
-#|
-(defun %label-to-value (k object)
-      (gethash 'k (slot-value object '_options_dict)))
-
-
-#|
-def _values_to_labels(values, obj):
-    "Convert values to labels from a _MultipleSelection object"
-    return tuple(_value_to_label(v, obj) for v in values)
-
-def _labels_to_values(k, obj):
-    "Convert labels to values from a _MultipleSelection object"
-    return tuple(_label_to_value(l, obj) for l in k)
-|#
-
- (defun %labels-to-values (k obj)
-   (loop for o across k collect (%label-to-value o obj)))
-
-(defun %value-to-label (value obj)
-	(car (rassoc value (options obj) :test #'equal)))
-
-;;; This implements
-;;; https://github.com/drmeister/spy-ipykernel/blob/master/ipywidgets/widgets/widget_selection.py#L106
-(defun %values-to-labels (values obj)
-  (map 'vector (lambda (v) (%value-to-label v obj)) values))
-
-(defmethod initialize-instance :after ((%selection %selection) &key)
-  (with-slots (value _options_labels _options_values _options_dict options) %selection
-    (loop for (k . v) in options
-	 do (setf (gethash k _options_dict) v))
-    (setf _options_labels (map 'vector #'car options))
-    (setf _options_values (map 'vector #'cdr options))
-    (if (not value)
-	(setf value (aref _options_values 0))))) 
-(defmethod initialize-instance :after ((%selection select-multiple) &key)
-  (with-slots (value _options_values) %selection
-    (if (zerop (length value))
-	(vector-push-extend (aref _options_values 0) value))))
-
-|#
 (defmethod widget-slot-value ((w widget) slot-name)
   (slot-value w slot-name))
 
@@ -309,22 +228,28 @@ def _labels_to_values(k, obj):
        do
 	  (vector-push-extend k options-labels) 
 	 (vector-push-extend v options-values))
+    ;;;If no initial value is supplied, choose the first option by default
     (when (zerop (length value))
       (setf value (aref options-values 0)))
     (setf index (position value options :key #'cdr :test #'equal))))
 
 
+;;;TODO: Finish validate-options
+;;;@validate('options')
+(defun validate-options (object val)
+  (if (slot-boundp object 'options)
+      val
+      val))
 
-;;;FIXME: Make validators -_- ....and propagators?
 
-(defun validate-selection (object val)
-  (if (slot-boundp object 'options) 
-      (let ((valid (member val (options object) :test #'string= :key #'car)))
-	(if valid
-	    val
-	    (error "New value for ~a is invalid: ~a" object val)))
-	val))
-#|
+
+;;;TODO: Finish options updater.
+;;;@observe('options')
+(defun update-options (object name new old)
+  new)
+
+
+;;;@validate('index')
 (defun validate-index (object val)
   (if (slot-boundp object 'value)
       (let ((valid (length (options object))))
@@ -332,15 +257,52 @@ def _labels_to_values(k, obj):
 	    val
 	    (error "New value for ~a is invalid: ~a" object val))
 	val)))
-|#
-(defun validate-label (object val)
-  (if (slot-boundp object 'label)
-      (let ((valid (assoc val (label object) :test #'string=)))
+
+;;;@observe('index')
+(defun update-index (object name new old)
+  (when (slot-boundp object 'index)
+    (unless (equal new old)
+      (let ((new-label (aref (options-labels object) new)))
+	(unless (string= (label object) new-label)
+	  (setf (label object) new-label)))
+      (let ((new-value (aref (options-values object) new)))
+	(unless (string= (value object) new-value)
+	  (setf (value object) new-value)))))
+  new)
+
+;;;@validate('value')
+(defun validate-value (object val)
+  (if (slot-boundp object 'options) 
+      (let ((valid (member val (options object) :test #'string= :key #'car)))
 	(if valid
 	    val
 	    (error "New value for ~a is invalid: ~a" object val)))
 	val))
 
+;;;@observe('value')
+(defun update-value (object name new old)
+  (when (slot-boundp object 'options)
+    (setf (index object) (position new (options object) :key #'cdr :test #'equal)))
+  new) 
+
+;;;@validate('label')
+(defun validate-label (object val)
+  (if (slot-boundp object 'label)
+      (let ((valid (find val (options-labels object) :test #'string=)))
+	(if valid
+	    val
+	    (error "New value for ~a is invalid: ~a" object val)))
+	val))
+
+;;;@observe('label')
+(defun update-label (object name new old)
+  (let ((index (position new (options-labels object) :test #'string=)))
+    (unless (= (index object) index)
+      (setf (index object) index))
+  new)
+
+  
+;;;validate('index') for ranged selection widgets
 (defun validate-range-index (object val)
   (if (slot-boundp object 'value)
       (let ((valid (length (value object))))
@@ -353,6 +315,7 @@ def _labels_to_values(k, obj):
 	))
       val))
 
+;;;@validate('index') for multiple-selection widgets
 (defun validate-multiple-indexes (object val)
   (if (slot-boundp object 'options)
       (let ((valid (length (options object))))
@@ -363,24 +326,5 @@ def _labels_to_values(k, obj):
       val))
 
 
-(defun update-index (object name new old)
-  (print "inside update-index")
-  (when (slot-boundp object 'index)
-    (unless (equal new old)
-      (print "new does not equal old")
-      (let ((new-label (aref (options-labels object) new)))
-	(unless (string= (label object) new-label)
-	  (print "label does not equal new-label")
-	  (setf (label object) new-label)))
-      (let ((new-value (aref (options-values object) new)))
-	(unless (string= (value object) new-value)
-	  (print "value does not equal new-value")
-	  (setf (value object) new-value)))))
-  new)
 
-(defun update-options (object name new old)
-  new)
 
-(defun update-value (object name new old)
-  (setf (index object) (position new (options object) :key #'cdr :test #'equal))
-  new)

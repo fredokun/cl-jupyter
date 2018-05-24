@@ -331,10 +331,11 @@
 
 (defmethod %make-button-center ((self trajectory-player))
   (let ((button (make-instance 'cljw::button :description " Center" :icon "fa-bullseye")))
-  (flet ((click (button)
-	   (center (view self))))
-    (cljw::on-click button #'click)
-    button)))
+    (flet ((click (button)
+	     (declare-ignore button)
+	     (center (view self))))
+      (cljw::on-click button #'click)
+      button)))
   ;;I need to figure out how to do @button.on_click to register this as the on_click method
  #|
     def _make_button_center(self):
@@ -384,6 +385,7 @@
 (defmethod %make-button-clean-error-output ((self trajectory-player))
   (let ((button (make-instance 'button :description "Clear Error")))
     (flet ((click (_)
+	     (declare-ignore _)
 	     (clean-error-output js-utils)))
       (cljw::on-click button #'click))))
 
@@ -456,6 +458,7 @@
 (defmethod %show-download-image ((self trajectory-player))
   (let ((button (make-instance 'button :description " Screenshot" :icon "fa-camera")))
     (flet ((click (button)
+	     (declare-ignore button)
 	     (download-image (view self))))
       (cljw::on-click button #'click))
       button))
@@ -464,6 +467,7 @@
   (error "We're not so sure about this whole Javascript interoperation deal")
   (let ((button (make-instance 'button :description description)))
     (flet ((on-click (button)
+	     (declare-ignore button)
 	     (display (Javascript (format (open-url-template js-utils) :url url)))))
       button)))
 ;;;HELP ME WITH THIS ONE please. I don't understand the javascript part
@@ -484,6 +488,7 @@
 (defmethod %make-button-qtconsole ((self trajectory-player))
   (let ((button (make-instance 'button :description "qtconsole" :tooltip "pop up qtconsole")))
     (flet ((click (button)
+	     (declare-ignore button)
 	     (funcall #'launch-qtconsole js-utils)))
       (cljw::on-click button #'click))
       button))

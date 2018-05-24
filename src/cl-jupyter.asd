@@ -53,8 +53,13 @@
                                                                        (:file "widget_string_7")
                                                                        (:file "widget_box_7")
 								       (:file "widget_output_7")
+                                                                       (:file "widget_selectioncontainer_7")
+                                                                       ;;;jupyter-cytoscape
 								       (:file "cyjs")
-                                                                       (:file "widget_selectioncontainer_7")))))))
+                                                                       ;;;bqplot
+                                                                       (:file "figure")
+                                                                       (:file "pyplot")
+                                                                       ))))))
 ;;; cl-jupyter stuff
                  (:file "utils")
                  (:file "completion")

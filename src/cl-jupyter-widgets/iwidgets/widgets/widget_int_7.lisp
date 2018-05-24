@@ -54,6 +54,7 @@
        
 (defclass-widget-register bounded-int-text (%bounded-int)
   ((%continuous-update :accessor continuous-update
+		       :initarg :continuous-update
 		       :type bool
 		       :initform :false
 		       :metadata (:sync t
@@ -100,7 +101,7 @@
             :initform :true
             :metadata (:sync t
                        :json-name "readout"
-                       :help "Dispaly the current value of the slider next to it."))
+                       :help "Display the current value of the slider next to it."))
    (readout_format :initarg :readout_format :accessor readout_format
                    :type unicode
                    :initform (number-format :format "d")
@@ -146,10 +147,6 @@
 	       :metadata (:sync t
 				:json-name "bar_style"
 				:help "Use a predefined styling for the progress bar. Options: \"success\", \"info\", \"warning\", and \"danger\". Default: \"\"."))
-      #|(style :accessor style :initform (make-instance 'slider-style)
-	  :metadata (:sync t
-			   :json-name "style"
-   ,@*widget-serialization*))|#
    )
   (:default-initargs
    :view-name (unicode "ProgressView")
@@ -271,6 +268,7 @@
      collect (clos:slot-definition-name slot-def)))
     
 ;;;Validator for changing value in a bounded int (make sure it's > min and < max.
+;;;@validate('value')
 (defun validate-bounded-int (object val)
   (if (and (slot-boundp object 'min) (slot-boundp object 'max))
       (let ((min (min object)) (max (max object)))
@@ -281,6 +279,7 @@
 
 ;;;Validator for changing a min in a bounded int (make sure it's not above max)
 ;;;If new min is above current value, set value to min.
+;;;@validate('int-min')
 (defun validate-int-min (object val)
   (if (slot-boundp object 'min)
       (with-slots ((max max) (value value)) object
@@ -291,6 +290,7 @@
 
 ;;;Validator for changing a max in a bounded int (make sure it's not below min)
 ;;;If new max is below current val, set value to max.
+;;;@validate('int-max')
 (defun validate-int-max (object val)
   (if (slot-boundp object 'max)
       (with-slots ((min min) (value value)) object
@@ -301,6 +301,7 @@
 
 ;;;Validator for the range of a bounded int
 ;;;Makes sure the first value is lower than the second value
+;;;@validate('value')
 (defun validate-bounded-int-range (object val)
   (flet ((enforce-min (val min) (if (< val min) min val))
 	 (enforce-max (val max) (if (> val max) max val)))

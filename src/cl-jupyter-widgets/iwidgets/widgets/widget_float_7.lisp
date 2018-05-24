@@ -135,12 +135,6 @@
 	  :metadata (:sync t
 			   :json-name "step"
 			   :help "Minimum step to increment the value"))
- #|  (style :initarg :style :accessor style
-	  :initform (make-instance 'instance-dict :instance (make-instance 'slider-style))
-	  :metadata (:sync t
-			   :json-name "style"
-			   :from-json json-to-widget
-			   :to-json widget-to-json))|#
    )
   (:default-initargs
    :view-name (unicode "FloatSliderView")
@@ -162,12 +156,6 @@
 	       :metadata (:sync t
 				:json-name "bar_style"
 				:help "Use a predefined styling for the progress bar. Options: 'success', 'info', 'warning', 'danger'"))
-  #| (style :initarg :style :accessor style
-	  :initform (make-instance 'instance-dict :instance (make-instance 'progress-style))
-	  :metadata (:sync t
-			   :json-name "style"
-			   :from-json json-to-widget
-			   :to-json widget-to-json))|#
    )
   (:default-initargs
    :view-name (unicode "ProgressView")
@@ -263,12 +251,6 @@
 	     :metadata (:sync t
 			      :json-name "disabled"
 			      :help "Enable or disabled user changes"))
-  #| (style :initarg :style :accessor style
-	  :initform (make-instance 'instance-dict :instance (make-instance 'slider-style))
-	  :metadata (:sync t
-			   :json-name "style"
-			   :from-json json-to-widget
-			   :to-json widget-to-json))|#
    )
   (:default-initargs
    :view-name (unicode "FloatRangeSliderView")

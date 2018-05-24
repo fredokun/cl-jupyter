@@ -27,19 +27,50 @@
    #:instance
    #:on-msg
    #:on-displayed
-   #:button
-   #:text
-   #:int-slider
-   #:dropdown
-   #:tab
+   ;;;For particular widgets
+   #:value
+   #:description
+   ;;;from widget_bool_7
    #:checkbox
-   #:float-text
-   #:int-text
    #:toggle-button
-   #:color-picker
-   #:box
+   #:valid
+   ;;;from widget_int_7
+   #:int-text
+   #:bounded-int-text
+   #:int-slider
+   #:int-progress
+   #:int-range-slider
+   ;;;from widget_float_7
+   #:float-text
+   #:bounded-float-text
+   #:float-slider
+   #:float-progress
+   #:float-range-slider
+   ;;;from widget_selection_7
+   #:toggle-buttons
+   #:dropdown
+   #:radio-buttons
+   #:select
+   #:select-multiple
+   #:selection-slider
+   #:selection-range-slider
+   ;;;from widget_selectioncontainer_7
+   #:accordion
+   #:tab
+   ;;;from widget_button_7
+   #:button
+   ;;;from widget_box_7
    #:vbox
    #:hbox
+   ;;;from widget_color_7
+   #:color-picker
+   ;;;from widget_string_7
+   #:html
+   #:html-math
+   #:label
+   #:textarea
+   #:text
+   #:password
    )
   (:import-from :fredokun-utilities #:[] #:[]-contains))
 

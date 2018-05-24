@@ -65,9 +65,3 @@ https://github.com/drmeister/widget-dev/blob/master/ipywidgets6/widgets/widget_i
       (cljw:widget-log "    Converting the image to: ~s~%" b64image)
       (setf (b64value object) b64image))))
 
- #||value = Bytes()
-
-    @observe('value')
-    def _value_changed(self, change):
-        self._b64value = base64.b64encode(change['new'])
- ||#

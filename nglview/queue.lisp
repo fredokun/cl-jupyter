@@ -153,5 +153,5 @@ NOTE:       The result may be falsified immediately, becoming false if
       (progn
         (format t "Read: ~s~%" msg)
         (when (eq msg :end)
-          (mp:exit-process))))))
+          (bordeaux-threads:destroy-thread (bordeaux-threads:current-thread)))))))
          

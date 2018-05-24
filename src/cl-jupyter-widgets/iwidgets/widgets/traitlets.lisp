@@ -137,7 +137,7 @@
 
 ;;; Abstract. All objects with :sync t should be a subclass of this, to get the slot.
 (defclass synced-object ()
-  ((%mutex :initform (mp:make-shared-mutex) :accessor mutex))
+  ((%mutex :initform (bordeaux-threads:make-lock) :accessor mutex))
   (:metaclass traitlet-class))
 
 #++
@@ -164,17 +164,17 @@
   (let ((smutex (gensym "SHARED-MUTEX")))
     `(let ((,smutex ,shared-mutex))
        (unwind-protect
-	    (progn (mp:shared-lock ,smutex)
+	    (progn (bordeaux-threads:acquire-lock ,smutex)
 		   ,@body)
-	 (mp:shared-unlock ,smutex)))))
+	 (bordeaux-threads:release-lock ,smutex)))))
 
 (defmacro with-write-lock (shared-mutex &body body)
   (let ((smutex (gensym "SHARED-MUTEX")))
     `(let ((,smutex ,shared-mutex))
        (unwind-protect
-	    (progn (mp:write-lock ,smutex)
+	    (progn (bordeaux-threads:acquire-lock ,smutex)
 		   ,@body)
-	 (mp:write-unlock ,smutex)))))
+	 (bordeaux-threads:release-lock ,smutex)))))
 
 (defmethod clos:slot-value-using-class
     ((class traitlet-class) (object synced-object) (slotd effective-traitlet))

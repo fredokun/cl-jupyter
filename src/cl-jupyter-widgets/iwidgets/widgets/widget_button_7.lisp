@@ -49,10 +49,6 @@
                  :metadata (:sync t
                                   :json-name "button_style"
                                   :help "Use a predefined styling for the button. Options include: \"primary\", \"success\", \"info\", \"warning\", \"danger\", and \"""\"."))
-   #|(style :initarg :style :accessor style
-           :initform (make-instance 'instance-dict :instance (make-instance 'button-style))
-           :metadata #.`(:sync t :json-name "style" :help "Styling customizations"
-                            ,@*widget-serialization*))|#
   (%click-handlers :initform (make-instance 'callback-dispatcher)
                    :accessor click-handlers)
   )

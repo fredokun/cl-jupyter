@@ -15,8 +15,6 @@
 			       :json-name "disabled"
 			       :help "Enable or disable user changes.")))
   (:default-initargs
-  ;; :model-module (unicode "jupyter-js-widgets")
- ;;   :view-module (unicode "jupyter-js-widgets")
     :model-name  (unicode "BoolModel")
     )
   (:metaclass traitlets:traitlet-class))
