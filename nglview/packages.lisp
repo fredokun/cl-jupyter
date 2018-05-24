@@ -33,6 +33,7 @@
    #:make-remote-call-callback
    #:callback
    #:method-name
+   #:description
    #:fire-callback
    #:remote-call-add
    #:remote-call-thread-run

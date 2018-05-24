@@ -2,7 +2,8 @@
 
 (defclass value-widget (widget)
   ((value :initarg :value :accessor value
-	 :initform nil)))
+          :initform nil))
+  (:metaclass traitlets:traitlet-class))
 
 (defmethod get-interact-value ((self value-widget))
   (value self))

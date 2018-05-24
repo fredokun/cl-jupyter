@@ -23,7 +23,8 @@
   (:export #:parse-json
 	   #:parse-json-from-string
 	   #:encode-json
-	   #:encode-json-to-string))
+	   #:encode-json-to-string
+           #:dumps))
 
 (defpackage #:cl-jupyter
   (:use #:cl #:fredo-utils #:myjson)

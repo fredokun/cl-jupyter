@@ -153,7 +153,6 @@
    :model-name (unicode "SelectMultipleModel"))
   (:metaclass traitlets:traitlet-class))
 
-
 (defclass-widget-register selection-slider (%selection)
   ((orientation :initarg :orientation :accessor orientation
 		 :type unicode

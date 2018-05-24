@@ -366,6 +366,10 @@ The INDENT can be given for beautiful/debugging output (default is NIL
   (with-output-to-string (stream)
     (encode-json stream thing :indent indent)))
 
+(defun dumps (thing &rest args &key indent)
+  "A function that mimics  python json.dumps(whatever)."
+  (apply #'encode-json-to-string thing args))
+
 (defun gen-indent (level)
   (if level
       (make-string (* level *json-encoder-indent-level*) :initial-element #\Space)

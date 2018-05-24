@@ -32,8 +32,11 @@
 
 (defun show-file (path &rest kwargs &key &allow-other-keys)
   (let ((view (make-nglwidget)))
-    (apply #'add-omponent view kwargs)
+    (apply #'add-component view kwargs)
     view))
+
+(defun show-cando-trajectory (trajectory &rest kwargs &key &allow-other-keys)
+  (apply #'make-nglwidget :structure trajectory kwargs))
 
 (defun show-aggregate (aggregate &rest kwargs &key &allow-other-keys)
   (let ((structure (make-instance 'cando-structure :matter aggregate)))

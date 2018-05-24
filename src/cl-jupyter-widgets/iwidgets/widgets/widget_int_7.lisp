@@ -83,7 +83,8 @@
   (:metaclass traitlets:traitlet-class))
 
 (defclass-widget-register int-slider (%bounded-int)
-  ((%step :initarg :step :accessor step
+  ((value :observers (cando-user::my-observer))
+   (%step :initarg :step :accessor step
           :type integer
           :initform 1
           :metadata (:sync t

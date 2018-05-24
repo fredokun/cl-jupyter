@@ -3,17 +3,36 @@
 (defconstant keyword-package (find-package :keyword)
   "The KEYWORD package.")
 
-(defun simple-completions (prefix package)
+(defun simple-completions (prefix package sep-char)
   "Return a list of completions for the string PREFIX."
-  (let ((strings (all-completions prefix package)))
+  (cljw:widget-log "simple-completions prefix: ~a  package: ~a~%" prefix package)
+  (let ((strings (all-completions prefix package sep-char)))
     (list strings (longest-common-prefix strings))))
 
-(defun all-completions (prefix package)
+(defun all-completions (prefix package sep-char)
+  (cond
+    ((char= sep-char #\")
+     (let* ((filename prefix))
+       (filename-completions prefix)))
+    (t (symbol-completions prefix package))))
+
+(defun filename-completions (prefix)
+     (let* ((filename prefix)
+            (files (mapcar #'enough-namestring (append (directory (concatenate 'string filename "*/"))
+                                                (directory (concatenate 'string filename "*.*"))
+                                                (directory (concatenate 'string filename "*"))))))
+       (cljw:widget-log "all-completions  filename: ~a~%" filename)
+       (cljw:widget-log "files: ~a~%" files)
+       files)) ;;;(list files (longest-common-prefix files))))
+
+
+(defun symbol-completions (prefix package)
   (multiple-value-bind (name pname intern) (tokenize-symbol prefix)
     (let* ((extern (and pname (not intern)))
 	   (pkg (cond ((equal pname "") keyword-package)
                       ((not pname) (guess-buffer-package package))
                       (t (guess-package pname))))
+           (_ (cljw:widget-log "Guessed package: ~a from pname: ~a~%" pkg pname))
 	   (test (lambda (sym) (prefix-match-p name (symbol-name sym))))
 	   (syms (and pkg (matching-symbols pkg extern test)))
            (strings (loop for sym in syms
@@ -154,8 +173,8 @@ Returns a list of completions with package qualifiers if needed."
   (untokenize-symbol nil nil \"foo\")    ==> \"foo\"
 "
   (cond ((not package-name) 	symbol-name)
-        (internal-p 		(cat package-name "::" symbol-name))
-        (t 			(cat package-name ":" symbol-name))))
+        (internal-p 		(concatenate 'string package-name "::" symbol-name))
+        (t 			(concatenate 'string package-name ":" symbol-name))))
 
 
 
@@ -173,7 +192,7 @@ Return nil if no package matches."
 Return the package or nil."
   ;; STRING comes usually from a (in-package STRING) form.
   (ignore-errors
-    (find-package (let ((*package* *swank-io-package*))
+    (find-package (let ((*package* (find-package :keyword)))
                     (read-from-string string)))))
 
 (defun guess-buffer-package (string)
@@ -191,10 +210,12 @@ part, and a flag if the STRING represents a symbol that is
 internal to the package identifier part. (Notice that the flag is
 also true with an empty package identifier part, as the STRING is
 considered to represent a symbol internal to some current package.)"
+  (cljw:widget-log "tokenize-symbol ~a~%" string)
   (let ((package (let ((pos (position #\: string)))
                    (if pos (subseq string 0 pos) nil)))
         (symbol (let ((pos (position #\: string :from-end t)))
                   (if pos (subseq string (1+ pos)) string)))
         (internp (not (= (count #\: string) 1))))
+    (cljw:widget-log "tokenize-symbol result -> symbol: ~a  package: ~a  internp: ~a~%" symbol package internp)
     (values symbol package internp)))
 

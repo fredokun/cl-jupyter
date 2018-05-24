@@ -27,8 +27,7 @@
    #:instance
    #:on-msg
    #:on-displayed
-   ;;;begin kevin symbols
-   ;;;For all widgets
+   ;;;For particular widgets
    #:value
    #:description
    ;;;from widget_bool_7
@@ -60,7 +59,6 @@
    #:tab
    ;;;from widget_button_7
    #:button
-   #:%handle-button-msg
    ;;;from widget_box_7
    #:vbox
    #:hbox
