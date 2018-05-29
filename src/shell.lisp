@@ -79,6 +79,10 @@
                                          (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg)))
                                       ((equal msg-type "complete_request")
                                        (complete-request shell identities msg))
+
+                                      ((equal msg-type "inspect_request")
+                                       (inspect-request shell identities msg))
+                                      
                                       (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping... msg: ~s" msg-type msg))))))))))
     (bordeaux-threads:release-lock *session-receive-lock*)))
 
@@ -106,16 +110,70 @@
                                :end cursor-end
                                :from-end t))
          (cursor-start (if sep-pos (1+ sep-pos) 0))
-         (partial-token (subseq text cursor-start cursor-end))
-         (completions (simple-completions partial-token *package* (char text sep-pos))))
-    (cljw:widget-log "complete-request partial-token: ~a~%" partial-token)
-    (let* ((data `(("status" . "ok")
-                   ("metadata" . ())
-                   ("cursor_start" . ,cursor-start)
-                   ("cursor_end" . ,cursor-end)
-                   ("matches" . ,(make-array (length (car completions)) :initial-contents (car completions)))))
-           (reply (make-message msg "complete_reply" nil data)))
-      (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell)))))
+         (partial-token (subseq text cursor-start cursor-end)))
+    (multiple-value-bind (completions metadata)
+        (simple-completions partial-token *package* (char text sep-pos))        
+      (cljw:widget-log "complete-request partial-token: ~a~%" partial-token)
+      (cljw:widget-log "   --> completions: ~s~%" completions)
+      (cljw:widget-log "   --> metadata: ~s~%" metadata)
+      (let* ((data `(("status" . "ok")
+                     ("metadata" . ,metadata)
+                     ("cursor_start" . ,cursor-start)
+                     ("cursor_end" . ,cursor-end)
+                     ("matches" . ,(make-array (length (car completions)) :initial-contents (car completions)))))
+             (reply (make-message msg "complete_reply" nil data)))
+        (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))))))
+
+
+(defun inspect-request (shell identities msg)
+  (let* ((json (parse-json-from-string (message-content msg)))
+         (text ([] json "code"))
+         (cursor-end ([] json "cursor_pos"))
+         (sep-pos (position-if (lambda (c) (or (char<= c #\space)
+                                               (char= c #\()
+                                               (char= c #\))
+                                               (char= c #\")
+                                               (char= c #\#)
+                                               (char= c #\')
+                                               (char= c #\`)))
+                               text
+                               :start 0
+                               :end cursor-end
+                               :from-end t))
+         (cursor-start (if sep-pos (1+ sep-pos) 0))
+         (partial-token (subseq text cursor-start cursor-end)))
+    (cljw:widget-log "inspect_request partial-token: ~s~%" partial-token)
+    (let ((metadata nil)
+          (data (fulfil-inspect-request partial-token)))
+      (let* ((data `(("status" . "ok")
+                     ("found" . ,(if data :true :false))
+                     ("metadata" . ,metadata)
+                     ("data" . ,data)))
+             (reply (make-message msg "inspect_reply" nil data)))
+        (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))))))
+
+(defun fulfil-inspect-request (token)
+  (when (and (stringp token) (> (length token) 0))
+    (multiple-value-bind (name package-name intern)
+        (tokenize-symbol token)
+      (let* ((package (if package-name
+                          (find-package (let ((*package* (find-package :keyword)))
+                                          (read-from-string package-name)))
+                          (package-name *package*)))
+             (symbol-name (let ((*package* (find-package :keyword)))
+                            (string (read-from-string name))))
+             (symbol (find-symbol symbol-name package)))
+        (cond
+          ((fboundp symbol)
+           (let* ((func (fdefinition symbol))
+                  (lambda-list (core:function-lambda-list func))
+                  (lambda-list-string (if lambda-list
+                                          (string-downcase (format nil "~a" lambda-list))
+                                          "()"))
+                  (docstring (documentation func 'function)))
+             (list (cons "text/plain" (format nil  "Function       ~a~%~%~a~%" lambda-list-string docstring)))))
+          (t nil))))))
+
 
 ;; for protocol version 5  
 (defclass content-kernel-info-reply (message-content)

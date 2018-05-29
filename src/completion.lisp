@@ -6,8 +6,9 @@
 (defun simple-completions (prefix package sep-char)
   "Return a list of completions for the string PREFIX."
   (cljw:widget-log "simple-completions prefix: ~a  package: ~a~%" prefix package)
-  (let ((strings (all-completions prefix package sep-char)))
-    (list strings (longest-common-prefix strings))))
+  (multiple-value-bind (strings metadata)
+      (all-completions prefix package sep-char)
+    (values (list strings (longest-common-prefix strings)) metadata)))
 
 (defun all-completions (prefix package sep-char)
   (cond
@@ -27,30 +28,37 @@
 
 
 (defun symbol-completions (prefix package)
-  (multiple-value-bind (name pname intern) (tokenize-symbol prefix)
-    (let* ((extern (and pname (not intern)))
-	   (pkg (cond ((equal pname "") keyword-package)
-                      ((not pname) (guess-buffer-package package))
-                      (t (guess-package pname))))
-           (_ (cljw:widget-log "Guessed package: ~a from pname: ~a~%" pkg pname))
-	   (test (lambda (sym) (prefix-match-p name (symbol-name sym))))
-	   (syms (and pkg (matching-symbols pkg extern test)))
-           (strings (loop for sym in syms
-                          for str = (unparse-symbol sym)
-                          when (prefix-match-p name str) ; remove |Foo|
-                          collect str)))
-      (format-completion-set strings intern pname))))
+  (cljw:widget-log "symbol-completions for prefix: ~s  package: ~s~%" prefix package)
+  (multiple-value-bind (name package-name intern)
+      (tokenize-symbol prefix)
+    (let* ((extern (and package-name (not intern)))
+           (pkg (cond ((equal package-name "") keyword-package)
+                      ((not package-name) (guess-buffer-package package))
+                      (t (guess-package package-name))))
+           (_ (cljw:widget-log "Guessed package: ~a from package-name: ~a~%" pkg package-name))
+           (test (lambda (sym) (prefix-match-p name (symbol-name sym))))
+           (syms (and pkg (matching-symbols pkg extern test)))
+           (strings-and-metadata (loop for sym in syms
+                                       for metadata = (when (fboundp sym)
+                                                        (let ((lambda-list (core:function-lambda-list (symbol-function sym))))
+                                                          (if lambda-list
+                                                              (string-downcase (format nil "~a" lambda-list))
+                                                              "()")))
+                                       for str = (unparse-symbol sym)
+                                       when (prefix-match-p name str) ; remove |Foo|
+                                         collect (cons str metadata))))
+      (format-completion-set strings-and-metadata intern package-name))))
 
 (defun matching-symbols (package external test)
   (let ((test (if external 
-		  (lambda (s)
-		    (and (symbol-external-p s package) 
-			 (funcall test s)))
-		  test))
-	(result '()))
+                  (lambda (s)
+                    (and (symbol-external-p s package) 
+                         (funcall test s)))
+                  test))
+        (result '()))
     (do-symbols (s package)
       (when (funcall test s) 
-	(push s result)))
+        (push s result)))
     (remove-duplicates result)))
 
 ;; FIXME: this docstring is more confusing than helpful.
@@ -159,11 +167,15 @@ If PACKAGE is not specified, the home package of SYMBOL is used."
                  (if diff-pos (subseq s1 0 diff-pos) s1))))
         (reduce #'common-prefix strings))))
 
-(defun format-completion-set (strings internal-p package-name)
+(defun format-completion-set (strings-and-metadata internal-p package-name)
   "Format a set of completion strings.
 Returns a list of completions with package qualifiers if needed."
-  (mapcar (lambda (string) (untokenize-symbol package-name internal-p string))
-          (sort strings #'string<)))
+  (let ((strings-and-metadata (mapcar (lambda (string-and-metadata)
+                                        (let ((string (car string-and-metadata))
+                                              (metadata (cdr string-and-metadata)))
+                                          (cons (untokenize-symbol package-name internal-p string) metadata)))
+                                      (sort strings-and-metadata (lambda (x y) (string< (car x) (car y)))))))
+    (values (mapcar #'car strings-and-metadata) strings-and-metadata)))
 
 (defun untokenize-symbol (package-name internal-p symbol-name)
   "The inverse of TOKENIZE-SYMBOL.
