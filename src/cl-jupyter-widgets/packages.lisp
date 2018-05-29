@@ -60,6 +60,7 @@
    ;;;from widget_button_7
    #:button
    ;;;from widget_box_7
+   #:box
    #:vbox
    #:hbox
    ;;;from widget_color_7

@@ -13,7 +13,7 @@
 	  :type unicode
 	  :initform (unicode "")
 	  :validator validate-label
-          :observers (update-label)))
+          :observers (update-label))
    (index :initarg :index :accessor index
 	  :type integer
 	  :initform 0
@@ -250,7 +250,8 @@
 
 
 ;;;@validate('index')
-(defun validate-index (object val)
+#+(or)
+(defmethod validate-index (object val)
   (if (slot-boundp object 'value)
       (let ((valid (length (options object))))
 	(if (<= val valid)
@@ -299,7 +300,7 @@
   (let ((index (position new (options-labels object) :test #'string=)))
     (unless (= (index object) index)
       (setf (index object) index))
-  new)
+    new))
 
   
 ;;;validate('index') for ranged selection widgets

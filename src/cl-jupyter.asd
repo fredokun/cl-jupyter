@@ -57,8 +57,8 @@
                                                                        ;;;jupyter-cytoscape
 								       (:file "cyjs")
                                                                        ;;;bqplot
-                                                                       (:file "figure")
-                                                                       (:file "pyplot")
+;;;                                                                       (:file "figure")
+;;;                                                                       (:file "pyplot")
                                                                        ))))))
 ;;; cl-jupyter stuff
                  (:file "utils")
