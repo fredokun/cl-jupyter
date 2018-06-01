@@ -28,6 +28,7 @@
 (defparameter *handle-comm-open-hook* nil)
 (defparameter *handle-comm-msg-hook* nil)
 (defparameter *handle-comm-close-hook* nil)
+(defparameter *generate-backtrace-hook* nil)
 
 (defclass shell-channel ()
   ((kernel :initarg :kernel :reader shell-kernel)
