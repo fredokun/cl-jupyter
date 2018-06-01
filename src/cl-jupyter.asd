@@ -17,6 +17,7 @@
                (:file "config")
                (:file "message")
                (:file "shell")
+               (:file "completion")
                (:file "iopub")
                (:file "display")
                (:file "evaluator")
