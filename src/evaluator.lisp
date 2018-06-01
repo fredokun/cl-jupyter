@@ -45,7 +45,6 @@ The history of evaluations is also saved by the evaluator.
                 (elt out-values (- value-ref 1)))
               (values-list out-values)))))))
 
-
 (defun make-evaluator (kernel)
   (let ((evaluator (make-instance 'evaluator
 				  :kernel kernel)))

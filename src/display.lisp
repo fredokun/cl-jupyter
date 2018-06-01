@@ -168,8 +168,7 @@ Lisp printer. In most cases this is enough but specializations are
 			     ("image/jpeg" . ,(render-jpeg value))
 			     ("image/svg+xml" . ,(render-svg value))
 			     ("application/json" . ,(render-json value))
-			     ("application/javascript" . ,(render-javascript value))
-                             )))
+			     ("application/javascript" . ,(render-javascript value)))))
 
 (defun display-html (value)
   "Display VALUE as HTML."
