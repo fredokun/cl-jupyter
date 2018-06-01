@@ -294,32 +294,20 @@ The wire-deserialization part follows.
 
 |#
 
-(defparameter *message-send-lock* (bordeaux-threads:make-lock 'message-send-lock))
+;; Locking, courtesy of dmeister, thanks !
+(defparameter *message-send-lock* (bordeaux-threads:make-lock "message-send-lock"))
 
 (defun message-send (socket msg &key (identities nil) (key nil))
-  (let ((wire-parts (wire-serialize msg :identities identities :key key)))
-    (logg 2 "[Send] wire parts: ~W~%" wire-parts)
-    (logg 2 "Entering message-send~%")
-    (unwind-protect
-         (progn
-           (bordeaux-threads:acquire-lock *message-send-lock*)
-           (dolist (part wire-parts)
-;;; FIXME: Try converting all base strings to character strings - does it make any difference?
-             #+(or)(let ((part-character-string (make-array (length part) :element-type 'character :initial-contents part)))
-               (logg 2 "pzmq:send socket part-character-string=|~s|~%" part)
-                     (pzmq:send socket part-character-string :sndmore t))
-             (progn
-               (logg 2 "pzmq:About to send socket part: ~s~%" part)
-               (logg 2 "pzmq:      --->    as bytes: ~s~%" (if (typep part 'simple-base-string)
-                                                                                      (core:coerce-to-byte8-vector part)
-                                                                                      :NOT-A-SIMPLE-BASE-STRING))
-               (if (typep part 'clasp-ffi:foreign-data)
-                   (pzmq:send socket part :len (clasp-ffi:foreign-data-size part) :sndmore t)
-                   (pzmq:send socket part :sndmore t))))
-           (prog1
-               (pzmq:send socket nil)
-             (logg 2 "Leaving message-send~%")))
-      (bordeaux-threads:release-lock *message-send-lock*))))
+  (unwind-protect
+       (progn
+	 (bordeaux-threads:acquire-lock *message-send-lock*)
+	 (let ((wire-parts (wire-serialize msg :identities identities :key key)))
+	   ;;DEBUG>>
+	   ;;(format t "~%[Send] wire parts: ~W~%" wire-parts)
+	   (dolist (part wire-parts)
+	     (pzmq:send socket part :sndmore t))
+	   (pzmq:send socket nil)))
+    (bordeaux-threads:release-lock *message-send-lock*)))
 
 (defun recv-string (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
   "Receive a message part from a socket as a string."
@@ -343,10 +331,17 @@ The wire-deserialization part follows.
         (zmq-recv-list socket (cons part parts) (+ part-num 1))
         (reverse (cons part parts)))))
 
+(defparameter *message-recv-lock* (bordeaux-threads:make-lock "message-recv-lock"))
+
 (defun message-recv (socket)
-  (logg 2 "[Recv] About to zmq-recv-list socket~%")
-  (let ((parts (zmq-recv-list socket)))
-    (dolist (part parts)
-      (logg 2 "[Recv]: part: |~A|  type-of -> ~a~%" part (type-of part)))
-    #++(format t "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
-    (wire-deserialize parts)))
+  (unwind-protect
+       (progn
+	 (bordeaux-threads:acquire-lock *message-recv-lock*)
+	 (let ((parts (zmq-recv-list socket)))
+	   ;;DEBUG>>
+	   (format t "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
+	   (wire-deserialize parts)))
+    (bordeaux-threads:release-lock *message-recv-lock*)))
+
+
+
