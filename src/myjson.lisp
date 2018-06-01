@@ -420,15 +420,10 @@ with a new line")
 	     (json-write stream nil nil (format nil "blabla ~A" toto))))
 	   => "blabla (ME TOTO)")
 
-
-#+clasp
-(defmethod encode-json (stream (thing cljw::instance-dict) &key (indent nil) (first-line nil))
-  (error "You need to encode json for the instance-dict ~a" thing))
-
 (defmethod encode-json (stream (thing cons) &key (indent nil) (first-line nil))
   (json-write stream (if first-line nil indent) (if indent t nil) "{")
   (let ((sepstr (if indent (format nil ",~%") ",")))
-    (when cl-jupyter::*sort-encoded-json*
+    (when (and (boundp 'cl-jupyter::*sort-encoded-json*) cl-jupyter::*sort-encoded-json*)
       (setf thing (sort (copy-list thing) #'string< :key #'car)))
     (loop 
        for (key . val) in thing
