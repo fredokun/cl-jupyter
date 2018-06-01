@@ -1,8 +1,0 @@
-name: bqplot
-channels:
-  - conda-forge
-dependencies:
-  - bqplot
-  - scikit-learn
-  - scipy
-  - numpy>=1.13,<1.14  # prevent warning in pyplot demo re: dtypes

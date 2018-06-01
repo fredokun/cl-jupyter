@@ -5,7 +5,7 @@
 
 (defun simple-completions (prefix package sep-char)
   "Return a list of completions for the string PREFIX."
-  (cljw:widget-log "simple-completions prefix: ~a  package: ~a~%" prefix package)
+  (logg 2 "simple-completions prefix: ~a  package: ~a~%" prefix package)
   (multiple-value-bind (strings metadata)
       (all-completions prefix package sep-char)
     (values (list strings (longest-common-prefix strings)) metadata)))
@@ -22,20 +22,20 @@
             (files (mapcar #'enough-namestring (append (directory (concatenate 'string filename "*/"))
                                                 (directory (concatenate 'string filename "*.*"))
                                                 (directory (concatenate 'string filename "*"))))))
-       (cljw:widget-log "all-completions  filename: ~a~%" filename)
-       (cljw:widget-log "files: ~a~%" files)
+       (logg 2 "all-completions  filename: ~a~%" filename)
+       (logg 2 "files: ~a~%" files)
        files)) ;;;(list files (longest-common-prefix files))))
 
 
 (defun symbol-completions (prefix package)
-  (cljw:widget-log "symbol-completions for prefix: ~s  package: ~s~%" prefix package)
+  (logg 2 "symbol-completions for prefix: ~s  package: ~s~%" prefix package)
   (multiple-value-bind (name package-name intern)
       (tokenize-symbol prefix)
     (let* ((extern (and package-name (not intern)))
            (pkg (cond ((equal package-name "") keyword-package)
                       ((not package-name) (guess-buffer-package package))
                       (t (guess-package package-name))))
-           (_ (cljw:widget-log "Guessed package: ~a from package-name: ~a~%" pkg package-name))
+           (_ (logg 2 "Guessed package: ~a from package-name: ~a~%" pkg package-name))
            (test (lambda (sym) (prefix-match-p name (symbol-name sym))))
            (syms (and pkg (matching-symbols pkg extern test)))
            (strings-and-metadata (loop for sym in syms
@@ -222,12 +222,12 @@ part, and a flag if the STRING represents a symbol that is
 internal to the package identifier part. (Notice that the flag is
 also true with an empty package identifier part, as the STRING is
 considered to represent a symbol internal to some current package.)"
-  (cljw:widget-log "tokenize-symbol ~a~%" string)
+  (logg 2 "tokenize-symbol ~a~%" string)
   (let ((package (let ((pos (position #\: string)))
                    (if pos (subseq string 0 pos) nil)))
         (symbol (let ((pos (position #\: string :from-end t)))
                   (if pos (subseq string (1+ pos)) string)))
         (internp (not (= (count #\: string) 1))))
-    (cljw:widget-log "tokenize-symbol result -> symbol: ~a  package: ~a  internp: ~a~%" symbol package internp)
+    (logg 2 "tokenize-symbol result -> symbol: ~a  package: ~a  internp: ~a~%" symbol package internp)
     (values symbol package internp)))
 

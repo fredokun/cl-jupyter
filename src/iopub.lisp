@@ -28,11 +28,11 @@
 (defun send-status-starting (iopub session &key (key nil))
   (let ((status-msg (make-orphan-message session "status" nil
 					 `(("execution_state" . "starting")) #())))
-    (cljw:widget-log "[iopub] Made orphan message: ~s~%" status-msg)
+    (logg 2 "[iopub] Made orphan message: ~s~%" status-msg)
     #+(or)(format t "[iopub] Made orphan message: ~s~%" status-msg)
     (prog1
 	(message-send (iopub-socket iopub) status-msg :identities '("status") :key key)
-      (cljw:widget-log "[iopub] Leaving send-status-starting~%"))))
+      (logg 2 "[iopub] Leaving send-status-starting~%"))))
 
 (defun send-status-update (iopub parent-msg status &key (key nil))
   (let ((status-content `((:execution--state . ,status))))
@@ -48,7 +48,7 @@
     (message-send (iopub-socket iopub) code-msg :identities '("execute_input") :key key)))
 
 (defun send-execute-raw-display-object (iopub parent-msg execution-count display-obj &key (key nil))
-  (cljw:widget-log "iopub.lisp::send-execute-raw-display-object    display-obj -> ~s~%" display-obj)
+  (logg 2 "iopub.lisp::send-execute-raw-display-object    display-obj -> ~s~%" display-obj)
   (let ((result-msg (make-message parent-msg "execute_result" nil
                                   `(("execution_count" . ,execution-count)
                                     ("data" . ,(display-object-data display-obj))
@@ -56,7 +56,7 @@
     (message-send (iopub-socket iopub) result-msg :identities '("execute_result") :key key)))
 
 (defun send-execute-result (iopub parent-msg execution-count result &key (key nil))
-  (cljw:widget-log "iopub.lisp::send-execute-result    result -> ~s~%" result)
+  (logg 2 "iopub.lisp::send-execute-result    result -> ~s~%" result)
   (let ((display-obj (display result)))
     (send-execute-raw-display-object iopub parent-msg execution-count display-obj :key key)))
 

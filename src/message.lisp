@@ -195,13 +195,13 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
 (defvar +WIRE-IDS-MSG-DELIMITER+ "<IDS|MSG>")
 
 (defmethod wire-serialize ((msg message) &key (identities nil) (key nil))
-  (cljw:widget-log "  in wire-serialize~%")
+  (logg 2 "  in wire-serialize~%")
   (with-slots (header parent-header metadata content buffers) msg
-    (cljw:widget-log "header -> ~s~%" header)
-    (cljw:widget-log "parent-header -> ~s~%" parent-header)
-    (cljw:widget-log "metadata -> ~s~%" metadata)
-    (cljw:widget-log "content -> ~s~%" content)
-    (cljw:widget-log "Number of buffers  -> ~d~%" (length buffers))
+    (logg 2 "header -> ~s~%" header)
+    (logg 2 "parent-header -> ~s~%" parent-header)
+    (logg 2 "metadata -> ~s~%" metadata)
+    (logg 2 "content -> ~s~%" content)
+    (logg 2 "Number of buffers  -> ~d~%" (length buffers))
     (let ((header-json (encode-json-to-string header))
           (parent-header-json (if parent-header
                                   (encode-json-to-string parent-header)
@@ -212,11 +212,11 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
           (content-json (if content
                             (encode-json-to-string content)
                             "{}")))
-      (cljw:widget-log "About to calculate signature~%")
+      (logg 2 "About to calculate signature~%")
       (let ((sig (if key
                      (message-signing key (list header-json parent-header-json metadata-json content-json))
                      "")))
-	(cljw:widget-log "About to do append~%")
+	(logg 2 "About to do append~%")
         (append identities
                 (list +WIRE-IDS-MSG-DELIMITER+
                       sig
@@ -260,7 +260,7 @@ The wire-deserialization part follows.
 
 
 (defun wire-deserialize (parts)
-  (cljw:widget-log "  in wire-deserialize (length parts) -> ~d~%" (length parts))
+  (logg 2 "  in wire-deserialize (length parts) -> ~d~%" (length parts))
   (let ((delim-index (position +WIRE-IDS-MSG-DELIMITER+ parts :test  #'equal)))
     (when (not delim-index)
       (error "no <IDS|MSG> delimiter found in message parts"))
@@ -298,19 +298,19 @@ The wire-deserialization part follows.
 
 (defun message-send (socket msg &key (identities nil) (key nil))
   (let ((wire-parts (wire-serialize msg :identities identities :key key)))
-    (cl-jupyter-widgets:widget-log "[Send] wire parts: ~W~%" wire-parts)
-    (cl-jupyter-widgets:widget-log "Entering message-send~%")
+    (logg 2 "[Send] wire parts: ~W~%" wire-parts)
+    (logg 2 "Entering message-send~%")
     (unwind-protect
          (progn
            (bordeaux-threads:acquire-lock *message-send-lock*)
            (dolist (part wire-parts)
 ;;; FIXME: Try converting all base strings to character strings - does it make any difference?
              #+(or)(let ((part-character-string (make-array (length part) :element-type 'character :initial-contents part)))
-               (cl-jupyter-widgets:widget-log "pzmq:send socket part-character-string=|~s|~%" part)
+               (logg 2 "pzmq:send socket part-character-string=|~s|~%" part)
                      (pzmq:send socket part-character-string :sndmore t))
              (progn
-               (cl-jupyter-widgets:widget-log "pzmq:About to send socket part: ~s~%" part)
-               (cl-jupyter-widgets:widget-log "pzmq:      --->    as bytes: ~s~%" (if (typep part 'simple-base-string)
+               (logg 2 "pzmq:About to send socket part: ~s~%" part)
+               (logg 2 "pzmq:      --->    as bytes: ~s~%" (if (typep part 'simple-base-string)
                                                                                       (core:coerce-to-byte8-vector part)
                                                                                       :NOT-A-SIMPLE-BASE-STRING))
                (if (typep part 'clasp-ffi:foreign-data)
@@ -318,7 +318,7 @@ The wire-deserialization part follows.
                    (pzmq:send socket part :sndmore t))))
            (prog1
                (pzmq:send socket nil)
-             (cl-jupyter-widgets:widget-log "Leaving message-send~%")))
+             (logg 2 "Leaving message-send~%")))
       (bordeaux-threads:release-lock *message-send-lock*))))
 
 (defun recv-string (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
@@ -344,9 +344,9 @@ The wire-deserialization part follows.
         (reverse (cons part parts)))))
 
 (defun message-recv (socket)
-  (cljw:widget-log "[Recv] About to zmq-recv-list socket~%")
+  (logg 2 "[Recv] About to zmq-recv-list socket~%")
   (let ((parts (zmq-recv-list socket)))
     (dolist (part parts)
-      (cljw:widget-log "[Recv]: part: |~A|  type-of -> ~a~%" part (type-of part)))
+      (logg 2 "[Recv]: part: |~A|  type-of -> ~a~%" part (type-of part)))
     #++(format t "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
     (wire-deserialize parts)))
