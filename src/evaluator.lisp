@@ -58,24 +58,25 @@ The history of evaluations is also saved by the evaluator.
   `(handler-case
        (handler-bind
            ((simple-warning
-             #'(lambda (wrn)
-                 (format *error-output* "~&~A: ~%" (class-name (class-of wrn)))
-                 (apply (function format) *error-output*
-                        (simple-condition-format-control   wrn)
-                        (simple-condition-format-arguments wrn))
-                 (format *error-output* "~&")
-                 (muffle-warning)))
+              #'(lambda (wrn)
+                  (format *error-output* "~&~A: ~%" (class-name (class-of wrn)))
+                  (apply (function format) *error-output*
+                         (simple-condition-format-control   wrn)
+                         (simple-condition-format-arguments wrn))
+                  (format *error-output* "~&")
+                  (muffle-warning)))
             (warning
-             #'(lambda (wrn)
-                 (format *error-output* "~&~A: ~%  ~A~%"
-                         (class-name (class-of wrn)) wrn)
-                 (muffle-warning)))
+              #'(lambda (wrn)
+                  (format *error-output* "~&~A: ~%  ~A~%"
+                          (class-name (class-of wrn)) wrn)
+                  (muffle-warning)))
             (serious-condition
-             #'(lambda (err)
-                 (logg 2 "~a~%" (with-output-to-string (*standard-output*)
-                                           (format t "~a~%" err)))
-                 (logg 2 "~a~%" (with-output-to-string (*standard-output*)
-                                           (core::clasp-backtrace))))))
+              #'(lambda (err)
+                  (logg 2 "~a~%" (with-output-to-string (*standard-output*)
+                                   (format t "~a~%" err)))
+                  (when *generate-backtrace-hook*
+                    (logg 2 "~a~%" (with-ouptut-to-string (*standard-output*)
+                                     (funcall *generate-backtrace-hook*)))))))
          (progn ,@body))
      (simple-condition (err)
        (format *error-output* "~&~A: ~%" (class-name (class-of err)))
