@@ -228,9 +228,7 @@ elif config.lisp_implementation == "ccl":
 
 elif config.lisp_implementation == "clasp":
     if not config.lisp_executable:
-        config.lisp_executable = '/Users/meister/Development/clasp/build/boehm/iclasp-boehm'
-
-    #print("ccl version string = {}".format(ccl_version_string))
+        config.lisp_executable = 'clasp'
 
 
     import re
