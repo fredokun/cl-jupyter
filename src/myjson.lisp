@@ -421,6 +421,7 @@ with a new line")
 	   => "blabla (ME TOTO)")
 
 
+#+clasp
 (defmethod encode-json (stream (thing cljw::instance-dict) &key (indent nil) (first-line nil))
   (error "You need to encode json for the instance-dict ~a" thing))
 
