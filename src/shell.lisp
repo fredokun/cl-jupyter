@@ -28,6 +28,11 @@
 (defparameter *handle-comm-open-hook* nil)
 (defparameter *handle-comm-msg-hook* nil)
 (defparameter *handle-comm-close-hook* nil)
+(defparameter *cl-jupyter-widget-display-hook* nil
+  "A function with the form (display-hook result-widget iopub msg execution-count key).
+If the display hook function recognizes result-widget as a widget it displays it and
+returns T. If it doesn't recognize it as a widget then simply return NIL and shell will
+display the result.")
 (defparameter *generate-backtrace-hook* nil)
 
 (defclass shell-channel ()
@@ -317,11 +322,14 @@ with the symbol to the left of the cursor."
 		(send-stream (kernel-iopub (shell-kernel shell)) msg "stderr" stderr :key (kernel-key shell)))
 	      ;; send the first result
               (logg 2 "==> About to display results -> ~s~%" results)
-	      (if (and (consp results) (typep (car results) 'cljw:widget))
-		  (cljw:ipython-display (car results) (kernel-iopub (shell-kernel shell))
-                                        msg execution-count (kernel-key shell))
-		  (send-execute-result (kernel-iopub (shell-kernel shell)) 
-				       msg execution-count (car results) :key (kernel-key shell)))
+              (cond
+                ((and *cl-jupyter-widget-display-hook*
+                      (funcall *cl-jupyter-widget-display-hook*
+                               (car results)
+                               (kernel-iopub (shell-kernel shell))
+                               msg execution-count (kernel-key shell))))
+                (t (send-execute-result (kernel-iopub (shell-kernel shell))
+				       msg execution-count (car results) :key (kernel-key shell))))
 	      ;; status back to idle
 	      (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))
 	      ;; send reply (control)
