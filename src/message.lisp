@@ -305,7 +305,11 @@ The wire-deserialization part follows.
 	   ;;DEBUG>>
 	   ;;(format t "~%[Send] wire parts: ~W~%" wire-parts)
 	   (dolist (part wire-parts)
-	     (pzmq:send socket part :sndmore t))
+             ;;; Clasp with cl-jupyter-widgets 
+             #+clasp(if (typep part 'clasp-ffi:foreign-data)
+                        (pzmq:send socket part :len (clasp-ffi:foreign-data-size part) :sndmore t)
+                        (pzmq:send socket part :sndmore t))
+	     #-clasp(pzmq:send socket part :sndmore t))
 	   (pzmq:send socket nil)))
     (bordeaux-threads:release-lock *message-send-lock*)))
 
