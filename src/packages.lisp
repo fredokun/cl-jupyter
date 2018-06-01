@@ -51,7 +51,16 @@
    #:*special-variables*
    #:kernel-start
    #:[]
-   #:[]-contains))
+   #:[]-contains
+   #:*kernel-start-hook*
+   #:*kernel-shutdown-hook*
+   #:*sort-encoded-json*
+   #:*handle-comm-open-hook*
+   #:*handle-comm-msg-hook*
+   #:*handle-comm-close-hook*
+   #:*cl-jupyter-widget-display-hook*
+   #:*generate-backtrace-hook*
+   ))
 
 (defpackage #:cl-jupyter-user
   (:use #:cl #:fredo-utils #:cl-jupyter #:common-lisp-user)
