@@ -122,7 +122,7 @@
                  (shell (make-shell-channel kernel))
                  (iopub (make-iopub-channel kernel)))
 	    ;; Invoke the *kernel-start-hook* if available
-	    (when cl-jupyter-widgets:*kernel-start-hook* (funcall cl-jupyter-widgets:*kernel-start-hook* kernel))
+	    (when cl-jupyter:*kernel-start-hook* (funcall cl-jupyter:*kernel-start-hook* kernel))
 	    ;; Launch the hearbeat thread
 	    (let ((hb-socket (pzmq:socket (kernel-ctx kernel) :rep)))
 	      (let ((hb-endpoint (format nil "~A://~A:~A"
@@ -138,7 +138,7 @@
 			 (format t "[Kernel] Entering mainloop ...~%")
 			 (shell-loop shell))
 		    ;; clean up when exiting
-		    (when cl-jupyter-widgets:*kernel-shutdown-hook* (funcall cl-jupyter-widgets:*kernel-shutdown-hook* kernel))
+		    (when cl-jupyter:*kernel-shutdown-hook* (funcall cl-jupyter:*kernel-shutdown-hook* kernel))
 		    (bordeaux-threads:destroy-thread heartbeat-thread-id)
 		    (pzmq:close hb-socket)
 		    (pzmq:close (iopub-socket iopub))

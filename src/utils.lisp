@@ -1,6 +1,7 @@
 
 (in-package #:fredokun-utilities)
 
+
 (declaim (inline []))
 (defun [] (table key &optional (default nil defaultp))
   (let ((pair (assoc key table :test #'equal)))

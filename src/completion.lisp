@@ -4,7 +4,7 @@
   "The KEYWORD package.")
 
 (defun simple-completions (prefix package sep-char)
-  "Return a list of completions for the string PREFIX."
+  "Return a list of completions for the string **prefix**."
   (logg 2 "simple-completions prefix: ~a  package: ~a~%" prefix package)
   (multiple-value-bind (strings metadata)
       (all-completions prefix package sep-char)

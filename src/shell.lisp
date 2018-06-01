@@ -16,6 +16,19 @@
 (defvar *default-special-bindings*)
 (defvar *special-variables* '(*parent-msg* *shell* *kernel*))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; These variables are to allow cl-jupyter-widgets to extend
+;;; the cl-jupyter message handler.
+
+(defparameter *kernel-start-hook* nil)
+(defparameter *kernel-shutdown-hook* nil)
+(defparameter *sort-encoded-json* nil)
+(defparameter *handle-comm-open-hook* nil)
+(defparameter *handle-comm-msg-hook* nil)
+(defparameter *handle-comm-close-hook* nil)
+
 (defclass shell-channel ()
   ((kernel :initarg :kernel :reader shell-kernel)
    (socket :initarg :socket :initform nil :accessor shell-socket)))
@@ -69,20 +82,18 @@
                                       ((equal msg-type "execute_request")
                                        (setf active (handle-execute-request shell identities msg)))
                                       ((equal msg-type "comm_open")
-                                       (when cl-jupyter-widgets:*handle-comm-open-hook*
-                                         (funcall cl-jupyter-widgets:*handle-comm-open-hook* shell identities msg)))
+                                       (when cl-jupyter:*handle-comm-open-hook*
+                                         (funcall cl-jupyter:*handle-comm-open-hook* shell identities msg)))
                                       ((equal msg-type "comm_msg")
-                                       (when cl-jupyter-widgets:*handle-comm-msg-hook*
-                                         (funcall cl-jupyter-widgets:*handle-comm-msg-hook* shell identities msg)))
+                                       (when cl-jupyter:*handle-comm-msg-hook*
+                                         (funcall cl-jupyter:*handle-comm-msg-hook* shell identities msg)))
                                       ((equal msg-type "comm_close")
-                                       (when cl-jupyter-widgets:*handle-comm-close-hook*
-                                         (funcall cl-jupyter-widgets:*handle-comm-close-hook* shell identities msg)))
+                                       (when cl-jupyter:*handle-comm-close-hook*
+                                         (funcall cl-jupyter:*handle-comm-close-hook* shell identities msg)))
                                       ((equal msg-type "complete_request")
                                        (complete-request shell identities msg))
-
                                       ((equal msg-type "inspect_request")
                                        (inspect-request shell identities msg))
-                                      
                                       (t (warn "[Shell] message type '~A' not (yet ?) supported, skipping... msg: ~s" msg-type msg))))))))))
     (bordeaux-threads:release-lock *session-receive-lock*)))
 
@@ -95,6 +106,7 @@
 
 
 (defun complete-request (shell identities msg)
+  "Handle complete_request.  This provides tab completion to cl-jupyter."
   (let* ((json (parse-json-from-string (message-content msg)))
          (text ([] json "code"))
          (cursor-end ([] json "cursor_pos"))
@@ -126,6 +138,10 @@
 
 
 (defun inspect-request (shell identities msg)
+  "Handle inspect_request.  This provides Shift-Tab completion to cl-jupyter.
+This should be improved so that if the cursor is inside of a form it returns information
+on the function of the form.  Currently it provides information on the function associated
+with the symbol to the left of the cursor."
   (let* ((json (parse-json-from-string (message-content msg)))
          (text ([] json "code"))
          (cursor-end ([] json "cursor_pos"))
@@ -276,7 +292,6 @@
       (logg 2 "  ===>    Code to execute = ~W~%" code)
       (vbinds (execution-count results stdout stderr)
 	      (progn
-		;;(format t "Set cl-jupyter-widgets:*kernel* -> ~a  (specialp 'cl-jupyter-widgets:*kernel*) -> ~a~%" cl-jupyter-widgets:*kernel* (core:specialp 'cl-jupyter-widgets:*kernel* ))
 		(logg 2 "Set cl-jupyter:*kernel* -> ~a ~%" cl-jupyter:*kernel*)
 		(evaluate-code (kernel-evaluator (shell-kernel shell)) code))
 	      (logg 2 "==> Execution count = ~A~%" execution-count)
