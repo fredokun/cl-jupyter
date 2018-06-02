@@ -16,6 +16,8 @@
 	   #:read-file-lines
 	   #:read-string-file
 	   #:read-binary-file
+           #:backtrace-as-string
+           #:function-lambda-list
 	   #:quit))
 
 (defpackage #:myjson
@@ -59,7 +61,6 @@
    #:*handle-comm-msg-hook*
    #:*handle-comm-close-hook*
    #:*cl-jupyter-widget-display-hook*
-   #:*generate-backtrace-hook*
    ))
 
 (defpackage #:cl-jupyter-user

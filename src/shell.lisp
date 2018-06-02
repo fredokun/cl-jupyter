@@ -33,7 +33,6 @@
 If the display hook function recognizes result-widget as a widget it displays it and
 returns T. If it doesn't recognize it as a widget then simply return NIL and shell will
 display the result.")
-(defparameter *generate-backtrace-hook* nil)
 
 (defclass shell-channel ()
   ((kernel :initarg :kernel :reader shell-kernel)
@@ -54,7 +53,7 @@ display the result.")
           (pzmq:bind socket endpoint)
           shell)))))
 
-(defparameter *session-receive-lock* (bordeaux-threads:make-lock 'session-receive-lock))
+(defparameter *session-receive-lock* (bordeaux-threads:make-lock "session-receive-lock"))
 
 (defun shell-loop (shell)
   (unwind-protect
@@ -65,9 +64,9 @@ display the result.")
            (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
            (format t "[Shell] entering main loop~%")
            (while active
-                  (format t "[Shell] top of main loop~%")
+                  (logg 1 "[Shell] top of main loop~%")
                   (vbinds (identities sig msg)  (message-recv (shell-socket shell))
-                          (logg 2 "[Shell] Received message ~s~%" msg)
+                          (logg 1 "[Shell] Received message ~s~%" msg)
                           (progn
                             (logg 2 "Shell Received message:~%")
                             (logg 2 "  | identities: ~A~%" identities)
@@ -129,18 +128,34 @@ display the result.")
                                :from-end t))
          (cursor-start (if sep-pos (1+ sep-pos) 0))
          (partial-token (subseq text cursor-start cursor-end)))
-    (multiple-value-bind (completions metadata)
-        (simple-completions partial-token *package* (char text sep-pos))        
-      (logg 2 "complete-request partial-token: ~a~%" partial-token)
-      (logg 2 "   --> completions: ~s~%" completions)
-      (logg 2 "   --> metadata: ~s~%" metadata)
-      (let* ((data `(("status" . "ok")
-                     ("metadata" . ,metadata)
-                     ("cursor_start" . ,cursor-start)
-                     ("cursor_end" . ,cursor-end)
-                     ("matches" . ,(make-array (length (car completions)) :initial-contents (car completions)))))
-             (reply (make-message msg "complete_reply" nil data)))
-        (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))))))
+    (handler-case
+        (handler-bind
+            ((serious-condition
+               #'(lambda (err)
+                   (logg 2 "~a~%" (with-output-to-string (*standard-output*)
+                                    (format t "~a~%" err)))
+                   (logg 2 "~a~%" (fredo-utils:backtrace-as-string)))))
+          (multiple-value-bind (completions metadata)
+              (simple-completions partial-token *package* (char text sep-pos))        
+            (logg 2 "complete-request partial-token: ~a~%" partial-token)
+            (logg 2 "   --> completions: ~s~%" completions)
+            (logg 2 "   --> metadata: ~s~%" metadata)
+            (let* ((data `(("status" . "ok")
+                           ("metadata" . ,metadata)
+                           ("cursor_start" . ,cursor-start)
+                           ("cursor_end" . ,cursor-end)
+                           ("matches" . ,(make-array (length (car completions)) :initial-contents (car completions)))))
+                   (reply (make-message msg "complete_reply" nil data)))
+              (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell)))))
+      (simple-condition (err)
+        (format *error-output* "~&~A: ~%" (class-name (class-of err)))
+        (apply (function format) *error-output*
+               (simple-condition-format-control   err)
+               (simple-condition-format-arguments err))
+        (format *error-output* "~&"))
+      (serious-condition (err)
+        (format *error-output* "~&An error occurred of type: ~A: ~%  ~S~%"
+                (class-name (class-of err)) err)))))
 
 
 (defun inspect-request (shell identities msg)
@@ -173,29 +188,6 @@ with the symbol to the left of the cursor."
                      ("data" . ,data)))
              (reply (make-message msg "inspect_reply" nil data)))
         (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))))))
-
-(defun fulfil-inspect-request (token)
-  (when (and (stringp token) (> (length token) 0))
-    (multiple-value-bind (name package-name intern)
-        (tokenize-symbol token)
-      (let* ((package (if package-name
-                          (find-package (let ((*package* (find-package :keyword)))
-                                          (read-from-string package-name)))
-                          (package-name *package*)))
-             (symbol-name (let ((*package* (find-package :keyword)))
-                            (string (read-from-string name))))
-             (symbol (find-symbol symbol-name package)))
-        (cond
-          ((fboundp symbol)
-           (let* ((func (fdefinition symbol))
-                  (lambda-list (core:function-lambda-list func))
-                  (lambda-list-string (if lambda-list
-                                          (string-downcase (format nil "~a" lambda-list))
-                                          "()"))
-                  (docstring (documentation func 'function)))
-             (list (cons "text/plain" (format nil  "Function       ~a~%~%~a~%" lambda-list-string docstring)))))
-          (t nil))))))
-
 
 ;; for protocol version 5  
 (defclass content-kernel-info-reply (message-content)

@@ -8,6 +8,7 @@
                :bordeaux-threads
                :uuid
                :babel
+               #+sbcl #:sb-introspect
                #-clasp :ironclad
                :cl-base64)
   :serial t

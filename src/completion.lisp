@@ -1,13 +1,29 @@
+#| completion.lisp
+
+Provide symbol completion for Tab and Shift-Tab in jupyter notebook/lab
+- Christian Schafmeister 2018
+
+The symbol completion code was lifted from slime.
+|#
+
+
 (in-package :cl-jupyter)
+
+(defclass completion ()
+  ((name :initarg :name :accessor name)
+   (metadata :initarg :metadata :accessor metadata)))
 
 (defconstant keyword-package (find-package :keyword)
   "The KEYWORD package.")
 
 (defun simple-completions (prefix package sep-char)
-  "Return a list of completions for the string **prefix**."
+  "Return a list of completions for the string **prefix**.
+jupyter lab allows some sort of metadata to be associated with completion
+entries - but I don't know how they work and I couldn't find any documentation on it."
   (logg 2 "simple-completions prefix: ~a  package: ~a~%" prefix package)
-  (multiple-value-bind (strings metadata)
-      (all-completions prefix package sep-char)
+  (let* ((completions (all-completions prefix package sep-char))
+         (strings (mapcar #'name completions))
+         (metadata (remove nil (mapcar #'metadata completions))))
     (values (list strings (longest-common-prefix strings)) metadata)))
 
 (defun all-completions (prefix package sep-char)
@@ -18,14 +34,15 @@
     (t (symbol-completions prefix package))))
 
 (defun filename-completions (prefix)
-     (let* ((filename prefix)
-            (files (mapcar #'enough-namestring (append (directory (concatenate 'string filename "*/"))
-                                                (directory (concatenate 'string filename "*.*"))
-                                                (directory (concatenate 'string filename "*"))))))
-       (logg 2 "all-completions  filename: ~a~%" filename)
-       (logg 2 "files: ~a~%" files)
-       files)) ;;;(list files (longest-common-prefix files))))
-
+  (let* ((filename prefix)
+         (files (mapcar  (lambda (x)
+                           (make-instance 'completion
+                                          :name (enough-namestring x)))
+                         (append (directory (concatenate 'string filename "*/"))
+                                 (directory (concatenate 'string filename "*.*"))
+                                 (directory (concatenate 'string filename "*"))))))
+    (logg 2 "all-completions  filename: ~a~%" filename)
+    files))
 
 (defun symbol-completions (prefix package)
   (logg 2 "symbol-completions for prefix: ~s  package: ~s~%" prefix package)
@@ -38,16 +55,17 @@
            (_ (logg 2 "Guessed package: ~a from package-name: ~a~%" pkg package-name))
            (test (lambda (sym) (prefix-match-p name (symbol-name sym))))
            (syms (and pkg (matching-symbols pkg extern test)))
-           (strings-and-metadata (loop for sym in syms
-                                       for metadata = (when (fboundp sym)
-                                                        (let ((lambda-list (core:function-lambda-list (symbol-function sym))))
-                                                          (if lambda-list
-                                                              (string-downcase (format nil "~a" lambda-list))
-                                                              "()")))
-                                       for str = (unparse-symbol sym)
-                                       when (prefix-match-p name str) ; remove |Foo|
-                                         collect (cons str metadata))))
-      (format-completion-set strings-and-metadata intern package-name))))
+           (completions (loop for sym in syms
+                              ;; Once we figure out how the jupyter lab
+                              ;; metadata works for completion - we could
+                              ;; provide something here
+                              for metadata = nil
+                              for str = (unparse-symbol sym)
+                              when (prefix-match-p name str) ; remove |Foo|
+                                collect (make-instance 'completion
+                                                       :name str
+                                                       :metadata metadata))))
+      (format-completion-set completions intern package-name))))
 
 (defun matching-symbols (package external test)
   (let ((test (if external 
@@ -167,15 +185,16 @@ If PACKAGE is not specified, the home package of SYMBOL is used."
                  (if diff-pos (subseq s1 0 diff-pos) s1))))
         (reduce #'common-prefix strings))))
 
-(defun format-completion-set (strings-and-metadata internal-p package-name)
+(defun format-completion-set (completions internal-p package-name)
   "Format a set of completion strings.
 Returns a list of completions with package qualifiers if needed."
-  (let ((strings-and-metadata (mapcar (lambda (string-and-metadata)
-                                        (let ((string (car string-and-metadata))
-                                              (metadata (cdr string-and-metadata)))
-                                          (cons (untokenize-symbol package-name internal-p string) metadata)))
-                                      (sort strings-and-metadata (lambda (x y) (string< (car x) (car y)))))))
-    (values (mapcar #'car strings-and-metadata) strings-and-metadata)))
+  (mapcar (lambda (completion)
+            (let ((string (name completion))
+                  (metadata (metadata completion)))
+              (make-instance 'completion
+                             :name (untokenize-symbol package-name internal-p string)
+                             :metadata metadata)))
+          (sort completions (lambda (x y) (string< (name x) (name y))))))
 
 (defun untokenize-symbol (package-name internal-p symbol-name)
   "The inverse of TOKENIZE-SYMBOL.
@@ -184,11 +203,9 @@ Returns a list of completions with package qualifiers if needed."
   (untokenize-symbol \"quux\" t \"foo\")   ==> \"quux::foo\"
   (untokenize-symbol nil nil \"foo\")    ==> \"foo\"
 "
-  (cond ((not package-name) 	symbol-name)
-        (internal-p 		(concatenate 'string package-name "::" symbol-name))
-        (t 			(concatenate 'string package-name ":" symbol-name))))
-
-
+  (cond ((not package-name)     symbol-name)
+        (internal-p             (concatenate 'string package-name "::" symbol-name))
+        (t                      (concatenate 'string package-name ":" symbol-name))))
 
 (defun guess-package (string)
   "Guess which package corresponds to STRING.
@@ -213,7 +230,6 @@ Fall back to the current if no such package exists."
   (or (and string (guess-package string))
       *package*))
 
-
 (defun tokenize-symbol (string)
   "STRING is interpreted as the string representation of a symbol
 and is tokenized accordingly. The result is returned in three
@@ -231,3 +247,24 @@ considered to represent a symbol internal to some current package.)"
     (logg 2 "tokenize-symbol result -> symbol: ~a  package: ~a  internp: ~a~%" symbol package internp)
     (values symbol package internp)))
 
+(defun fulfil-inspect-request (token)
+  (when (and (stringp token) (> (length token) 0))
+    (multiple-value-bind (name package-name intern)
+        (tokenize-symbol token)
+      (let* ((package (if package-name
+                          (find-package (let ((*package* (find-package :keyword)))
+                                          (read-from-string package-name)))
+                          (package-name *package*)))
+             (symbol-name (let ((*package* (find-package :keyword)))
+                            (string (read-from-string name))))
+             (symbol (find-symbol symbol-name package)))
+        (cond
+          ((fboundp symbol)
+           (let* ((func (fdefinition symbol))
+                  (lambda-list (fredo-utils:function-lambda-list func))
+                  (lambda-list-string (if lambda-list
+                                          (string-downcase (format nil "~a" lambda-list))
+                                          "()"))
+                  (docstring (documentation func 'function)))
+             (list (cons "text/plain" (format nil  "Function       ~a~%~%~a~%" lambda-list-string docstring)))))
+          (t nil))))))

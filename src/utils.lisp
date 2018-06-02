@@ -15,6 +15,22 @@
   (let ((pair (assoc key table :test #'equal)))
     pair))
 
+(defun getpid ()
+  "Return the pid of the current process"
+  #+clasp(core:getpid)
+  #+sbcl(sb-posix:getpid))
+
+
+(defun function-lambda-list (function)
+  "Return the lambda-list of a function - there is no standard way of doing this"
+  #+clasp(core:function-lambda-list function)
+  #+sbcl(sb-introspect:function-lambda-list function))
+
+
+(defun backtrace-as-string ()
+  "Returns the backtrace as a string for logging crashes"
+  #+clasp(with-output-to-string (*standard-output*) (core::clasp-backtrace))
+  #+sbcl "Generate a backtrace for sbcl")
 
 #|
 
@@ -84,13 +100,16 @@
 (defparameter *log-lock* nil)
 
 ;;; Comment out the following eval-when if you want logging fully disabled
-;;;#+(or)
-(eval-when (:execute :load-toplevel)
+#+(or)
+(eval-when (:execute :load-toplevel :compile-toplevel)
+  (format t "Turning on cl-jupyter logging~%")
   (push :cl-jupyter-log *features*))
 
 #+cl-jupyter-log
 (eval-when (:execute :load-toplevel)
-  (let* ((log-file-name (make-pathname :name (format nil "cl-jupyter-~a" (core:getpid))
+  (setf *log-enabled* t)
+  (setf *log-level* 2)
+  (let* ((log-file-name (make-pathname :name (format nil "cl-jupyter-~a" (getpid))
                                        :type "log"))
          (log-path-name (cond
                           ((probe-file "/home/app/logs/")
@@ -100,18 +119,17 @@
                                 :direction :output
                                 :if-exists :append
                                 :if-does-not-exist :create))
-    (setf ext:+process-error-output+ *log-file*)
     (format *log-file* "Log started up~%")
-    (setf *log-lock* (mp:make-lock :name 'cl-jupyter-log))
+    (setf *log-lock* (bordeaux-threads:make-lock "cl-jupyter-log"))
     (format *log-file* "About to start logging cl-jupyter~%")
     (defun always-log (fmt &rest args)
       (let ((msg (apply #'format nil fmt args)))
         (unwind-protect
              (progn
-               (mp:lock *log-lock* t)
+               (bordeaux-threads:acquire-lock *log-lock* t)
                (princ msg *log-file*)
                (finish-output *log-file*))
-          (mp:unlock *log-lock*))))
+          (bordeaux-threads:release-lock *log-lock*))))
     (format *log-file* "===================== new run =======================~%")))
 
 #+cl-jupyter-log

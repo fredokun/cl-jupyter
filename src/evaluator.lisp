@@ -73,9 +73,7 @@ The history of evaluations is also saved by the evaluator.
               #'(lambda (err)
                   (logg 2 "~a~%" (with-output-to-string (*standard-output*)
                                    (format t "~a~%" err)))
-                  (when *generate-backtrace-hook*
-                    (logg 2 "~a~%" (with-ouptut-to-string (*standard-output*)
-                                     (funcall *generate-backtrace-hook*)))))))
+                  (logg 2 "~a~%" (fredo-utils:backtrace-as-string)))))
          (progn ,@body))
      (simple-condition (err)
        (format *error-output* "~&~A: ~%" (class-name (class-of err)))
