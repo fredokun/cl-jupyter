@@ -265,6 +265,7 @@ considered to represent a symbol internal to some current package.)"
                   (lambda-list-string (if lambda-list
                                           (string-downcase (format nil "~a" lambda-list))
                                           "()"))
-                  (docstring (documentation func 'function)))
+                  (docstring (or (documentation func 'function)
+                                 "No documentation available")))
              (list (cons "text/plain" (format nil  "Function       ~a~%~%~a~%" lambda-list-string docstring)))))
           (t nil))))))
