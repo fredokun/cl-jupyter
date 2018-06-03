@@ -20,13 +20,6 @@
   #+clasp(core:getpid)
   #+sbcl(sb-posix:getpid))
 
-
-(defun function-lambda-list (function)
-  "Return the lambda-list of a function - there is no standard way of doing this"
-  #+clasp(core:function-lambda-list function)
-  #+sbcl(sb-introspect:function-lambda-list function))
-
-
 (defun backtrace-as-string ()
   "Returns the backtrace as a string for logging crashes"
   #+clasp(with-output-to-string (*standard-output*) (core::clasp-backtrace))
@@ -100,7 +93,7 @@
 (defparameter *log-lock* nil)
 
 ;;; Comment out the following eval-when if you want logging fully disabled
-#+(or)
+;;;#+(or)
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (format t "Turning on cl-jupyter logging~%")
   (push :cl-jupyter-log *features*))

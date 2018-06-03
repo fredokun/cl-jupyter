@@ -54,6 +54,7 @@
    #:kernel-start
    #:[]
    #:[]-contains
+   #:*started-kernels*
    #:*kernel-start-hook*
    #:*kernel-shutdown-hook*
    #:*sort-encoded-json*
@@ -61,6 +62,7 @@
    #:*handle-comm-msg-hook*
    #:*handle-comm-close-hook*
    #:*cl-jupyter-widget-display-hook*
+   #:logg
    ))
 
 (defpackage #:cl-jupyter-user

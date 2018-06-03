@@ -122,7 +122,9 @@
                  (shell (make-shell-channel kernel))
                  (iopub (make-iopub-channel kernel)))
 	    ;; Invoke the *kernel-start-hook* if available
-	    (when cl-jupyter:*kernel-start-hook* (funcall cl-jupyter:*kernel-start-hook* kernel))
+	    (if cl-jupyter:*kernel-start-hook*
+                (funcall cl-jupyter:*kernel-start-hook* kernel)
+                (push kernel cl-jupyter:*started-kernels*))
 	    ;; Launch the hearbeat thread
 	    (let ((hb-socket (pzmq:socket (kernel-ctx kernel) :rep)))
 	      (let ((hb-endpoint (format nil "~A://~A:~A"

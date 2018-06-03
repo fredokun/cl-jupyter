@@ -22,12 +22,22 @@
 ;;; These variables are to allow cl-jupyter-widgets to extend
 ;;; the cl-jupyter message handler.
 
-(defparameter *kernel-start-hook* nil)
-(defparameter *kernel-shutdown-hook* nil)
-(defparameter *sort-encoded-json* nil)
-(defparameter *handle-comm-open-hook* nil)
-(defparameter *handle-comm-msg-hook* nil)
-(defparameter *handle-comm-close-hook* nil)
+(defvar *started-kernels* nil
+  "Save kernels that are started before the *kernel-start-hook* is set")
+(defvar *kernel-start-hook* nil
+  "Set this to a function to invoke a callback whenever a kernel is started")
+(defvar *kernel-shutdown-hook* nil
+  "Set this to a function to invoke a callback whenever a kernel is shutdown")
+(defvar *handle-comm-open-hook* nil
+  "Set this to a function to invoke a callback whenever an comm_open message is received")
+(defvar *handle-comm-msg-hook* nil
+  "Set this to a function to invoke a callback whenever an comm_msg message is received")
+(defvar *handle-comm-close-hook* nil
+  "Set this to a function to invoke a callback whenever an comm_close message is received")
+
+(defparameter *sort-encoded-json* nil
+  "Set to T if you want json dictionaries to be sorted before they are sent out")
+
 (defparameter *cl-jupyter-widget-display-hook* nil
   "A function with the form (display-hook result-widget iopub msg execution-count key).
 If the display hook function recognizes result-widget as a widget it displays it and

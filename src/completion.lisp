@@ -261,7 +261,7 @@ considered to represent a symbol internal to some current package.)"
         (cond
           ((fboundp symbol)
            (let* ((func (fdefinition symbol))
-                  (lambda-list (fredo-utils:function-lambda-list func))
+                  (lambda-list (arg:arglist func))
                   (lambda-list-string (if lambda-list
                                           (string-downcase (format nil "~a" lambda-list))
                                           "()"))

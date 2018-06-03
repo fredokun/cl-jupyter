@@ -8,6 +8,8 @@
                :bordeaux-threads
                :uuid
                :babel
+               :trivial-backtrace
+               :trivial-arguments
                #+sbcl #:sb-introspect
                #-clasp :ironclad
                :cl-base64)
