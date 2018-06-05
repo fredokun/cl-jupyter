@@ -18,6 +18,7 @@
 	   #:read-binary-file
            #:backtrace-as-string
            #:function-lambda-list
+           #:getpid
 	   #:quit))
 
 (defpackage #:myjson

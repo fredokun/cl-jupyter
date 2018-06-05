@@ -70,7 +70,7 @@ display the result.")
        (progn
          (bordeaux-threads:acquire-lock *session-receive-lock*)
          (let ((active t))
-           (format t "[Shell] loop started~%")
+           (format t "[Shell] loop started pid: ~a~%" (fredokun-utilities:getpid))
            (send-status-starting (kernel-iopub (shell-kernel shell)) (kernel-session (shell-kernel shell)) :key (kernel-key shell))
            (format t "[Shell] entering main loop~%")
            (while active
