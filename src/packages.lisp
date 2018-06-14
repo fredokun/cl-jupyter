@@ -16,7 +16,6 @@
 	   #:read-file-lines
 	   #:read-string-file
 	   #:read-binary-file
-           #:backtrace-as-string
            #:function-lambda-list
            #:getpid
 	   #:quit))

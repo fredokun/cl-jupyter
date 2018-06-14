@@ -53,37 +53,57 @@ The history of evaluations is also saved by the evaluator.
 
 ;;; macro taken from: http://www.cliki.net/REPL
 ;;; modified to handle warnings correctly
+#+(or)
 (defmacro handling-errors (&body body)
-  `(handler-case
-       (handler-bind
-           ((simple-warning
-              #'(lambda (wrn)
-                  (format *error-output* "~&~A: ~%" (class-name (class-of wrn)))
-                  (apply (function format) *error-output*
-                         (simple-condition-format-control   wrn)
-                         (simple-condition-format-arguments wrn))
-                  (format *error-output* "~&")
-                  (muffle-warning)))
-            (warning
-              #'(lambda (wrn)
-                  (format *error-output* "~&~A: ~%  ~A~%"
-                          (class-name (class-of wrn)) wrn)
-                  (muffle-warning)))
-            (serious-condition
-              #'(lambda (err)
-                  (logg 2 "~a~%" (with-output-to-string (*standard-output*)
-                                   (format t "~a~%" err)))
-                  (logg 2 "~a~%" (fredo-utils:backtrace-as-string)))))
-         (progn ,@body))
-     (simple-condition (err)
-       (format *error-output* "~&~A: ~%" (class-name (class-of err)))
-       (apply (function format) *error-output*
-              (simple-condition-format-control   err)
-              (simple-condition-format-arguments err))
-       (format *error-output* "~&"))
-     (serious-condition (err)
-       (format *error-output* "~&An error occurred of type: ~A: ~%  ~S~%"
-               (class-name (class-of err)) err))))
+  `(let (backtrace)
+     (handler-case
+         (handler-bind
+             ((warning
+                #'(lambda (wrn)
+                    (format *error-output* "~&~A~%" wrn)
+                    (muffle-warning)))
+              (serious-condition
+                #'(lambda (err)
+                    (logg 2 "~a~%" (with-output-to-string (sout)
+                                     (format t "~&~A~%" err)))
+                    (logg 2 "~a~%" (with-output-to-string (sout)
+                                     (trivial-backtrace:print-backtrace-to-stream sout)))
+                    (setf backtrace (with-output-to-string (sout)
+                                      (trivial-backtrace:print-backtrace-to-stream sout))))))
+           (progn ,@body))
+       (simple-condition (err)
+         (format *error-output* "~&~A: ~%" (class-name (class-of err)))
+         (apply (function format) *error-output*
+                (simple-condition-format-control   err)
+                (simple-condition-format-arguments err))
+         (format *error-output* "~&")
+         (format *error-output* "simple-condition backtrace:~%~A~%" backtrace))
+       (serious-condition (err)
+         (format *error-output* "~&An error occurred of type: ~A: ~%  ~S~%~%"
+                 (class-name (class-of err)) err)
+         (format *error-output* "serious-condition backtrace:~%~A~%" backtrace)))))
+
+(defmacro handling-errors (&body body)
+  `(block error-handler
+     (handler-bind
+         ((warning
+            #'(lambda (wrn)
+                (format *error-output* "~&~A~%" wrn)
+                (muffle-warning)
+                (return-from error-handler)))
+          (serious-condition
+            #'(lambda (err)
+                #+(or)(progn
+                  (logg 2 "~a~%" (with-output-to-string (sout) (format sout "~&~A~%" err)))
+                  (logg 2 "~a~%" (with-output-to-string (sout)
+                                   (trivial-backtrace:print-backtrace-to-stream sout))))
+                (format *error-output* "~&An error occurred of type: ~A: ~%  ~A~%~%"
+                        (class-name (class-of err)) err)
+                (format *error-output* "serious-condition backtrace:~%~A~%"
+                        (with-output-to-string (sout)
+                          (trivial-backtrace:print-backtrace-to-stream sout)))
+                (return-from error-handler))))
+       (progn ,@body))))
 
 (defun evaluate-code (evaluator code)
   ;; (format t "[Evaluator] Code to evaluate: ~W~%" code)

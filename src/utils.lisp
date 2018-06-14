@@ -20,11 +20,6 @@
   #+clasp(core:getpid)
   #+sbcl(sb-posix:getpid))
 
-(defun backtrace-as-string ()
-  "Returns the backtrace as a string for logging crashes"
-  #+clasp(with-output-to-string (*standard-output*) (core::clasp-backtrace))
-  #+sbcl "Generate a backtrace for sbcl")
-
 #|
 
 # CommonTypes: Utilities #
