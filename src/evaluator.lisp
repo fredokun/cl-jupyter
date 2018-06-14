@@ -51,38 +51,6 @@ The history of evaluations is also saved by the evaluator.
     (setf (slot-value kernel 'evaluator) evaluator)
     evaluator))
 
-;;; macro taken from: http://www.cliki.net/REPL
-;;; modified to handle warnings correctly
-#+(or)
-(defmacro handling-errors (&body body)
-  `(let (backtrace)
-     (handler-case
-         (handler-bind
-             ((warning
-                #'(lambda (wrn)
-                    (format *error-output* "~&~A~%" wrn)
-                    (muffle-warning)))
-              (serious-condition
-                #'(lambda (err)
-                    (logg 2 "~a~%" (with-output-to-string (sout)
-                                     (format t "~&~A~%" err)))
-                    (logg 2 "~a~%" (with-output-to-string (sout)
-                                     (trivial-backtrace:print-backtrace-to-stream sout)))
-                    (setf backtrace (with-output-to-string (sout)
-                                      (trivial-backtrace:print-backtrace-to-stream sout))))))
-           (progn ,@body))
-       (simple-condition (err)
-         (format *error-output* "~&~A: ~%" (class-name (class-of err)))
-         (apply (function format) *error-output*
-                (simple-condition-format-control   err)
-                (simple-condition-format-arguments err))
-         (format *error-output* "~&")
-         (format *error-output* "simple-condition backtrace:~%~A~%" backtrace))
-       (serious-condition (err)
-         (format *error-output* "~&An error occurred of type: ~A: ~%  ~S~%~%"
-                 (class-name (class-of err)) err)
-         (format *error-output* "serious-condition backtrace:~%~A~%" backtrace)))))
-
 (defmacro handling-errors (&body body)
   `(block error-handler
      (handler-bind
