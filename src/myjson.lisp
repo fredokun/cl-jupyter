@@ -121,6 +121,7 @@ There are several libraries available for json encoding and decoding,
 		  ;(format t "escape char = ~A~%" escape-char)
 		  (cond ((eql escape-char :eof) (error 'json-parse-error :message "Unexpected end of file (after '\')"))
 			((char= escape-char #\n) (vector-push-extend #\Newline str))
+                        ((char= escape-char #\t) (vector-push-extend #\Tab str))
 			(t 
 			 ;;(vector-push-extend char str) ;; XXX: escaping is performed on the lisp side
 			 (vector-push-extend escape-char str)))))
@@ -379,6 +380,9 @@ The INDENT can be given for beautiful/debugging output (default is NIL
        do (cond ((char= char #\Newline)
                  (vector-push-extend #\\ jstr)
                  (vector-push-extend #\n jstr))
+                ((char= char #\Tab)
+                 (vector-push-extend #\\ jstr)
+                 (vector-push-extend #\t jstr))
                 (t (vector-push-extend char jstr))))
     jstr))
 
@@ -386,6 +390,10 @@ The INDENT can be given for beautiful/debugging output (default is NIL
  (string-to-json-string "this is a string  
 with a new line")
  => "this is a string  \\nwith a new line")
+
+(example
+ (string-to-json-string "this is a string	with a tabular character")
+ => "this is a string\\twith a tabular character")
 
 (example
  (string-to-json-string "(format t \"hello~%\")")
