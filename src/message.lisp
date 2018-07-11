@@ -298,20 +298,25 @@ The wire-deserialization part follows.
 (defparameter *message-send-lock* (bordeaux-threads:make-lock "message-send-lock"))
 
 (defun message-send (socket msg &key (identities nil) (key nil))
-  (unwind-protect
-       (progn
-	 (bordeaux-threads:acquire-lock *message-send-lock*)
-	 (let ((wire-parts (wire-serialize msg :identities identities :key key)))
-	   ;;DEBUG>>
-	   ;;(format t "~%[Send] wire parts: ~W~%" wire-parts)
-	   (dolist (part wire-parts)
-             ;;; Clasp with cl-jupyter-widgets 
-             #+clasp(if (typep part 'clasp-ffi:foreign-data)
-                        (pzmq:send socket part :len (clasp-ffi:foreign-data-size part) :sndmore t)
-                        (pzmq:send socket part :sndmore t))
-	     #-clasp(pzmq:send socket part :sndmore t))
-	   (pzmq:send socket nil)))
-    (bordeaux-threads:release-lock *message-send-lock*)))
+  (flet ((send-part (part sndmore)
+           ;; Clasp supports binary buffers using clasp-ffi:foreign-data
+           #+clasp(if (typep part 'clasp-ffi:foreign-data)
+                      (pzmq:send socket part :len (clasp-ffi:foreign-data-size part) :sndmore sndmore)
+                      (pzmq:send socket part :sndmore sndmore))
+           #-clasp(pzmq:send socket part :sndmore sndmore)))
+    (unwind-protect
+         (progn
+           (bordeaux-threads:acquire-lock *message-send-lock*)
+           (let ((wire-parts (wire-serialize msg :identities identities :key key)))
+             (logg 2 "  in message-send (length wire-parts) -> ~s~%" (length wire-parts))
+             (logg 2 "      wire-parts-> ~s~%" wire-parts)
+             ;; Ensure that the last part send has sndmore = NIL
+             (do* ((cur wire-parts (cdr cur))
+                   (part (car cur) (car cur))
+                   (sndmore (cdr cur) (cdr cur)))
+                  ((null cur))
+               (send-part part sndmore))))
+      (bordeaux-threads:release-lock *message-send-lock*))))
 
 (defun recv-string (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
   "Receive a message part from a socket as a string."
