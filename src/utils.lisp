@@ -20,6 +20,11 @@
   #+clasp(core:getpid)
   #+sbcl(sb-posix:getpid))
 
+(defun current-date-time ()
+  (multiple-value-bind (second minute hour date month year day daylight-p zone)
+      (get-decoded-time)
+    (format nil "~4d-~02,'0d-~02,'0dT~02,'0d:~02,'0d:~02,'0d" year month date hour minute second)))
+
 #|
 
 # CommonTypes: Utilities #
@@ -88,7 +93,7 @@
 (defparameter *log-lock* nil)
 
 ;;; Comment out the following eval-when if you want logging fully disabled
-#+(or)
+;;;#+(or)
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (format t "Turning on cl-jupyter logging~%")
   (push :cl-jupyter-log *features*))
@@ -125,7 +130,7 @@
   "Log the passed ARGS using the format string FMT and its
  arguments ARGS."
   (if (or (not *log-enabled*)
-          (< level *log-level*))
+          (> level *log-level*))
       (values);; disabled
       ;; when enabled
       `(progn (always-log ,fmt ,@args))))
@@ -161,11 +166,13 @@
          => '(1 . 3)) ;; without a warning
 
 
-(defun afetch (comp alist &key (test #'eql))
+(defun afetch (comp alist &key (test #'eql) (default nil defaultp))
   (let ((binding (assoc comp alist :test test)))
     (if binding
         (cdr binding)
-        (error "No such key: ~A" comp))))
+        (if defaultp
+            default
+            (error "No such key: ~A in dict ~S" comp alist)))))
 
 (defmacro while (condition &body body)
   (let ((eval-cond-var (gensym "eval-cond-"))

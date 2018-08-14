@@ -294,11 +294,11 @@ Note:   Python None maps to NIL
 
 (example (with-input-from-string (s "34.212e-42")
 	   (parse-json-number #\- s))
-	 => -3.42113e-41 :warn-only t)
+	 => -3.4212e-41 :warn-only t)
 
 (example (with-input-from-string (s "34.212e-42")
 	   (parse-json-number #\1 s))
-	 => 1.3421076e-40 :warn-only t)
+	 => 1.34212e-40 :warn-only t)
 
 (example (with-input-from-string (s ".212E+32")
 	   (parse-json-number #\0 s))

@@ -206,6 +206,7 @@ with the symbol to the left of the cursor."
    (language-info-name :initarg :language-info-name :type string)
    (language-info-version :initarg :language-info-version :type string)
    (language-info-mimetype :initarg :language-info-mimetype :type string)
+   (language-info-file-extension :initarg :language-info-file-extension :type string)
    (language-info-pygments-lexer :initarg :language-info-pygments-lexer :type string)
    (language-info-codemirror-mode :initarg :language-info-codemirror-mode :type string)
    (language-info-nbconvert-exporter :initarg :language-info-nbconvert-exporter :type string)
@@ -232,6 +233,7 @@ with the symbol to the left of the cursor."
   (with-slots (protocol-version
                implementation implementation-version
                language-info-name language-info-version
+	       language-info-file-extension
                language-info-mimetype language-info-pygments-lexer language-info-codemirror-mode
                language-info-nbconvert-exporter
                banner help-links) object
@@ -241,6 +243,7 @@ with the symbol to the left of the cursor."
                           ("language_info" . (("name" . ,language-info-name)
                                               ("version" . ,language-info-version)
                                               ("mimetype" . ,language-info-mimetype)
+					      ("file_extension" . ,language-info-file-extension)
                                               ("pygments_lexer" . ,language-info-pygments-lexer)
                                               ("codemirror_mode" . ,language-info-codemirror-mode)))
                                               ;("nbconvert_exporter" . ,language-info-nbconvert-exporter)))
@@ -266,6 +269,7 @@ with the symbol to the left of the cursor."
                  :language-info-name "common-lisp"
                  :language-info-version "X3J13"
                  :language-info-mimetype "text/x-common-lisp"
+                 :language-info-file-extension ".lisp"
                  :language-info-pygments-lexer "common-lisp"
                  :language-info-codemirror-mode "text/x-common-lisp"
                  :language-info-nbconvert-exporter ""
@@ -278,7 +282,8 @@ with the symbol to the left of the cursor."
   ;;   				  'content-kernel-info-reply
   ;;   				  :protocol-version #(4 1)
   ;;   				  :language-version #(1 2 7)  ;; XXX: impl. dependent but really cares ?
-   ;;   				  :language "common-lisp"))))
+    ;;   				  :language "common-lisp"))))
+;;    (logg 2 "WARN WARN WARN message-send for handle-kernel-info-request - dropping identities~%")
     (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))
     ;; status back to idle
     ;;(send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))
