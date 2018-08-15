@@ -143,7 +143,7 @@ display the result.")
             ((serious-condition
                #'(lambda (err)
                    (logg 2 "~a~%" (with-output-to-string (sout) (format sout "~A~%" err)))
-                   (logg 2 "~A~%" (with-output-to-string (sout) (trivial-backtrace:print-backtrace-to-stream sout))))))
+                   (logg 2 "~A~%" (let ((*print-pretty* nil)) (with-output-to-string (sout) (trivial-backtrace:print-backtrace-to-stream sout)))))))
           (multiple-value-bind (completions metadata)
               (simple-completions partial-token *package* (char text sep-pos))        
             (logg 2 "complete-request partial-token: ~a~%" partial-token)
@@ -257,7 +257,7 @@ with the symbol to the left of the cursor."
 (defun handle-kernel-info-request (shell identities msg)
   ;;(format t "[Shell] handling 'kernel-info-request'~%")
   ;; status to busy
-  ;;(send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))
+  (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))
   ;; for protocol version 5
   (let ((reply (make-message
                 msg "kernel_info_reply" nil
@@ -286,7 +286,7 @@ with the symbol to the left of the cursor."
 ;;    (logg 2 "WARN WARN WARN message-send for handle-kernel-info-request - dropping identities~%")
     (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))
     ;; status back to idle
-    ;;(send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))
+    (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell))
     ))
 
 #|

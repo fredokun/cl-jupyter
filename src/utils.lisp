@@ -101,7 +101,7 @@
 #+cl-jupyter-log
 (eval-when (:execute :load-toplevel)
   (setf *log-enabled* t)
-  (setf *log-level* 2)
+  (setf *log-level* 1)
   (let* ((log-file-name (make-pathname :name (format nil "cl-jupyter-~a" (getpid))
                                        :type "log"))
          (log-path-name (cond

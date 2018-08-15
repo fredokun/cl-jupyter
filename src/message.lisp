@@ -210,12 +210,13 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
 
 ;; XXX: should be a defconstant but  strings are not EQL-able...
 (defvar +WIRE-IDS-MSG-DELIMITER+ "<IDS|MSG>")
+(defvar +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ (babel:string-to-octets +WIRE-IDS-MSG-DELIMITER+))
 
 (defmethod wire-serialize ((msg message) &key (identities nil) (key nil))
-  (logg 2 ">>>>>>>>> in wire-serialize time: ~s~%" (fredokun-utilities:current-date-time))
+  (dolist (id identities) (check-type id (simple-array (unsigned-byte 8) (*))))
+  (logg 1 ">>>>>>>>> in wire-serialize time: ~s~%" (fredokun-utilities:current-date-time))
   (with-slots (header parent-header metadata content buffers) msg
-    (logg 2 "~a~%" (with-output-to-string (sout)
-                     (encode-json sout msg :indent 3 :first-line t)))
+    (logg 1 "~a~%" (with-output-to-string (sout) (encode-json sout msg :indent 3 :first-line t)))
     (logg 2 "header -> ~s~%" header)
     (logg 2 "parent-header -> ~s~%" parent-header)
     (logg 2 "metadata -> ~s~%" metadata)
@@ -224,32 +225,36 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
     (let ((header-json (encode-json-to-string header))
           (parent-header-json (if parent-header
                                   (encode-json-to-string parent-header)
-                                  "{}"))
+				"{}"))
           (metadata-json (if metadata
                              (encode-json-to-string metadata)
-                             "{}"))
+			   "{}"))
           (content-json (if content
                             (encode-json-to-string content)
-                            "{}")))
+			  "{}")))
       (logg 2 "content: ~s~%" content-json)
       (logg 2 "header: ~s~%" header-json)
       (logg 2 "parent-header: ~s~%" parent-header-json)
       (logg 2 "About to calculate signature~%")
       (let ((sig (if key
                      (message-signing key (list header-json parent-header-json metadata-json content-json))
-                     "")))
+		   "")))
         (logg 2 "About to do append~%")
         (append identities
-                (list +WIRE-IDS-MSG-DELIMITER+
-                      sig
-                      header-json
-                      parent-header-json
-                      metadata-json
-                      content-json)
-                (coerce buffers 'list))))))
+                (list* +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+
+		       (babel:string-to-octets sig)
+		       (babel:string-to-octets header-json)
+		       (babel:string-to-octets parent-header-json)
+		       (babel:string-to-octets metadata-json)
+		       (babel:string-to-octets content-json)
+		       (coerce buffers 'list)))))))
 
 (example-progn
- (defparameter *wire1* (wire-serialize *msg1* :identities '("XXX-YYY-ZZZ-TTT" "AAA-BBB-CCC-DDD"))))
+ (defparameter *wire1*
+   (wire-serialize *msg1*
+		   :identities (list
+				(babel:string-to-octets "XXX-YYY-ZZZ-TTT")
+				(babel:string-to-octets "AAA-BBB-CCC-DDD")))))
 
 
 #|
@@ -260,47 +265,47 @@ The wire-deserialization part follows.
 
 |#
 
-(example (position +WIRE-IDS-MSG-DELIMITER+ *wire1*)
+(example (position +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ *wire1* :test #'equalp)
          => 2)
 
-(example (nth (position +WIRE-IDS-MSG-DELIMITER+ *wire1*) *wire1*)
+(example (babel:octets-to-string (nth (position +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ *wire1* :test #'equalp) *wire1*))
          => +WIRE-IDS-MSG-DELIMITER+)
 
 (example
- (subseq *wire1* 0 (position +WIRE-IDS-MSG-DELIMITER+ *wire1*))
- => '("XXX-YYY-ZZZ-TTT" "AAA-BBB-CCC-DDD"))
+ (mapcar (lambda (x) (babel:octets-to-string x))
+	 (subseq *wire1* 0 (position +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ *wire1* :test #'equalp)))
+ => '( "XXX-YYY-ZZZ-TTT" "AAA-BBB-CCC-DDD"))
 
 (example
- (subseq *wire1* (+ 6 (position +WIRE-IDS-MSG-DELIMITER+ *wire1*)))
+ (subseq *wire1* (+ 6 (position +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ *wire1* :test #'equalp)))
  => nil)
 
 (example
- (let ((delim-index (position +WIRE-IDS-MSG-DELIMITER+ *wire1*)))
-   (subseq *wire1* (+ 2 delim-index) (+ 6 delim-index)))
- => '("{\"date\": \"dummy-date\",\"msg_id\": \"XXX-YYY-ZZZ-TTT\",\"username\": \"fredokun\",\"session\": \"AAA-BBB-CCC-DDD\",\"msg_type\": \"execute_request\",\"version\": \"5.1\"}"
-      "{}" "{}" "{}"))
+ (let ((delim-index (position +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ *wire1* :test #'equalp)))
+   (mapcar #'babel:octets-to-string (subseq *wire1* (+ 2 delim-index) (+ 6 delim-index))))
+   => '("{\"date\": \"dummy-date\",\"msg_id\": \"XXX-YYY-ZZZ-TTT\",\"username\": \"fredokun\",\"session\": \"AAA-BBB-CCC-DDD\",\"msg_type\": \"execute_request\",\"version\": \"5.1\"}"
+	"{}" "{}" "{}"))
 
 
 (defun wire-deserialize (parts)
-  (logg 2 "<<<<<< in wire-deserialize time: ~s~%" (fredokun-utilities:current-date-time))
+  (logg 1 "<<<<<< in wire-deserialize time: ~s~%" (fredokun-utilities:current-date-time))
   (logg 2 "  (length parts) -> ~d~%" (length parts))
-  (let ((delim-index (position +WIRE-IDS-MSG-DELIMITER+ parts :test  #'equal)))
-    (when (not delim-index)
-      (error "no <IDS|MSG> delimiter found in message parts"))
+  (let ((delim-index (position +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ parts :test  #'equalp)))
+    (when (not delim-index) (error "no <IDS|MSG> delimiter found in message parts"))
     (logg 2 "     delim-index -> ~d~%" delim-index)
     (logg 2 "     parts -> ~s~%" parts)
     (let ((identities (subseq parts 0 delim-index))
           (signature (nth (1+ delim-index) parts)))
       (let ((msg (destructuring-bind (header parent-header metadata content &rest buffers)
-                     (subseq parts (+ 2 delim-index) #+(or)(+ 6 delim-index)) ; the buffers are destructured
-                   (make-instance 'message
-                                  :header (wire-deserialize-header header)
-                                  :parent-header (wire-deserialize-header parent-header)
-                                  :metadata metadata
-                                  :content content
-                                  :buffers (coerce buffers 'vector)))))
-        (logg 2 "~a~%" (with-output-to-string (sout)
-                         (encode-json sout msg :indent 0 :first-line t)))
+				     (subseq parts (+ 2 delim-index) #+(or)(+ 6 delim-index)) ; the buffers are destructured
+				     (make-instance 'message
+						    :header (wire-deserialize-header (babel:octets-to-string header))
+						    :parent-header (wire-deserialize-header (babel:octets-to-string parent-header))
+						    :metadata (babel:octets-to-string metadata)
+						    :content (babel:octets-to-string content)
+						    :buffers (coerce buffers 'vector)))))
+        (logg 1 "~a~%" (with-output-to-string (sout)
+					      (encode-json sout msg :indent 0 :first-line t)))
         (values identities
                 signature
                 msg)))))
@@ -327,28 +332,25 @@ The wire-deserialization part follows.
 (defun message-send (socket msg &key (identities nil) (key nil))
   (flet ((send-part (part sndmore)
 		    ;; Clasp supports binary buffers using clasp-ffi:foreign-data
-		    #+clasp(cond
-			    ((typep part 'clasp-ffi:foreign-data)
-			     (pzmq:send socket part :len (clasp-ffi:foreign-data-size part) :sndmore sndmore))
-			    ((stringp part)
-			     (logg 2 "message-send string: ~s~%" part)
-			     (pzmq:send socket part :sndmore sndmore))
-			    ((typep part '(array (unsigned-byte 8)))
-			     (let (buf)
-			       (unwind-protect
-				   (progn
-				     (setf buf (cffi:foreign-alloc :uint8 :initial-contents part :count (length part)))
-				     (logg 2 "message-send (array (unsigned-byte 8)): ~s~%" (loop for x from 0 below (length part) collect (cffi:mem-aref buf :uint8 x)))
-				     (pzmq:send socket buf :len (length part)))
-				 (cffi:foreign-free buf))))
-			    (t (error "Cannot send part ~s of type ~s" part (type-of part))))
+		    (cond
+		     ((typep part 'clasp-ffi:foreign-data)
+		      (pzmq:send socket part :len (clasp-ffi:foreign-data-size part) :sndmore sndmore))
+		     ((typep part '(array (unsigned-byte 8)))
+		      (let (buf)
+			(unwind-protect
+			    (progn
+			      (setf buf (cffi:foreign-alloc :uint8 :initial-contents part :count (length part)))
+			      (logg 2 "message-send (array (unsigned-byte 8)): ~s~%" (loop for x from 0 below (length part) collect (cffi:mem-aref buf :uint8 x)))
+			      (pzmq:send socket buf :len (length part) :sndmore sndmore))
+			  (cffi:foreign-free buf))))
+		     (t (error "Cannot send part ~s of type ~s" part (type-of part))))
 		    #-clasp(pzmq:send socket part :sndmore sndmore)))
     (unwind-protect
          (progn
            (bordeaux-threads:acquire-lock *message-send-lock*)
            (let ((wire-parts (wire-serialize msg :identities identities :key key)))
              (logg 2 "  in message-send (length wire-parts) -> ~s~%" (length wire-parts))
-             (logg 2 "    send  wire-parts-> ~s~%" wire-parts)
+             (logg 2 "    send wire-parts-> ~s~%" wire-parts)
 	     (logg 2 "    send (pzmq:getsockopt socket :type) -> ~s~%" (pzmq:getsockopt socket :type))
 	     (logg 2 "    send (pzmq:getsockopt socket :identity) -> ~s~%" (pzmq:getsockopt socket :identity))
              ;; Ensure that the last part send has sndmore = NIL
@@ -359,26 +361,23 @@ The wire-deserialization part follows.
                (Send-part part sndmore))))
       (bordeaux-threads:release-lock *message-send-lock*))))
 
-(defun recv-string-or-array-bytes (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
+(defun recv-array-bytes (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
   "Receive a message part from a socket as a string."
-  (pzmq:with-message msg
-    (pzmq:msg-recv msg socket :dontwait dontwait)
-    (values
-     (let* ((data (pzmq:msg-data msg))
-            (len (pzmq:msg-size msg))
-            (all-graphic-p (loop for index from 0 below len
-                                 always (graphic-char-p (code-char (cffi:mem-aref data :uint8 index))))))
-       (if all-graphic-p
-           (cffi:foreign-string-to-lisp data :count len :encoding encoding)
-           (let ((array-bytes (make-array len :element-type 'ext:byte8)))
-             (loop for index from 0 below len
-                   do (setf (aref array-bytes index) (cffi:mem-aref data :uint8 index)))
-             array-bytes)))
-     (pzmq:getsockopt socket :rcvmore))))
+  (pzmq:with-message
+   msg
+   (pzmq:msg-recv msg socket :dontwait dontwait)
+   (values
+    (let* ((data (pzmq:msg-data msg))
+	   (len (pzmq:msg-size msg))
+	   (array-bytes (make-array len :element-type 'ext:byte8)))
+      (loop for index from 0 below len
+	    do (setf (aref array-bytes index) (cffi:mem-aref data :uint8 index)))
+      array-bytes)
+    (pzmq:getsockopt socket :rcvmore))))
 
 (defun zmq-recv-list (socket &optional (parts nil) (part-num 1))
   (multiple-value-bind (part more)
-      (recv-string-or-array-bytes socket)
+      (recv-array-bytes socket)
     ;;(format t "[Shell]: received message part #~A: ~W (more? ~A)~%" part-num part more)
     (if more
         (zmq-recv-list socket (cons part parts) (+ part-num 1))

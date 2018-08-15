@@ -64,12 +64,14 @@ The history of evaluations is also saved by the evaluator.
                 #+(or)(progn
                   (logg 2 "~a~%" (with-output-to-string (sout) (format sout "~&~A~%" err)))
                   (logg 2 "~a~%" (with-output-to-string (sout)
-                                   (trivial-backtrace:print-backtrace-to-stream sout))))
+							(let ((*print-pretty* nil))
+                                   (trivial-backtrace:print-backtrace-to-stream sout)))))
                 (format *error-output* "~&An error occurred of type: ~A: ~%  ~A~%~%"
                         (class-name (class-of err)) err)
                 (format *error-output* "serious-condition backtrace:~%~A~%"
                         (with-output-to-string (sout)
-                          (trivial-backtrace:print-backtrace-to-stream sout)))
+					       (let ((*print-pretty* nil))
+						 (trivial-backtrace:print-backtrace-to-stream sout))))
                 (return-from error-handler))))
        (progn ,@body))))
 
