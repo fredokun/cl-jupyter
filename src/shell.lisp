@@ -105,6 +105,8 @@ display the result.")
                                       ((equal msg-type "comm_close")
                                        (when cl-jupyter:*handle-comm-close-hook*
                                          (funcall cl-jupyter:*handle-comm-close-hook* shell identities msg)))
+                                      ((equal msg-type "interrupt_request")
+				       (warn "Handle interrupt_request"))
                                       ((equal msg-type "complete_request")
                                        (complete-request shell identities msg))
                                       ((equal msg-type "inspect_request")
