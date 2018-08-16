@@ -101,7 +101,7 @@
 #+cl-jupyter-log
 (eval-when (:execute :load-toplevel)
   (setf *log-enabled* t)
-  (setf *log-level* 1)
+  (setf *log-level* 2)
   (let* ((log-file-name (make-pathname :name (format nil "cl-jupyter-~a" (getpid))
                                        :type "log"))
          (log-path-name (cond
@@ -112,6 +112,7 @@
                                 :direction :output
                                 :if-exists :append
                                 :if-does-not-exist :create))
+    (setf *trace-output* *log-file*)
     (format *log-file* "Log started up~%")
     (setf *log-lock* (bordeaux-threads:make-lock "cl-jupyter-log"))
     (format *log-file* "About to start logging cl-jupyter~%")
