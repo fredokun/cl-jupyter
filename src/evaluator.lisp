@@ -62,8 +62,8 @@ The history of evaluations is also saved by the evaluator.
           (serious-condition
             #'(lambda (err)
                 #+(or)(progn
-                  (logg 2 "~a~%" (with-output-to-string (sout) (format sout "~&~A~%" err)))
-                  (logg 2 "~a~%" (with-output-to-string (sout)
+                  (logg 0 "~a~%" (with-output-to-string (sout) (format sout "~&~A~%" err)))
+                  (logg 0 "~a~%" (with-output-to-string (sout)
 							(let ((*print-pretty* nil))
                                    (trivial-backtrace:print-backtrace-to-stream sout)))))
                 (format *error-output* "~&An error occurred of type: ~A: ~%  ~A~%~%"

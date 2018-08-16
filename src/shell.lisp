@@ -142,8 +142,8 @@ display the result.")
         (handler-bind
             ((serious-condition
                #'(lambda (err)
-                   (logg 2 "~a~%" (with-output-to-string (sout) (format sout "~A~%" err)))
-                   (logg 2 "~A~%" (let ((*print-pretty* nil)) (with-output-to-string (sout) (trivial-backtrace:print-backtrace-to-stream sout)))))))
+                   (logg 0 "~a~%" (with-output-to-string (sout) (format sout "~A~%" err)))
+                   (logg 0 "~A~%" (let ((*print-pretty* nil)) (with-output-to-string (sout) (trivial-backtrace:print-backtrace-to-stream sout)))))))
           (multiple-value-bind (completions metadata)
               (simple-completions partial-token *package* (char text sep-pos))        
             (logg 2 "complete-request partial-token: ~a~%" partial-token)
