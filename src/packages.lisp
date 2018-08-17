@@ -53,6 +53,8 @@
    #:*default-special-bindings*
    #:*special-variables*
    #:kernel-start
+   #:kernel-session
+   #:kernel-iopub
    #:[]
    #:[]-contains
    #:*started-kernels*
