@@ -93,7 +93,7 @@
 (defparameter *log-lock* nil)
 
 ;;; Comment out the following eval-when if you want logging fully disabled
-#+(or)
+;;#+(or)
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (format t "Turning on cl-jupyter logging~%")
   (push :cl-jupyter-log *features*))
