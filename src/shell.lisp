@@ -307,7 +307,10 @@ with the symbol to the left of the cursor."
       (vbinds (execution-count results stdout stderr)
 	      (progn
 		(logg 2 "Set cl-jupyter:*kernel* -> ~a ~%" cl-jupyter:*kernel*)
-		(evaluate-code (kernel-evaluator (shell-kernel shell)) code))
+		(evaluate-code (kernel-evaluator (shell-kernel shell)) code
+                               :iopub (kernel-iopub (shell-kernel shell))
+                               :parent-msg msg
+                               :key (kernel-key shell)))
 	      (logg 2 "==> Execution count = ~A~%" execution-count)
 	      (logg 2 "==> results = ~S~%" results)
 	      (logg 2 "==> STDOUT = ~S~%" stdout)
