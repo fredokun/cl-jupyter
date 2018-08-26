@@ -10,6 +10,7 @@
                :babel
                :trivial-backtrace
                :trivial-arguments
+               :trivial-gray-streams
                #+sbcl #:sb-introspect
                #-clasp :ironclad
                :cl-base64)
