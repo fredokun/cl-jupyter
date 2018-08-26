@@ -326,6 +326,20 @@ The wire-deserialization part follows.
 
 |#
 
+(defun bstr (vec)
+  (with-output-to-string (sout)
+    (loop for x across vec
+          do (cond
+               ((= x #.(char-code #\"))
+                (princ "\"" sout))
+               ((< x 32)
+                (princ "\\x" sout)
+                (format sout "~2,'0x" x))
+               ((>= x 128)
+                (princ "\\x" sout)
+                (format sout "~2,'0x" x))
+               (t (write-char (code-char x) sout))))))
+                 
 ;; Locking, courtesy of dmeister, thanks !
 (defparameter *message-send-lock* (bordeaux-threads:make-lock "message-send-lock"))
 
@@ -341,6 +355,7 @@ The wire-deserialization part follows.
 			    (progn
 			      (setf buf (cffi:foreign-alloc :uint8 :initial-contents part :count (length part)))
 			      (logg 2 "message-send (array (unsigned-byte 8)): ~s~%" (loop for x from 0 below (length part) collect (cffi:mem-aref buf :uint8 x)))
+			      (logg 2 "                  AKA (as byte-string): ~s~%" (bstr part))
 			      (pzmq:send socket buf :len (length part) :sndmore sndmore))
 			  (cffi:foreign-free buf))))
 		     (t (error "Cannot send part ~s of type ~s" part (type-of part))))
@@ -350,7 +365,7 @@ The wire-deserialization part follows.
            (bordeaux-threads:acquire-lock *message-send-lock*)
            (let ((wire-parts (wire-serialize msg :identities identities :key key)))
              (logg 2 "  in message-send (length wire-parts) -> ~s~%" (length wire-parts))
-             (logg 2 "    send wire-parts-> ~s~%" wire-parts)
+             (logg 2 "    send wire-parts-> ~s~%" (loop for x in wire-parts collect (bstr x)))
 	     (logg 2 "    send (pzmq:getsockopt socket :type) -> ~s~%" (pzmq:getsockopt socket :type))
 	     (logg 2 "    send (pzmq:getsockopt socket :identity) -> ~s~%" (pzmq:getsockopt socket :identity))
              ;; Ensure that the last part send has sndmore = NIL
@@ -364,16 +379,16 @@ The wire-deserialization part follows.
 (defun recv-array-bytes (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
   "Receive a message part from a socket as a string."
   (pzmq:with-message
-   msg
-   (pzmq:msg-recv msg socket :dontwait dontwait)
-   (values
-    (let* ((data (pzmq:msg-data msg))
-	   (len (pzmq:msg-size msg))
-	   (array-bytes (make-array len :element-type 'ext:byte8)))
-      (loop for index from 0 below len
-	    do (setf (aref array-bytes index) (cffi:mem-aref data :uint8 index)))
-      array-bytes)
-    (pzmq:getsockopt socket :rcvmore))))
+    msg
+    (pzmq:msg-recv msg socket :dontwait dontwait)
+    (values
+     (let* ((data (pzmq:msg-data msg))
+	    (len (pzmq:msg-size msg))
+	    (array-bytes (make-array len :element-type 'ext:byte8)))
+       (loop for index from 0 below len
+	     do (setf (aref array-bytes index) (cffi:mem-aref data :uint8 index)))
+       array-bytes)
+     (pzmq:getsockopt socket :rcvmore))))
 
 (defun zmq-recv-list (socket &optional (parts nil) (part-num 1))
   (multiple-value-bind (part more)
