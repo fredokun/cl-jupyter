@@ -124,6 +124,7 @@ display the result.")
 
 (defun complete-request (shell identities msg)
   "Handle complete_request.  This provides tab completion to cl-jupyter."
+  (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))
   (let* ((json (parse-json-from-string (message-content msg)))
          (text ([] json "code"))
          (cursor-end ([] json "cursor_pos"))
@@ -166,7 +167,8 @@ display the result.")
         (format *error-output* "~&"))
       (serious-condition (err)
         (format *error-output* "~&An error occurred of type: ~A: ~%  ~S~%"
-                (class-name (class-of err)) err)))))
+                (class-name (class-of err)) err))))
+  (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell)))
 
 
 (defun inspect-request (shell identities msg)
@@ -174,6 +176,7 @@ display the result.")
 This should be improved so that if the cursor is inside of a form it returns information
 on the function of the form.  Currently it provides information on the function associated
 with the symbol to the left of the cursor."
+  (send-status-update (kernel-iopub (shell-kernel shell)) msg "busy" :key (kernel-key shell))
   (let* ((json (parse-json-from-string (message-content msg)))
          (text ([] json "code"))
          (cursor-end ([] json "cursor_pos"))
@@ -198,7 +201,8 @@ with the symbol to the left of the cursor."
                      ("metadata" . ,metadata)
                      ("data" . ,data)))
              (reply (make-message msg "inspect_reply" nil data)))
-        (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell))))))
+        (message-send (shell-socket shell) reply :identities identities :key (kernel-key shell)))))
+  (send-status-update (kernel-iopub (shell-kernel shell)) msg "idle" :key (kernel-key shell)))
 
 ;; for protocol version 5  
 (defclass content-kernel-info-reply (message-content)
