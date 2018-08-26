@@ -385,6 +385,9 @@ The INDENT can be given for beautiful/debugging output (default is NIL
        do (cond ((char= char #\Newline)
                  (vector-push-extend #\\ jstr)
                  (vector-push-extend #\n jstr))
+                ((char= char #\Return)
+                 (vector-push-extend #\\ jstr)
+                 (vector-push-extend #\r jstr))
                 (t (vector-push-extend char jstr))))
     jstr))
 
