@@ -341,40 +341,35 @@ The wire-deserialization part follows.
                (t (write-char (code-char x) sout))))))
                  
 ;; Locking, courtesy of dmeister, thanks !
-(defparameter *message-send-lock* (bordeaux-threads:make-lock "message-send-lock"))
-
-(defun message-send (socket msg &key (identities nil) (key nil))
+(defun message-send (channel msg &key (identities nil) (key nil))
   (flet ((send-part (part sndmore)
-		    ;; Clasp supports binary buffers using clasp-ffi:foreign-data
-		    (cond
-		     ((typep part 'clasp-ffi:foreign-data)
-		      (pzmq:send socket part :len (clasp-ffi:foreign-data-size part) :sndmore sndmore))
-		     ((typep part '(array (unsigned-byte 8)))
-		      (let (buf)
-			(unwind-protect
-			    (progn
-			      (setf buf (cffi:foreign-alloc :uint8 :initial-contents part :count (length part)))
-			      (logg 2 "message-send (array (unsigned-byte 8)): ~s~%" (loop for x from 0 below (length part) collect (cffi:mem-aref buf :uint8 x)))
-			      (logg 2 "                  AKA (as byte-string): ~s~%" (bstr part))
-			      (pzmq:send socket buf :len (length part) :sndmore sndmore))
-			  (cffi:foreign-free buf))))
-		     (t (error "Cannot send part ~s of type ~s" part (type-of part))))
-		    #-clasp(pzmq:send socket part :sndmore sndmore)))
-    (unwind-protect
-         (progn
-           (bordeaux-threads:acquire-lock *message-send-lock*)
-           (let ((wire-parts (wire-serialize msg :identities identities :key key)))
-             (logg 2 "  in message-send (length wire-parts) -> ~s~%" (length wire-parts))
-             (logg 2 "    send wire-parts-> ~s~%" (loop for x in wire-parts collect (bstr x)))
-	     (logg 2 "    send (pzmq:getsockopt socket :type) -> ~s~%" (pzmq:getsockopt socket :type))
-	     (logg 2 "    send (pzmq:getsockopt socket :identity) -> ~s~%" (pzmq:getsockopt socket :identity))
-             ;; Ensure that the last part send has sndmore = NIL
-             (do* ((cur wire-parts (cdr cur))
-                   (part (car cur) (car cur))
-                   (sndmore (cdr cur) (cdr cur)))
-                  ((null cur))
-               (Send-part part sndmore))))
-      (bordeaux-threads:release-lock *message-send-lock*))))
+	   ;; Clasp supports binary buffers using clasp-ffi:foreign-data
+	   (cond
+	     ((typep part 'clasp-ffi:foreign-data)
+	      (pzmq:send (socket channel) part :len (clasp-ffi:foreign-data-size part) :sndmore sndmore))
+	     ((typep part '(array (unsigned-byte 8)))
+	      (let (buf)
+		(unwind-protect
+		     (progn
+		       (setf buf (cffi:foreign-alloc :uint8 :initial-contents part :count (length part)))
+		       (logg 2 "message-send (array (unsigned-byte 8)): ~s~%" (loop for x from 0 below (length part) collect (cffi:mem-aref buf :uint8 x)))
+		       (logg 2 "                  AKA (as byte-string): ~s~%" (bstr part))
+		       (pzmq:send (socket channel) buf :len (length part) :sndmore sndmore))
+		  (cffi:foreign-free buf))))
+	     (t (error "Cannot send part ~s of type ~s" part (type-of part))))
+	   #-clasp(pzmq:send (socket channel) part :sndmore sndmore)))
+    (bordeaux-threads:with-lock-held ((send-lock channel))
+      (let ((wire-parts (wire-serialize msg :identities identities :key key)))
+        (logg 2 "  in message-send (length wire-parts) -> ~s~%" (length wire-parts))
+        (logg 2 "    send wire-parts-> ~s~%" (loop for x in wire-parts collect (bstr x)))
+	(logg 2 "    send (pzmq:getsockopt socket :type) -> ~s~%" (pzmq:getsockopt (socket channel) :type))
+	(logg 2 "    send (pzmq:getsockopt socket :identity) -> ~s~%" (pzmq:getsockopt (socket channel) :identity))
+        ;; Ensure that the last part send has sndmore = NIL
+        (do* ((cur wire-parts (cdr cur))
+              (part (car cur) (car cur))
+              (sndmore (cdr cur) (cdr cur)))
+             ((null cur))
+          (Send-part part sndmore))))))
 
 (defun recv-array-bytes (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
   "Receive a message part from a socket as a string."
@@ -393,26 +388,21 @@ The wire-deserialization part follows.
 (defun zmq-recv-list (socket &optional (parts nil) (part-num 1))
   (multiple-value-bind (part more)
       (recv-array-bytes socket)
-    ;;(format t "[Shell]: received message part #~A: ~W (more? ~A)~%" part-num part more)
+    ;;(jformat t "[Shell]: received message part #~A: ~W (more? ~A)~%" part-num part more)
     (if more
         (zmq-recv-list socket (cons part parts) (+ part-num 1))
         (reverse (cons part parts)))))
 
 
-(defparameter *message-recv-lock* (bordeaux-threads:make-lock "message-recv-lock"))
-
-(defun message-recv (socket)
-  (unwind-protect
-       (progn
-	 (bordeaux-threads:acquire-lock *message-recv-lock*)
-	 (let ((parts (zmq-recv-list socket)))
-	   (logg 2 "=============== message-recv ==============~%")
-	   (logg 2 "    recv (pzmq:getsockopt socket :type) -> ~s~%" (pzmq:getsockopt socket :type))
-	   (logg 2 "    recv (pzmq:getsockopt socket :identity) -> ~s~%" (pzmq:getsockopt socket :identity))
-	   ;;DEBUG>>
-	   ;;(format t "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
-	   (wire-deserialize parts)))
-    (bordeaux-threads:release-lock *message-recv-lock*)))
+(defun message-recv (channel)
+  (bordeaux-threads:with-lock-held ((recv-lock channel))
+    (let ((parts (zmq-recv-list (socket channel))))
+      (logg 2 "=============== message-recv ==============~%")
+      (logg 2 "    recv (pzmq:getsockopt socket :type) -> ~s~%" (pzmq:getsockopt (socket channel) :type))
+      (logg 2 "    recv (pzmq:getsockopt socket :identity) -> ~s~%" (pzmq:getsockopt (socket channel) :identity))
+      ;;DEBUG>>
+      ;;(jformat t "[Recv]: parts: ~A~%" (mapcar (lambda (part) (format nil "~W" part)) parts))
+      (wire-deserialize parts))))
 
 
 

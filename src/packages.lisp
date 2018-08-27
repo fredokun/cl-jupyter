@@ -18,6 +18,7 @@
 	   #:read-string-file
 	   #:read-binary-file
            #:function-lambda-list
+           #:jformat
            #:getpid
 	   #:quit))
 
@@ -33,6 +34,9 @@
   (:use #:cl #:fredo-utils #:myjson)
   (:export
    #:send-execute-raw-display-object ; cl-jupyter-widgets uses this
+   #:make-message
+   #:display-object
+   #:display-object-data
    #:display
    #:display-plain render-plain
    #:display-html render-html
@@ -43,24 +47,37 @@
    #:display-svg render-svg
    #:display-json render-json
    #:display-javascript render-javascript
+   #:header-msg-type
+   #:message-send
    #:message-header
    #:message-content
    #:message-buffers
    #:message
+   #:socket
+   #:kernel
    #:*shell*
    #:*kernel*
    #:*parent-msg*
    #:*default-special-bindings*
    #:*special-variables*
+   #:take-history-in
+   #:take-history-out
+   #:shell-interrupt
+   #:history-in
+   #:history-out
    #:kernel-start
    #:kernel-session
    #:kernel-iopub
+   #:kernel-key
+   #:kernel-shell
+   #:send-status-update
    #:[]
    #:[]-contains
    #:*started-kernels*
    #:*kernel-start-hook*
    #:*kernel-shutdown-hook*
    #:*sort-encoded-json*
+   #:*evaluator*
    #:*handle-comm-open-hook*
    #:*handle-comm-msg-hook*
    #:*handle-comm-close-hook*

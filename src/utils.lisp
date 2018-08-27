@@ -41,6 +41,11 @@
   
   )
 
+(defparameter *jformat-lock* (bordeaux-threads:make-lock "format-lock"))
+
+(defmacro jformat (stream fmt &rest args)
+  `(bordeaux-threads:with-lock-held (*jformat-lock*)
+     (format ,stream ,fmt ,@args)))
 
 (defmacro example (expr arrow expected &key (warn-only nil))
   "Show an evaluation example, useful for documentation and lightweight testing.
@@ -109,21 +114,18 @@
                            (merge-pathnames log-file-name #P"/home/app/logs/"))
                           (t (merge-pathnames log-file-name #P"/tmp/")))))
     (setf *log-file* (cl:open log-path-name
-                                :direction :output
-                                :if-exists :append
-                                :if-does-not-exist :create))
+                              :direction :output
+                              :if-exists :append
+                              :if-does-not-exist :create))
     (setf *trace-output* *log-file*)
     (format *log-file* "Log started up~%")
     (setf *log-lock* (bordeaux-threads:make-lock "cl-jupyter-log"))
     (format *log-file* "About to start logging cl-jupyter~%")
     (defun always-log (fmt &rest args)
       (let ((msg (apply #'format nil fmt args)))
-        (unwind-protect
-             (progn
-               (bordeaux-threads:acquire-lock *log-lock* t)
-               (princ msg *log-file*)
-               (finish-output *log-file*))
-          (bordeaux-threads:release-lock *log-lock*))))
+        (bordeaux-threads:with-lock-held (*log-lock*)
+          (princ msg *log-file*)
+          (finish-output *log-file*))))
     (format *log-file* "===================== new run =======================~%")))
 
 #+cl-jupyter-log
@@ -185,7 +187,7 @@
 
 (example (let ((count 0))
            (while (< count 10)
-             ;;(format t "~A " count)
+             ;;(jformat t "~A " count)
              (incf count)
              count))
          => 10)

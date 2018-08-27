@@ -42,7 +42,7 @@
 (defun latex (text)
   (display-latex (make-instance 'latex-text :text text)))
 
-(example (cl-jupyter::display-object-data (latex "$\\frac{1}{2}$"))
+(example (cl-jupyter:display-object-data (latex "$\\frac{1}{2}$"))
          => '(("text/plain" . "#<LATEX-TEXT #x302001F9E74D>")
               ("text/latex" . "$\\frac{1}{2}$")) :warn-only t)
 
@@ -64,7 +64,7 @@
 (defun html (text)
   (display-html (make-instance 'html-text :text text)))
 
-(example (cl-jupyter::display-object-data 
+(example (cl-jupyter:display-object-data 
 	  (html "<p bgcolor=\"lightblue\"><strong>cl-Jupyter<strong> is <tt>cool</tt> !</p>"))
          => '(("text/plain" . "#<HTML-TEXT {1005721623}>")
 	      ("text/html"
@@ -114,16 +114,16 @@
 |#
 
 (defun %in (hist-ref)
-  (cl-jupyter::take-history-in hist-ref))
-  ;; (let ((history-in (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-in)))
+  (cl-jupyter:take-history-in hist-ref))
+  ;; (let ((history-in (slot-value cl-jupyter:*evaluator* 'cl-jupyter:history-in)))
   ;;   (if (and (>= hist-ref 0)
   ;; 	     (< hist-ref (length history-in))) 
   ;; 	(aref history-in hist-ref)
   ;; 	nil)))
 
 (defun %out (hist-ref &optional value-ref)
-  (cl-jupyter::take-history-out hist-ref value-ref))
-  ;; (let ((history-out (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-out)))
+  (cl-jupyter:take-history-out hist-ref value-ref))
+  ;; (let ((history-out (slot-value cl-jupyter:*evaluator* 'cl-jupyter:history-out)))
   ;;   (if (and (>= hist-ref 0)
   ;; 	     (< hist-ref (length history-out)))
   ;; 	(let ((out-values  (aref history-out hist-ref)))

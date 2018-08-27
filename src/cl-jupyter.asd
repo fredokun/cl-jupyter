@@ -21,6 +21,7 @@
                (:file "config")
                (:file "message")
                (:file "shell")
+               (:file "control")
                (:file "completion")
                (:file "iopub")
                (:file "display")

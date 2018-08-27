@@ -44,7 +44,7 @@ The history of evaluations is also saved by the evaluator.
 (defvar *evaluator* nil)
 
 (defun take-history-in (hist-ref)
-  (let ((history-in (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-in)))
+  (let ((history-in (slot-value cl-jupyter:*evaluator* 'cl-jupyter:history-in)))
     (let ((href (if (< hist-ref 0)
                     (+ (+ (length history-in) 1) hist-ref)
                   hist-ref)))
@@ -54,7 +54,7 @@ The history of evaluations is also saved by the evaluator.
         nil))))
 
 (defun take-history-out (hist-ref &optional value-ref)
-  (let ((history-out (slot-value cl-jupyter::*evaluator* 'cl-jupyter::history-out)))
+  (let ((history-out (slot-value cl-jupyter:*evaluator* 'cl-jupyter:history-out)))
     (let ((href (if (< hist-ref 0)
                     (+ (+ (length history-out) 1) hist-ref)
                     hist-ref)))
@@ -98,8 +98,8 @@ The history of evaluations is also saved by the evaluator.
        (progn ,@body))))
 
 (defun evaluate-code (evaluator code &key iopub parent-msg key)
-  ;; (format t "[Evaluator] Code to evaluate: ~W~%" code)
-  (logg 2 "[Evaluator] Code to evaluate: ~W  cl-jupyter::*kernel*->~a~%"
+  ;; (jformat t "[Evaluator] Code to evaluate: ~W~%" code)
+  (logg 2 "[Evaluator] Code to evaluate: ~W  cl-jupyter:*kernel*->~a~%"
         code cl-jupyter:*kernel*)
   (let ((execution-count (+ (length (evaluator-history-in evaluator)) 1)))
     (let ((code-to-eval (handler-case
@@ -109,7 +109,7 @@ The history of evaluations is also saved by the evaluator.
                                    (list :read-error (format nil "~A (condition of type ~A)" err (class-name (class-of err)))))
                           #+sbcl (SB-INT:SIMPLE-READER-ERROR (err)
                                    (list :read-error (format nil "~A (condition of type ~A)" err (class-name (class-of err))))))))
-      ;;(format t "code-to-eval = ~A~%" code-to-eval)
+      ;;(jformat t "code-to-eval = ~A~%" code-to-eval)
       (cond
         ((and (consp code-to-eval)
               (eq (car code-to-eval) :read-error-eof))
@@ -129,7 +129,7 @@ The history of evaluations is also saved by the evaluator.
            (values execution-count results "" "")))
         (t
          ;; else "normal" evaluation
-         ;;(format t "[Evaluator] Code to evaluate: ~W~%" code-to-eval)
+         ;;(jformat t "[Evaluator] Code to evaluate: ~W~%" code-to-eval)
          (let* ((stdout (make-instance 'output-stream
                                        :iopub iopub
                                        :stream-name "stdout"
@@ -156,7 +156,7 @@ The history of evaluations is also saved by the evaluator.
                                  ;; put the evaluator in the environment
                                  (logg 2 "In evaluator.lisp:133  cl-jupyter:*kernel* -> ~a~%" cl-jupyter:*kernel*)
                                  (multiple-value-list (eval code-to-eval))))))))
-             ;;(format t "[Evaluator] : results = ~W~%" results)
+             ;;(jformat t "[Evaluator] : results = ~W~%" results)
              (logg 2 "[Evaluator] : results = ~W~%" results)
              (let ((in-code (format nil "~A" code-to-eval)))
                (vector-push-extend (subseq in-code 7 (1- (length in-code)))
