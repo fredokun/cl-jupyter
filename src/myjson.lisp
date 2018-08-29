@@ -116,13 +116,14 @@ Note:   Python None maps to NIL
   (let ((str (make-array 32 :fill-pointer 0 :adjustable t :element-type 'character)))
     (loop
        (let ((char (read-char input nil :eof)))
-	 ;(format t "char = ~A~%" char)
+	 ;(jformat t "char = ~A~%" char)
 	 (cond ((eql char :eof) (error 'json-parse-error :message "Unexpected end of file"))
 	       ((char= char #\\)
 		(let ((escape-char (read-char input nil :eof)))
-		  ;(format t "escape char = ~A~%" escape-char)
+		  ;(jformat t "escape char = ~A~%" escape-char)
 		  (cond ((eql escape-char :eof) (error 'json-parse-error :message "Unexpected end of file (after '\')"))
 			((char= escape-char #\n) (vector-push-extend #\Newline str))
+                        ((char= escape-char #\t) (vector-push-extend #\Tab str))
 			(t 
 			 ;;(vector-push-extend char str) ;; XXX: escaping is performed on the lisp side
 			 (vector-push-extend escape-char str)))))
@@ -225,21 +226,21 @@ Note:   Python None maps to NIL
 
 (defun parse-json-number (init input)
   (let ((number (format nil "~A" init)))
-    ;; (format t "Initial = ~A ~%" number)
+    ;; (jformat t "Initial = ~A ~%" number)
     (let ((fractpart (parse-json-number-fractional-part init input)))
-      ;; (format t "Fractional = ~A ~%" fractpart)
+      ;; (jformat t "Fractional = ~A ~%" fractpart)
       (setf number (concatenate 'string number fractpart)))
     (let ((sep (peek-char nil input nil :eof)))
       (when (eql sep #\.)
 	(read-char input)
 	(let ((decpart (parse-json-number-decimal-part input)))
-	  ;; (format t "Decimal = ~A ~%" decpart)
+	  ;; (jformat t "Decimal = ~A ~%" decpart)
 	  (setf number (concatenate 'string number decpart))
 	  (setf sep (peek-char nil input nil :eof))))
       (when (or (eql sep #\e) (eql sep #\E))
 	(read-char input)
 	(let ((exppart (parse-json-number-exponent-part (format nil "~A" sep) input)))
-	  ;; (format t "Exponent = ~A ~%" exppart)
+	  ;; (jformat t "Exponent = ~A ~%" exppart)
 	  (setf number (concatenate 'string number exppart)))))
       ;; return the resulting number
       (read-from-string number)))
@@ -294,11 +295,11 @@ Note:   Python None maps to NIL
 
 (example (with-input-from-string (s "34.212e-42")
 	   (parse-json-number #\- s))
-	 => -3.42113e-41 :warn-only t)
+	 => -3.4212e-41 :warn-only t)
 
 (example (with-input-from-string (s "34.212e-42")
 	   (parse-json-number #\1 s))
-	 => 1.3421076e-40 :warn-only t)
+	 => 1.34212e-40 :warn-only t)
 
 (example (with-input-from-string (s ".212E+32")
 	   (parse-json-number #\0 s))
@@ -385,6 +386,12 @@ The INDENT can be given for beautiful/debugging output (default is NIL
        do (cond ((char= char #\Newline)
                  (vector-push-extend #\\ jstr)
                  (vector-push-extend #\n jstr))
+                ((char= char #\Tab)
+                 (vector-push-extend #\\ jstr)
+                 (vector-push-extend #\t jstr))
+                ((char= char #\Return)
+                 (vector-push-extend #\\ jstr)
+                 (vector-push-extend #\r jstr))
                 (t (vector-push-extend char jstr))))
     jstr))
 
@@ -392,6 +399,10 @@ The INDENT can be given for beautiful/debugging output (default is NIL
  (string-to-json-string "this is a string  
 with a new line")
  => "this is a string  \\nwith a new line")
+
+(example
+ (string-to-json-string "this is a string	with a tabular character")
+ => "this is a string\\twith a tabular character")
 
 (example
  (string-to-json-string "(format t \"hello~%\")")
@@ -423,7 +434,7 @@ with a new line")
 (defmethod encode-json (stream (thing cons) &key (indent nil) (first-line nil))
   (json-write stream (if first-line nil indent) (if indent t nil) "{")
   (let ((sepstr (if indent (format nil ",~%") ",")))
-    (when (and (boundp 'cl-jupyter::*sort-encoded-json*) (symbol-value 'cl-jupyter::*sort-encoded-json*))
+    (when (and (boundp 'cl-jupyter:*sort-encoded-json*) (symbol-value 'cl-jupyter:*sort-encoded-json*))
       (setf thing (sort (copy-list thing) #'string< :key #'car)))
     (loop 
        for (key . val) in thing

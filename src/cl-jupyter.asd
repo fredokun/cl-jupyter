@@ -10,6 +10,7 @@
                :babel
                :trivial-backtrace
                :trivial-arguments
+               :trivial-gray-streams
                #+sbcl #:sb-introspect
                #-clasp :ironclad
                :cl-base64)
@@ -20,6 +21,7 @@
                (:file "config")
                (:file "message")
                (:file "shell")
+               (:file "control")
                (:file "completion")
                (:file "iopub")
                (:file "display")

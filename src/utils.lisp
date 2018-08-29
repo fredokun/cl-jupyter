@@ -20,10 +20,10 @@
   #+clasp(core:getpid)
   #+sbcl(sb-posix:getpid))
 
-(defun backtrace-as-string ()
-  "Returns the backtrace as a string for logging crashes"
-  #+clasp(with-output-to-string (*standard-output*) (core::clasp-backtrace))
-  #+sbcl "Generate a backtrace for sbcl")
+(defun current-date-time ()
+  (multiple-value-bind (second minute hour date month year day daylight-p zone)
+      (get-decoded-time)
+    (format nil "~4d-~02,'0d-~02,'0dT~02,'0d:~02,'0d:~02,'0d" year month date hour minute second)))
 
 #|
 
@@ -41,6 +41,11 @@
   
   )
 
+(defparameter *jformat-lock* (bordeaux-threads:make-lock "format-lock"))
+
+(defmacro jformat (stream fmt &rest args)
+  `(bordeaux-threads:with-lock-held (*jformat-lock*)
+     (format ,stream ,fmt ,@args)))
 
 (defmacro example (expr arrow expected &key (warn-only nil))
   "Show an evaluation example, useful for documentation and lightweight testing.
@@ -93,7 +98,7 @@
 (defparameter *log-lock* nil)
 
 ;;; Comment out the following eval-when if you want logging fully disabled
-;;;#+(or)
+#+(or)
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (format t "Turning on cl-jupyter logging~%")
   (push :cl-jupyter-log *features*))
@@ -109,20 +114,23 @@
                            (merge-pathnames log-file-name #P"/home/app/logs/"))
                           (t (merge-pathnames log-file-name #P"/tmp/")))))
     (setf *log-file* (cl:open log-path-name
-                                :direction :output
-                                :if-exists :append
-                                :if-does-not-exist :create))
+                              :direction :output
+                              :if-exists :append
+                              :if-does-not-exist :create))
+    (setf *trace-output* *log-file*)
     (format *log-file* "Log started up~%")
     (setf *log-lock* (bordeaux-threads:make-lock "cl-jupyter-log"))
     (format *log-file* "About to start logging cl-jupyter~%")
     (defun always-log (fmt &rest args)
       (let ((msg (apply #'format nil fmt args)))
-        (unwind-protect
-             (progn
-               (bordeaux-threads:acquire-lock *log-lock* t)
-               (princ msg *log-file*)
-               (finish-output *log-file*))
-          (bordeaux-threads:release-lock *log-lock*))))
+        (bordeaux-threads:with-lock-held (*log-lock*)
+          (if (> (length msg) 1024)
+              (progn
+                (princ (subseq msg 0 1024) *log-file*)
+                (princ "... output too long - terminating" *log-file*)
+                (terpri *log-file*))
+              (princ msg *log-file*))
+          (finish-output *log-file*))))
     (format *log-file* "===================== new run =======================~%")))
 
 #+cl-jupyter-log
@@ -130,7 +138,7 @@
   "Log the passed ARGS using the format string FMT and its
  arguments ARGS."
   (if (or (not *log-enabled*)
-          (< level *log-level*))
+          (> level *log-level*))
       (values);; disabled
       ;; when enabled
       `(progn (always-log ,fmt ,@args))))
@@ -166,11 +174,13 @@
          => '(1 . 3)) ;; without a warning
 
 
-(defun afetch (comp alist &key (test #'eql))
+(defun afetch (comp alist &key (test #'eql) (default nil defaultp))
   (let ((binding (assoc comp alist :test test)))
     (if binding
         (cdr binding)
-        (error "No such key: ~A" comp))))
+        (if defaultp
+            default
+            (error "No such key: ~A in dict ~S" comp alist)))))
 
 (defmacro while (condition &body body)
   (let ((eval-cond-var (gensym "eval-cond-"))
@@ -182,7 +192,7 @@
 
 (example (let ((count 0))
            (while (< count 10)
-             ;;(format t "~A " count)
+             ;;(jformat t "~A " count)
              (incf count)
              count))
          => 10)

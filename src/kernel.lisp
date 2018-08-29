@@ -4,6 +4,7 @@
   ((config :initarg :config :reader kernel-config)
    (ctx :initarg :ctx :reader kernel-ctx)
    (shell :initarg :shell :initform nil :reader kernel-shell)
+   (control :initarg :control :initform nil :reader kernel-control)
    (iopub :initarg :iopub :initform nil :reader kernel-iopub)
    (session :initarg :session :reader kernel-session)
    (evaluator :initarg :evaluator :initform nil :reader kernel-evaluator))
@@ -69,7 +70,7 @@
            "   ------------------                             "
            ""))))
 
-;; (format t (banner))
+;; (jformat t (banner))
 
 
 
@@ -84,35 +85,37 @@
    (signature-scheme :initarg :signature-scheme :reader config-signature-scheme :type string)
    (key :initarg :key :reader kernel-config-key)))
 
+(defparameter *shell-thread* nil)
+
 (defun kernel-start (&optional connection-file-name-arg)
   (let ((cmd-args (get-argv)))
 					;(princ (banner))
     (write-line "")
-    (format t "~A: an enhanced interactive Common Lisp REPL~%" +KERNEL-IMPLEMENTATION-NAME+)
-    (format t "(Version ~A - Jupyter protocol v.~A)~%"
-            +KERNEL-IMPLEMENTATION-VERSION+
-            +KERNEL-PROTOCOL-VERSION+)
-    (format t "--> (C) 2014-2015 Frederic Peschanski (cf. LICENSE)~%")
+    (jformat t "~A: an enhanced interactive Common Lisp REPL~%" +KERNEL-IMPLEMENTATION-NAME+)
+    (jformat t "(Version ~A - Jupyter protocol v.~A)~%"
+             +KERNEL-IMPLEMENTATION-VERSION+
+             +KERNEL-PROTOCOL-VERSION+)
+    (jformat t "--> (C) 2014-2015 Frederic Peschanski (cf. LICENSE)~%")
     (write-line "")
     (let ((connection-file-name (or connection-file-name-arg  (car (last cmd-args)))))
-      (format t "connection file = ~A~%" connection-file-name)
+      (jformat t "connection file = ~A~%" connection-file-name)
       (unless (stringp connection-file-name)
         (error "Wrong connection file argument (expecting a string)"))
       (let ((config-alist (parse-json-from-string (concat-all 'string "" (read-file-lines connection-file-name)))))
-        (format t "kernel configuration = ~A~%" config-alist)
+        (jformat t "kernel configuration = ~A~%" config-alist)
         (let ((config
-               (make-instance 'kernel-config
-                              :transport (afetch "transport" config-alist :test #'equal)
-                              :ip (afetch "ip" config-alist :test #'equal)
-                              :shell-port (afetch "shell_port" config-alist :test #'equal)
-                              :iopub-port (afetch "iopub_port" config-alist :test #'equal)
-                              :control-port (afetch "control_port" config-alist :test #'equal)
-                              :hb-port (afetch "hb_port" config-alist :test #'equal)
-                              :signature-scheme (afetch "signature_scheme" config-alist :test #'equal)
-                              :key (let ((str-key (afetch "key" config-alist :test #'equal)))
-                                     (if (string= str-key "")
-                                         nil
-                                         (babel:string-to-octets str-key :encoding :ASCII))))))
+                (make-instance 'kernel-config
+                               :transport (afetch "transport" config-alist :test #'equal)
+                               :ip (afetch "ip" config-alist :test #'equal)
+                               :shell-port (afetch "shell_port" config-alist :test #'equal)
+                               :iopub-port (afetch "iopub_port" config-alist :test #'equal)
+                               :control-port (afetch "control_port" config-alist :test #'equal)
+                               :hb-port (afetch "hb_port" config-alist :test #'equal)
+                               :signature-scheme (afetch "signature_scheme" config-alist :test #'equal)
+                               :key (let ((str-key (afetch "key" config-alist :test #'equal)))
+                                      (if (string= str-key "")
+                                          nil
+                                          (babel:string-to-octets str-key :encoding :ASCII))))))
           (when (not (string= (config-signature-scheme config) "hmac-sha256"))
             ;; XXX: only hmac-sha256 supported
             (error "Kernel only support signature scheme 'hmac-sha256' (provided ~S)" (config-signature-scheme config)))
@@ -120,6 +123,7 @@
           (let* ((kernel (make-kernel config))
                  (evaluator (make-evaluator kernel))
                  (shell (make-shell-channel kernel))
+                 (control (make-control-channel kernel))
                  (iopub (make-iopub-channel kernel)))
 	    ;; Invoke the *kernel-start-hook* if available
 	    (if cl-jupyter:*kernel-start-hook*
@@ -128,28 +132,32 @@
 	    ;; Launch the hearbeat thread
 	    (let ((hb-socket (pzmq:socket (kernel-ctx kernel) :rep)))
 	      (let ((hb-endpoint (format nil "~A://~A:~A"
-					 (config-transport config)
-					 (config-ip config)
-					 (config-hb-port config))))
-		;;(format t "heartbeat endpoint is: ~A~%" endpoint)
-		(pzmq:bind hb-socket hb-endpoint)
-		(let ((heartbeat-thread-id (start-heartbeat hb-socket)))
+				         (config-transport config)
+				         (config-ip config)
+				         (config-hb-port config))))
+	        ;;(jformat t "heartbeat endpoint is: ~A~%" endpoint)
+	        (pzmq:bind hb-socket hb-endpoint)
+                (setq *shell-thread (bordeaux-threads:current-thread))
+	        (let ((heartbeat-thread-id (start-heartbeat hb-socket))
+                      (control-thread-id (start-control control (bordeaux-threads:current-thread))))
 		  ;; main loop
 		  (unwind-protect
 		       (progn
-			 (format t "[Kernel] Entering mainloop ...~%")
-			 (shell-loop shell))
+		         (jformat t "[Kernel] Entering mainloop ...~%")
+		         (shell-loop shell))
 		    ;; clean up when exiting
 		    (when cl-jupyter:*kernel-shutdown-hook* (funcall cl-jupyter:*kernel-shutdown-hook* kernel))
 		    (bordeaux-threads:destroy-thread heartbeat-thread-id)
+		    (bordeaux-threads:destroy-thread control-thread-id)
 		    (pzmq:close hb-socket)
-		    (pzmq:close (iopub-socket iopub))
-		    (pzmq:close (shell-socket shell))
+		    (pzmq:close (socket control))
+		    (pzmq:close (socket iopub))
+		    (pzmq:close (socket shell))
 		    (pzmq:ctx-destroy (kernel-ctx kernel))
-		    (format t "Bye bye.~%")))))))))))
+		    (jformat t "Bye bye.~%")))))))))))
 
 (defun start-heartbeat (socket)
-  (format t "[Hearbeat] starting...~%")
+  (jformat t "[Hearbeat] starting...~%")
   (let ((thread-id (bordeaux-threads:make-thread
 		    (lambda ()
 		      (pzmq:proxy socket socket (cffi:null-pointer))))))
@@ -158,8 +166,24 @@
     ;; (loop
     ;; 	 (pzmq:with-message msg
     ;; 	   (pzmq:msg-recv msg socket)
-    ;; 			;;(format t "Heartbeat Received:~%")
+    ;; 			;;(jformat t "Heartbeat Received:~%")
     ;; 	   (pzmq:msg-send msg socket)
-    ;; 			;;(format t "  | message: ~A~%" msg)
+    ;; 			;;(jformat t "  | message: ~A~%" msg)
+    ;; 	   ))))))
+    thread-id))
+
+(defun start-control (control shell-thread)
+  (let ((thread-id (bordeaux-threads:make-thread
+		    (lambda ()
+                      (control-loop control shell-thread)))))
+    (logg 2 "start-control started~%")
+
+    ;; XXX: without proxy
+    ;; (loop
+    ;; 	 (pzmq:with-message msg
+    ;; 	   (pzmq:msg-recv msg socket)
+    ;; 			;;(jformat t "Heartbeat Received:~%")
+    ;; 	   (pzmq:msg-send msg socket)
+    ;; 			;;(jformat t "  | message: ~A~%" msg)
     ;; 	   ))))))
     thread-id))
