@@ -98,7 +98,7 @@
 (defparameter *log-lock* nil)
 
 ;;; Comment out the following eval-when if you want logging fully disabled
-;;#+(or)
+#+(or)
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (format t "Turning on cl-jupyter logging~%")
   (push :cl-jupyter-log *features*))
@@ -124,7 +124,12 @@
     (defun always-log (fmt &rest args)
       (let ((msg (apply #'format nil fmt args)))
         (bordeaux-threads:with-lock-held (*log-lock*)
-          (princ msg *log-file*)
+          (if (> (length msg) 1024)
+              (progn
+                (princ (subseq msg 0 1024) *log-file*)
+                (princ "... output too long - terminating" *log-file*)
+                (terpri *log-file*))
+              (princ msg *log-file*))
           (finish-output *log-file*))))
     (format *log-file* "===================== new run =======================~%")))
 

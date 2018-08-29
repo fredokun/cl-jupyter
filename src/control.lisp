@@ -89,7 +89,11 @@ with the symbol to the left of the cursor."
   (jformat t "[Control] handle-control-interrupt-request thread: ~a~%" shell-thread)
   (bordeaux-threads:interrupt-thread shell-thread
                                      (lambda ()
-                                       (format t "About to throw interrupt-shell~%")
+                                       (jformat t "About to throw interrupt-shell~%")
+                                       (logg 2 "Throwing interrupt-shell backtract~%~a~%"
+                                             (with-output-to-string (sout)
+                                               (let ((*print-pretty* nil))
+                                                 (trivial-backtrace:print-backtrace-to-stream sout))))
                                        (throw 'interrupt-shell nil)))
   (let ((reply (make-message msg "interrupt_reply" nil nil)))
     (message-send control reply :identities identities :key (kernel-key control)))
