@@ -239,3 +239,28 @@
       #-(or allegro clisp cmu cormanlisp gcl lispworks lucid sbcl
             kcl scl openmcl mcl abcl ecl clasp)
       (error 'not-implemented :proc (list 'quit code))) 
+
+
+(defmacro with-handling-errors (&body body)
+  `(block error-handler
+     (handler-bind
+         ((warning
+            #'(lambda (wrn)
+                (format *error-output* "~&~A~%" wrn)
+                (muffle-warning)
+                (return-from error-handler)))
+          (serious-condition
+            #'(lambda (err)
+                #+(or)(progn
+                  (logg 0 "~a~%" (with-output-to-string (sout) (format sout "~&~A~%" err)))
+                  (logg 0 "~a~%" (with-output-to-string (sout)
+                                                        (let ((*print-pretty* nil))
+                                   (trivial-backtrace:print-backtrace-to-stream sout)))))
+                (format *error-output* "~&An error occurred of type: ~A: ~%  ~A~%~%"
+                        (class-name (class-of err)) err)
+                (format *error-output* "serious-condition backtrace:~%~A~%"
+                        (with-output-to-string (sout)
+                                               (let ((*print-pretty* nil))
+                                                 (trivial-backtrace:print-backtrace-to-stream sout))))
+                (return-from error-handler))))
+       (progn ,@body))))

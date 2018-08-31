@@ -3,6 +3,7 @@
   (:use #:cl)
   (:export #:[]
            #:[]-contains
+           #:with-handling-errors
            #:current-date-time
            #:*example-enabled*
            #:*example-equal-predicate*

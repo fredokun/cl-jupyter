@@ -66,7 +66,9 @@ Lisp printer. In most cases this is enough but specializations are
 
 (defmethod render-plain ((value t))
   ;; Lisp printer by default
-  (format nil "~S" value))
+  ;; There can be problems when printing objects - so put it in with-handling-errors
+  (fredo-utils:with-handling-errors
+      (format nil "~S" value)))
 
 (example (render-plain '(1 2 3))
 			  => "(1 2 3)")
