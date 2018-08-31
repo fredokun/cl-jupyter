@@ -73,7 +73,7 @@ The history of evaluations is also saved by the evaluator.
     (setf (slot-value kernel 'evaluator) evaluator)
     evaluator))
 
-(defmacro handling-errors (&body body)
+(defmacro with-handling-errors (&body body)
   `(block error-handler
      (handler-bind
          ((warning
@@ -142,7 +142,7 @@ The history of evaluations is also saved by the evaluator.
                                        :parent-msg parent-msg)))
            (let ((results (let ((*standard-output* stdout)
                                 (*error-output* stderr))
-                            (handling-errors
+                            (with-handling-errors
                                         ;(if (and (consp code-to-eval)
                                         ;       (eql (car code-to-eval) 'quicklisp-client:quickload)
                                         ;       (stringp (cadr code-to-eval)))
