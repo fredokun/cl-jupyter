@@ -3,6 +3,7 @@
   (:use #:cl)
   (:export #:[]
            #:[]-contains
+           #:string-to-octets
            #:with-handling-errors
            #:current-date-time
            #:*example-enabled*
