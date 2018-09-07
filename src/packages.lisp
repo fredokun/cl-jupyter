@@ -13,6 +13,7 @@
            #:*logg-enabled*
            #:*logg-level*
            #:logg
+           #:logg-backtrace
            #:vbinds
            #:afetch
 	   #:while

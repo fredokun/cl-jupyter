@@ -221,6 +221,11 @@ be used with SETF."))
     (format *log-file* "Log started up~%")
     (setf *log-lock* (bordeaux-threads:make-lock "cl-jupyter-log"))
     (format *log-file* "About to start logging cl-jupyter~%")
+    (defun backtrace-log (fmt &rest args)
+      (let ((msg (apply #'format nil fmt args)))
+        (bordeaux-threads:with-lock-held (*log-lock*)
+          (princ msg *log-file*)
+          (finish-output *log-file*))))
     (defun always-log (fmt &rest args)
       (let ((msg (apply #'format nil fmt args)))
         (bordeaux-threads:with-lock-held (*log-lock*)
@@ -234,14 +239,24 @@ be used with SETF."))
     (format *log-file* "===================== new run =======================~%")))
 
 #+cl-jupyter-log
-(defmacro logg (level fmt &rest args)
-  "Log the passed ARGS using the format string FMT and its
+(progn
+  (defmacro logg (level fmt &rest args)
+    "Log the passed ARGS using the format string FMT and its
  arguments ARGS."
-  (if (or (not *log-enabled*)
-          (> level *log-level*))
-      (values);; disabled
-      ;; when enabled
-      `(progn (always-log ,fmt ,@args))))
+    (if (or (not *log-enabled*)
+            (> level *log-level*))
+        (values) ;; disabled
+        ;; when enabled
+        `(progn (always-log ,fmt ,@args))))
+  (defmacro logg-backtrace (level fmt &rest args)
+    "Log the passed ARGS using the format string FMT and its
+ arguments ARGS."
+    (if (or (not *log-enabled*)
+            (> level *log-level*))
+        (values) ;; disabled
+        ;; when enabled
+        `(progn (backtrace-log ,fmt ,@args)))))
+  
 
 #-cl-jupyter-log
 (defmacro logg (level fmt &rest args)
@@ -355,7 +370,7 @@ be used with SETF."))
                   (logg 0 "~a~%" (with-output-to-string (sout) (format sout "~&~A~%" err)))
                   (logg 0 "~a~%" (with-output-to-string (sout)
                                                         (let ((*print-pretty* nil))
-                                   (trivial-backtrace:print-backtrace-to-stream sout)))))
+                                                          (trivial-backtrace:print-backtrace-to-stream sout)))))
                 (format *error-output* "~&An error occurred of type: ~A: ~%  ~A~%~%"
                         (class-name (class-of err)) err)
                 (format *error-output* "serious-condition backtrace:~%~A~%"
