@@ -248,14 +248,10 @@ be used with SETF."))
         (values) ;; disabled
         ;; when enabled
         `(progn (always-log ,fmt ,@args))))
-  (defmacro logg-backtrace (level fmt &rest args)
+  (defmacro logg-backtrace (fmt &rest args)
     "Log the passed ARGS using the format string FMT and its
  arguments ARGS."
-    (if (or (not *log-enabled*)
-            (> level *log-level*))
-        (values) ;; disabled
-        ;; when enabled
-        `(progn (backtrace-log ,fmt ,@args)))))
+    `(progn (backtrace-log ,fmt ,@args))))
   
 
 #-cl-jupyter-log
