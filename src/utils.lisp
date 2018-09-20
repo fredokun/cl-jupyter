@@ -198,12 +198,12 @@ be used with SETF."))
 (defparameter *log-lock* nil)
 
 ;;; Comment out the following eval-when if you want logging fully disabled
-#+(or)
+;;;#+(or)
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (format t "Turning on cl-jupyter logging~%")
   (push :cl-jupyter-log *features*)
   (setf *log-enabled* t)
-  (setf *log-level* 1))
+  (setf *log-level* 2))
 
 #+cl-jupyter-log
 (eval-when (:execute :load-toplevel)

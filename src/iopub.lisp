@@ -62,5 +62,5 @@
 (defun send-stream (iopub parent-msg stream-name data &key (key nil))
   (let ((stream-msg (make-message parent-msg "stream" nil
 				  `(("name" . ,stream-name)
-				    ("text" . ,data)))))
+				    ("text" . ,data )))))
     (message-send iopub stream-msg :identities (list (fredokun-utilities:string-to-octets (format nil "stream.~W" stream-name))) :key key)))

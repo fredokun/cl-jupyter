@@ -14,7 +14,7 @@ The history of evaluations is also saved by the evaluator.
 
 
 (defclass output-stream (gray:fundamental-character-output-stream)
-  ((contents :initform (make-array 256 :element-type 'base-char :adjustable t :fill-pointer 0) :accessor contents)
+  ((contents :initform (make-array 256 :element-type 'character :adjustable t :fill-pointer 0) :accessor contents)
    (iopub :initarg :iopub :accessor iopub)
    (key :initarg :key :accessor key)
    (stream-name :initarg :stream-name :accessor stream-name)
@@ -124,16 +124,16 @@ The history of evaluations is also saved by the evaluator.
                                         ;(if (and (consp code-to-eval)
                                         ;       (eql (car code-to-eval) 'quicklisp-client:quickload)
                                         ;       (stringp (cadr code-to-eval)))
-                             ;; quicklisp hook
+                                ;; quicklisp hook
                                         ;  (multiple-value-list (ql:quickload (cadr code-to-eval)))
-                             ;; normal evaluation
-                             (let ((*evaluator* evaluator))
-                               (let ((* (take-history-out -1))
-                                     (** (take-history-out -2))
-                                     (*** (take-history-out -3)))
-                                 ;; put the evaluator in the environment
-                                 (logg 2 "In evaluator.lisp:133  cl-jupyter:*kernel* -> ~a~%" cl-jupyter:*kernel*)
-                                 (multiple-value-list (eval code-to-eval))))))))
+                                ;; normal evaluation
+                                (let ((*evaluator* evaluator))
+                                  (let ((* (take-history-out -1))
+                                        (** (take-history-out -2))
+                                        (*** (take-history-out -3)))
+                                    ;; put the evaluator in the environment
+                                    (logg 2 "In evaluator.lisp:133  cl-jupyter:*kernel* -> ~a~%" cl-jupyter:*kernel*)
+                                    (multiple-value-list (eval code-to-eval))))))))
              ;;(jformat t "[Evaluator] : results = ~W~%" results)
              (logg 2 "[Evaluator] : results = ~a~%" (let ((*print-readably* nil))
                                                       (format nil "~W" results)))

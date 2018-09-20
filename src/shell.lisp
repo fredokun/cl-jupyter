@@ -317,10 +317,10 @@ with the symbol to the left of the cursor."
                                :iopub (kernel-iopub (kernel shell))
                                :parent-msg msg
                                :key (kernel-key shell)))
-	      (logg 2 "==> Execution count = ~A~%" execution-count)
-	      (logg 2 "==> results = ~a~%" (let ((*print-readably* nil)) (format nil "~S" results)))
-	      (logg 2 "==> STDOUT = ~S~%" stdout)
-	      (logg 2 "==> STDERR = ~S~%" stderr)
+	      (logg 2 "=> STDOUT = ~S~%" stdout)
+	      (logg 2 "=> STDERR = ~S~%" stderr)
+	      (logg 2 "=> Execution count = ~A~%" execution-count)
+	      (logg 2 "=> results = ~a~%" (let ((*print-readably* nil)) (format nil "~S" results)))
 	      ;; broadcast the code to connected frontends
 	      (send-execute-code (kernel-iopub (kernel shell)) msg execution-count code :key (kernel-key shell))
 	      (when (and (consp results) (typep (car results) 'cl-jupyter-user::cl-jupyter-quit-obj))
