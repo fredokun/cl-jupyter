@@ -194,23 +194,23 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
   #+clasp(let* ((all-parts (with-output-to-string (sout)
                              (loop for part in parts
                                    do (princ part sout))))
-                (all-parts-octets (babel:string-to-octets all-parts)))
+                (all-parts-octets (fredokun-utilities:string-to-octets all-parts)))
            (core:hmac-sha256 all-parts-octets key))
   #-clasp(let ((hmac (ironclad:make-hmac key :SHA256)))
            ;; updates
            (loop for part in parts
-                 do (let ((part-bin (babel:string-to-octets part)))
+                 do (let ((part-bin (fredokun-utilities:string-to-octets part)))
                       (ironclad:update-hmac hmac part-bin)))
            ;; digest
            (octets-to-hex-string (ironclad:hmac-digest hmac))))
 
 (example
- (message-signing (babel:string-to-octets "toto") '("titi" "tata" "tutu" "tonton"))
+ (message-signing (fredokun-utilities:string-to-octets "toto") '("titi" "tata" "tutu" "tonton"))
  => "d32d091b5aabeb59b4291a8c5d70e0c20302a8bf9f642956b6affe5a16d9e134")
 
 ;; XXX: should be a defconstant but  strings are not EQL-able...
 (defvar +WIRE-IDS-MSG-DELIMITER+ "<IDS|MSG>")
-(defvar +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ (babel:string-to-octets +WIRE-IDS-MSG-DELIMITER+))
+(defvar +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ (fredokun-utilities:string-to-octets +WIRE-IDS-MSG-DELIMITER+))
 
 (defmethod wire-serialize ((msg message) &key (identities nil) (key nil))
   (dolist (id identities) (check-type id (simple-array (unsigned-byte 8) (*))))
@@ -242,19 +242,19 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
         (logg 2 "About to do append~%")
         (append identities
                 (list* +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+
-		       (babel:string-to-octets sig)
-		       (babel:string-to-octets header-json)
-		       (babel:string-to-octets parent-header-json)
-		       (babel:string-to-octets metadata-json)
-		       (babel:string-to-octets content-json)
+		       (fredokun-utilities:string-to-octets sig)
+		       (fredokun-utilities:string-to-octets header-json)
+		       (fredokun-utilities:string-to-octets parent-header-json)
+		       (fredokun-utilities:string-to-octets metadata-json)
+		       (fredokun-utilities:string-to-octets content-json)
 		       (coerce buffers 'list)))))))
 
 (example-progn
  (defparameter *wire1*
    (wire-serialize *msg1*
 		   :identities (list
-				(babel:string-to-octets "XXX-YYY-ZZZ-TTT")
-				(babel:string-to-octets "AAA-BBB-CCC-DDD")))))
+				(fredokun-utilities:string-to-octets "XXX-YYY-ZZZ-TTT")
+				(fredokun-utilities:string-to-octets "AAA-BBB-CCC-DDD")))))
 
 
 #|
@@ -339,37 +339,38 @@ The wire-deserialization part follows.
                 (princ "\\x" sout)
                 (format sout "~2,'0x" x))
                (t (write-char (code-char x) sout))))))
-                 
+
+
+
+
 ;; Locking, courtesy of dmeister, thanks !
 (defun message-send (channel msg &key (identities nil) (key nil))
-  (flet ((send-part (part sndmore)
-	   ;; Clasp supports binary buffers using clasp-ffi:foreign-data
-	   (cond
-	     ((typep part 'clasp-ffi:foreign-data)
-	      (pzmq:send (socket channel) part :len (clasp-ffi:foreign-data-size part) :sndmore sndmore))
-	     ((typep part '(array (unsigned-byte 8)))
-	      (let (buf)
-		(unwind-protect
-		     (progn
-		       (setf buf (cffi:foreign-alloc :uint8 :initial-contents part :count (length part)))
-		       (logg 2 "message-send (array (unsigned-byte 8)): ~s~%" (loop for x from 0 below (length part) collect (cffi:mem-aref buf :uint8 x)))
-		       (logg 2 "                  AKA (as byte-string): ~s~%" (bstr part))
-		       (pzmq:send (socket channel) buf :len (length part) :sndmore sndmore))
-		  (cffi:foreign-free buf))))
-	     (t (error "Cannot send part ~s of type ~s" part (type-of part))))
-	   #-clasp(pzmq:send (socket channel) part :sndmore sndmore)))
-    (bordeaux-threads:with-lock-held ((send-lock channel))
-      (let ((wire-parts (wire-serialize msg :identities identities :key key)))
-        (logg 2 "  in message-send (length wire-parts) -> ~s~%" (length wire-parts))
-        (logg 2 "    send wire-parts-> ~s~%" (loop for x in wire-parts collect (bstr x)))
-	(logg 2 "    send (pzmq:getsockopt socket :type) -> ~s~%" (pzmq:getsockopt (socket channel) :type))
-	(logg 2 "    send (pzmq:getsockopt socket :identity) -> ~s~%" (pzmq:getsockopt (socket channel) :identity))
+  (bordeaux-threads:with-lock-held ((send-lock channel))
+    (let ((wire-parts (wire-serialize msg :identities identities :key key)))
+      (logg 2 "  in message-send (length wire-parts) -> ~s~%" (length wire-parts))
+      (logg 2 "    send wire-parts-> ~s~%" (loop for x in wire-parts collect (bstr x)))
+      (logg 2 "    send (pzmq:getsockopt socket :type) -> ~s~%" (pzmq:getsockopt (socket channel) :type))
+      (logg 2 "    send (pzmq:getsockopt socket :identity) -> ~s~%" (pzmq:getsockopt (socket channel) :identity))
+      (flet ((send-part (part sndmore)
+               ;; Clasp supports binary buffers using clasp-ffi:foreign-data
+               (cond
+                 ((typep part 'clasp-ffi:foreign-data)
+                  (pzmq:send (socket channel) part :len (clasp-ffi:foreign-data-size part) :sndmore sndmore))
+                 ((typep part '(array (unsigned-byte 8)))
+                  (cffi:with-foreign-object (buf :uint8 (length part))
+                    (dotimes (i (length part)) (setf (cffi:mem-aref buf :uint8 i) (elt part i)))
+                    (logg 2 "message-send (array (unsigned-byte 8)): ~s~%"
+                          (loop for x below (length part) collect (cffi:mem-aref buf :uint8 x)))
+                    (logg 2 "                  AKA (as byte-string): ~s~%" (bstr part))
+                    (pzmq:send (socket channel) buf :len (length part) :sndmore sndmore)))
+                 (t (error "Cannot send part ~s of type ~s" part (type-of part))))
+               #-clasp(pzmq:send (socket channel) part :sndmore sndmore)))
         ;; Ensure that the last part send has sndmore = NIL
         (do* ((cur wire-parts (cdr cur))
               (part (car cur) (car cur))
               (sndmore (cdr cur) (cdr cur)))
              ((null cur))
-          (Send-part part sndmore))))))
+          (send-part part sndmore))))))
 
 (defun recv-array-bytes (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
   "Receive a message part from a socket as a string."

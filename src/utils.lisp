@@ -1,15 +1,117 @@
 
 (in-package #:fredokun-utilities)
 
-
-(declaim (inline []))
+#+(or)
+(declaim (notinline []))
+#+(or)
 (defun [] (table key &optional (default nil defaultp))
+  (format t "table-> ~s key -> ~s defaultp -> ~s~%" table key defaultp)
   (let ((pair (assoc key table :test #'equal)))
     (if pair
         (cdr pair)
         (if defaultp
             default
             (error "Could not find key ~a in dict ~a" key table)))))
+
+
+(macrolet
+    ((define-alist-get (name get-entry get-value-from-entry add doc)
+       `(progn
+          (declaim (notinline ,name))
+          (defun ,name (alist key &optional (default nil defaultp) &aux (test 'string=))
+            ,doc
+            (let ((entry (,get-entry key alist :test test)))
+              (if entry
+                  (values (,get-value-from-entry entry) entry)
+                  (if defaultp
+                      default
+                      (error "Could not find key ~a in alist ~a" key alist)))))
+          (define-setf-expander ,name (place key &key (test ''string=)
+                                       &environment env)
+            (multiple-value-bind
+                  (temporary-variables initforms newvals setter getter)
+                (get-setf-expansion place env)
+              (when (cdr newvals)
+                (error "~A cannot store multiple values in one place" ',name))
+              (let ((new-value (gensym "new-value"))
+                    (key-val (gensym "key-value"))
+                    (test-val (gensym "test-val"))
+                    (alist (gensym "alist"))
+                    (entry (gensym "entry")))
+                (values
+                 (append temporary-variables
+                         (list alist
+                               key-val
+                               test-val
+                               entry))
+                 (append initforms
+                         (list getter
+                               key
+                               test
+                               `(,',get-entry ,key-val ,alist :test ,test-val)))
+                 `(,new-value)
+                 `(cond
+                    (,entry
+                     (setf (,',get-value-from-entry ,entry) ,new-value))
+                    (t
+                     (let ,newvals
+                       (setf ,(first newvals) (,',add ,key ,new-value ,alist))
+                       ,setter
+                       ,new-value)))
+                 `(,',get-value-from-entry ,entry))))))))
+  (define-alist-get [] assoc cdr acons
+    "ASSOC-VALUE is an alist accessor very much like ASSOC, but it can
+be used with SETF."))
+
+
+(defparameter *base-string-to-octets-calls* 0)
+(defparameter *wide-string-to-octets-calls* 0)
+(defparameter *string-to-octets-calls* 0)
+(defun string-to-octets (string &key (encoding babel:*default-character-encoding* encodingp))
+  #+clasp
+  (cond
+    ((and (null encodingp) (core:base-string-p string))
+     (incf *base-string-to-octets-calls*)
+     (core:base-string-to-octets string))
+    ((and (null encodingp) (core:fits-in-base-string string))
+     (incf *wide-string-to-octets-calls*)
+     (core:character-string-that-fits-in-base-string-to-octets string))
+    (t
+     (incf *string-to-octets-calls*)
+     (babel:string-to-octets string :encoding encoding)))
+  #-clasp
+  (babel:string-to-octets string :encoding encoding))
+
+
+#+(or)  
+(define-setf-expander [] (table key &optional (default 'nil defaultp) &environment env)
+  (multiple-value-bind (temps inits new set get)
+      (get-setf-expansion table env)
+    (when (cdr new)
+      (error "~A cannot store multiple values in one place" '[]))
+    (let ((nv (gensym))
+          (elem-temp (gensym "ELEM")) (alist-temp (gensym "ALIST"))
+          (pair-temp (gensym "PAIR")) (default-temp (gensym "DEFAULT")))
+      (values
+       (append temps (list elem-temp alist-temp) (when defaultp (list default-temp))
+               (list pair-temp))
+       (append inits (list key get) (when defaultp (list default))
+               (list `(assoc ,elem-temp ,alist-temp :test #'equal)))
+       (list nv)
+       `(cond ((null ,pair-temp)
+               ,(if defaultp
+                    `(let ,new
+                       ;; progn to make the temp "used" and avoid the style warning.
+                       (setf ,(first new) (acons ,elem-temp (progn ,default-temp ,nv) ,alist-temp))
+                       ,set
+                       ,nv)
+                    `(error "Could not find key ~a in dict ~a" ,elem-temp ,alist-temp)))
+              (t (setf (cdr ,pair-temp) ,nv)))
+       `(cond ((null ,pair-temp)
+               ,(if defaultp
+                    default
+                    `(error "Could not find key ~a in dict ~a" ,elem-temp ,alist-temp)))
+              (t (cdr ,pair-temp)))))))
 
 (defun []-contains (table key)
   (let ((pair (assoc key table :test #'equal)))
@@ -34,11 +136,9 @@
 ;; To activate the inline examples
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *example-enabled* t) ;; nil in production / t for self-testing
-
   (defparameter *example-equal-predicate* #'equal)
-
   (defparameter *example-with-echo* nil)
-  
+ 
   )
 
 (defparameter *jformat-lock* (bordeaux-threads:make-lock "format-lock"))
@@ -98,15 +198,15 @@
 (defparameter *log-lock* nil)
 
 ;;; Comment out the following eval-when if you want logging fully disabled
-#+(or)
+;;;#+(or)
 (eval-when (:execute :load-toplevel :compile-toplevel)
   (format t "Turning on cl-jupyter logging~%")
-  (push :cl-jupyter-log *features*))
+  (push :cl-jupyter-log *features*)
+  (setf *log-enabled* t)
+  (setf *log-level* 2))
 
 #+cl-jupyter-log
 (eval-when (:execute :load-toplevel)
-  (setf *log-enabled* t)
-  (setf *log-level* 2)
   (let* ((log-file-name (make-pathname :name (format nil "cl-jupyter-~a" (getpid))
                                        :type "log"))
          (log-path-name (cond
@@ -121,6 +221,11 @@
     (format *log-file* "Log started up~%")
     (setf *log-lock* (bordeaux-threads:make-lock "cl-jupyter-log"))
     (format *log-file* "About to start logging cl-jupyter~%")
+    (defun backtrace-log (fmt &rest args)
+      (let ((msg (apply #'format nil fmt args)))
+        (bordeaux-threads:with-lock-held (*log-lock*)
+          (princ msg *log-file*)
+          (finish-output *log-file*))))
     (defun always-log (fmt &rest args)
       (let ((msg (apply #'format nil fmt args)))
         (bordeaux-threads:with-lock-held (*log-lock*)
@@ -134,14 +239,20 @@
     (format *log-file* "===================== new run =======================~%")))
 
 #+cl-jupyter-log
-(defmacro logg (level fmt &rest args)
-  "Log the passed ARGS using the format string FMT and its
+(progn
+  (defmacro logg (level fmt &rest args)
+    "Log the passed ARGS using the format string FMT and its
  arguments ARGS."
-  (if (or (not *log-enabled*)
-          (> level *log-level*))
-      (values);; disabled
-      ;; when enabled
-      `(progn (always-log ,fmt ,@args))))
+    (if (or (not *log-enabled*)
+            (> level *log-level*))
+        (values) ;; disabled
+        ;; when enabled
+        `(progn (always-log ,fmt ,@args))))
+  (defmacro logg-backtrace (fmt &rest args)
+    "Log the passed ARGS using the format string FMT and its
+ arguments ARGS."
+    `(progn (backtrace-log ,fmt ,@args))))
+  
 
 #-cl-jupyter-log
 (defmacro logg (level fmt &rest args)
@@ -239,3 +350,28 @@
       #-(or allegro clisp cmu cormanlisp gcl lispworks lucid sbcl
             kcl scl openmcl mcl abcl ecl clasp)
       (error 'not-implemented :proc (list 'quit code))) 
+
+
+(defmacro with-handling-errors (&body body)
+  `(block error-handler
+     (handler-bind
+         ((warning
+            #'(lambda (wrn)
+                (format *error-output* "~&~A~%" wrn)
+                (muffle-warning)
+                (return-from error-handler)))
+          (serious-condition
+            #'(lambda (err)
+                #+(or)(progn
+                  (logg 0 "~a~%" (with-output-to-string (sout) (format sout "~&~A~%" err)))
+                  (logg 0 "~a~%" (with-output-to-string (sout)
+                                                        (let ((*print-pretty* nil))
+                                                          (trivial-backtrace:print-backtrace-to-stream sout)))))
+                (format *error-output* "~&An error occurred of type: ~A: ~%  ~A~%~%"
+                        (class-name (class-of err)) err)
+                (format *error-output* "serious-condition backtrace:~%~A~%"
+                        (with-output-to-string (sout)
+                                               (let ((*print-pretty* nil))
+                                                 (trivial-backtrace:print-backtrace-to-stream sout))))
+                (return-from error-handler))))
+       (progn ,@body))))

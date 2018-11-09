@@ -90,7 +90,7 @@ with the symbol to the left of the cursor."
   (bordeaux-threads:interrupt-thread shell-thread
                                      (lambda ()
                                        (jformat t "About to throw interrupt-shell~%")
-                                       (logg 2 "Throwing interrupt-shell backtract~%~a~%"
+                                       (logg-backtrace "Throwing interrupt-shell backtract~%~a~%"
                                              (with-output-to-string (sout)
                                                (let ((*print-pretty* nil))
                                                  (trivial-backtrace:print-backtrace-to-stream sout))))

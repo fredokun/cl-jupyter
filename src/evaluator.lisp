@@ -14,7 +14,7 @@ The history of evaluations is also saved by the evaluator.
 
 
 (defclass output-stream (gray:fundamental-character-output-stream)
-  ((contents :initform (make-array 256 :element-type 'base-char :adjustable t :fill-pointer 0) :accessor contents)
+  ((contents :initform (make-array 256 :element-type 'character :adjustable t :fill-pointer 0) :accessor contents)
    (iopub :initarg :iopub :accessor iopub)
    (key :initarg :key :accessor key)
    (stream-name :initarg :stream-name :accessor stream-name)
@@ -73,29 +73,7 @@ The history of evaluations is also saved by the evaluator.
     (setf (slot-value kernel 'evaluator) evaluator)
     evaluator))
 
-(defmacro handling-errors (&body body)
-  `(block error-handler
-     (handler-bind
-         ((warning
-            #'(lambda (wrn)
-                (format *error-output* "~&~A~%" wrn)
-                (muffle-warning)
-                (return-from error-handler)))
-          (serious-condition
-            #'(lambda (err)
-                #+(or)(progn
-                  (logg 0 "~a~%" (with-output-to-string (sout) (format sout "~&~A~%" err)))
-                  (logg 0 "~a~%" (with-output-to-string (sout)
-                                                        (let ((*print-pretty* nil))
-                                   (trivial-backtrace:print-backtrace-to-stream sout)))))
-                (format *error-output* "~&An error occurred of type: ~A: ~%  ~A~%~%"
-                        (class-name (class-of err)) err)
-                (format *error-output* "serious-condition backtrace:~%~A~%"
-                        (with-output-to-string (sout)
-                                               (let ((*print-pretty* nil))
-                                                 (trivial-backtrace:print-backtrace-to-stream sout))))
-                (return-from error-handler))))
-       (progn ,@body))))
+
 
 (defun evaluate-code (evaluator code &key iopub parent-msg key)
   ;; (jformat t "[Evaluator] Code to evaluate: ~W~%" code)
@@ -142,22 +120,23 @@ The history of evaluations is also saved by the evaluator.
                                        :parent-msg parent-msg)))
            (let ((results (let ((*standard-output* stdout)
                                 (*error-output* stderr))
-                            (handling-errors
+                            (fredo-utils:with-handling-errors
                                         ;(if (and (consp code-to-eval)
                                         ;       (eql (car code-to-eval) 'quicklisp-client:quickload)
                                         ;       (stringp (cadr code-to-eval)))
-                             ;; quicklisp hook
+                                ;; quicklisp hook
                                         ;  (multiple-value-list (ql:quickload (cadr code-to-eval)))
-                             ;; normal evaluation
-                             (let ((*evaluator* evaluator))
-                               (let ((* (take-history-out -1))
-                                     (** (take-history-out -2))
-                                     (*** (take-history-out -3)))
-                                 ;; put the evaluator in the environment
-                                 (logg 2 "In evaluator.lisp:133  cl-jupyter:*kernel* -> ~a~%" cl-jupyter:*kernel*)
-                                 (multiple-value-list (eval code-to-eval))))))))
+                                ;; normal evaluation
+                                (let ((*evaluator* evaluator))
+                                  (let ((* (take-history-out -1))
+                                        (** (take-history-out -2))
+                                        (*** (take-history-out -3)))
+                                    ;; put the evaluator in the environment
+                                    (logg 2 "In evaluator.lisp:133  cl-jupyter:*kernel* -> ~a~%" cl-jupyter:*kernel*)
+                                    (multiple-value-list (eval code-to-eval))))))))
              ;;(jformat t "[Evaluator] : results = ~W~%" results)
-             (logg 2 "[Evaluator] : results = ~W~%" results)
+             (logg 2 "[Evaluator] : results = ~a~%" (let ((*print-readably* nil))
+                                                      (format nil "~W" results)))
              (let ((in-code (format nil "~A" code-to-eval)))
                (vector-push-extend (subseq in-code 7 (1- (length in-code)))
                                    (evaluator-history-in evaluator)))

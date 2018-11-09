@@ -148,7 +148,7 @@ display the result.")
             ((serious-condition
                #'(lambda (err)
                    (logg 0 "~a~%" (with-output-to-string (sout) (format sout "~A~%" err)))
-                   (logg 0 "~A~%" (let ((*print-pretty* nil)) (with-output-to-string (sout) (trivial-backtrace:print-backtrace-to-stream sout)))))))
+                   (logg-backtrace "~A~%" (let ((*print-pretty* nil)) (with-output-to-string (sout) (trivial-backtrace:print-backtrace-to-stream sout)))))))
           (multiple-value-bind (completions metadata)
               (simple-completions partial-token *package* (char text sep-pos))        
             (logg 2 "complete-request partial-token: ~a~%" partial-token)
@@ -317,10 +317,10 @@ with the symbol to the left of the cursor."
                                :iopub (kernel-iopub (kernel shell))
                                :parent-msg msg
                                :key (kernel-key shell)))
-	      (logg 2 "==> Execution count = ~A~%" execution-count)
-	      (logg 2 "==> results = ~S~%" results)
-	      (logg 2 "==> STDOUT = ~S~%" stdout)
-	      (logg 2 "==> STDERR = ~S~%" stderr)
+	      (logg 2 "=> STDOUT = ~S~%" stdout)
+	      (logg 2 "=> STDERR = ~S~%" stderr)
+	      (logg 2 "=> Execution count = ~A~%" execution-count)
+	      (logg 2 "=> results = ~a~%" (let ((*print-readably* nil)) (format nil "~S" results)))
 	      ;; broadcast the code to connected frontends
 	      (send-execute-code (kernel-iopub (kernel shell)) msg execution-count code :key (kernel-key shell))
 	      (when (and (consp results) (typep (car results) 'cl-jupyter-user::cl-jupyter-quit-obj))
@@ -338,7 +338,6 @@ with the symbol to the left of the cursor."
 	      (when (and stderr (> (length stderr) 0))
 		(send-stream (kernel-iopub (kernel shell)) msg "stderr" stderr :key (kernel-key shell)))
 	      ;; send the first result
-              (logg 2 "==> About to display results -> ~s~%" results)
               (cond
                 ((and *cl-jupyter-widget-display-hook*
                       (funcall *cl-jupyter-widget-display-hook*

@@ -115,7 +115,7 @@
                                :key (let ((str-key (afetch "key" config-alist :test #'equal)))
                                       (if (string= str-key "")
                                           nil
-                                          (babel:string-to-octets str-key :encoding :ASCII))))))
+                                          (fredokun-utilities:string-to-octets str-key :encoding :ASCII))))))
           (when (not (string= (config-signature-scheme config) "hmac-sha256"))
             ;; XXX: only hmac-sha256 supported
             (error "Kernel only support signature scheme 'hmac-sha256' (provided ~S)" (config-signature-scheme config)))
