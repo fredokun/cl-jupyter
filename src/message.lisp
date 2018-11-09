@@ -352,19 +352,20 @@ The wire-deserialization part follows.
       (logg 2 "    send (pzmq:getsockopt socket :type) -> ~s~%" (pzmq:getsockopt (socket channel) :type))
       (logg 2 "    send (pzmq:getsockopt socket :identity) -> ~s~%" (pzmq:getsockopt (socket channel) :identity))
       (flet ((send-part (part sndmore)
-               ;; Clasp supports binary buffers using clasp-ffi:foreign-data
-               (cond
-                 ((typep part 'clasp-ffi:foreign-data)
-                  (pzmq:send (socket channel) part :len (clasp-ffi:foreign-data-size part) :sndmore sndmore))
-                 ((typep part '(array (unsigned-byte 8)))
-                  (cffi:with-foreign-object (buf :uint8 (length part))
-                    (dotimes (i (length part)) (setf (cffi:mem-aref buf :uint8 i) (elt part i)))
-                    (logg 2 "message-send (array (unsigned-byte 8)): ~s~%"
-                          (loop for x below (length part) collect (cffi:mem-aref buf :uint8 x)))
-                    (logg 2 "                  AKA (as byte-string): ~s~%" (bstr part))
-                    (pzmq:send (socket channel) buf :len (length part) :sndmore sndmore)))
-                 (t (error "Cannot send part ~s of type ~s" part (type-of part))))
-               #-clasp(pzmq:send (socket channel) part :sndmore sndmore)))
+			;; Clasp supports binary buffers using clasp-ffi:foreign-data
+			#+clasp (cond
+				 ((typep part 'clasp-ffi:foreign-data)
+				  (pzmq:send (socket channel) part :len (clasp-ffi:foreign-data-size part) :sndmore sndmore))
+				 ((typep part '(array (unsigned-byte 8)))
+				  (cffi:with-foreign-object
+				   (buf :uint8 (length part))
+				   (dotimes (i (length part)) (setf (cffi:mem-aref buf :uint8 i) (elt part i)))
+				   (logg 2 "message-send (array (unsigned-byte 8)): ~s~%"
+					 (loop for x below (length part) collect (cffi:mem-aref buf :uint8 x)))
+				   (logg 2 "                  AKA (as byte-string): ~s~%" (bstr part))
+				   (pzmq:send (socket channel) buf :len (length part) :sndmore sndmore)))
+				 (t (error "Cannot send part ~s of type ~s" part (type-of part))))
+			#-clasp(pzmq:send (socket channel) part :sndmore sndmore)))
         ;; Ensure that the last part send has sndmore = NIL
         (do* ((cur wire-parts (cdr cur))
               (part (car cur) (car cur))
@@ -380,7 +381,8 @@ The wire-deserialization part follows.
     (values
      (let* ((data (pzmq:msg-data msg))
 	    (len (pzmq:msg-size msg))
-	    (array-bytes (make-array len :element-type 'ext:byte8)))
+	    (array-bytes #+clasp (make-array len :element-type 'ext:byte8)
+			 #-clasp(make-array len :element-type (unsigned-byte 8))))
        (loop for index from 0 below len
 	     do (setf (aref array-bytes index) (cffi:mem-aref data :uint8 index)))
        array-bytes)

@@ -13,7 +13,7 @@ The history of evaluations is also saved by the evaluator.
 
 
 
-(defclass output-stream (gray:fundamental-character-output-stream)
+(defclass output-stream (trivial-gray-streams:fundamental-character-output-stream)
   ((contents :initform (make-array 256 :element-type 'character :adjustable t :fill-pointer 0) :accessor contents)
    (iopub :initarg :iopub :accessor iopub)
    (key :initarg :key :accessor key)
@@ -21,10 +21,10 @@ The history of evaluations is also saved by the evaluator.
    (parent-msg :initarg :parent-msg :accessor parent-msg))
   (:documentation "A stream that handles sending output to the jupyter when finish-output is called"))
 
-(defmethod gray:stream-write-char ((s output-stream) c)
+(defmethod trivial-gray-streams:stream-write-char ((s output-stream) c)
   (vector-push-extend c (contents s)))
 
-(defmethod gray:stream-finish-output ((s output-stream))
+(defmethod trivial-gray-streams:stream-finish-output ((s output-stream))
   (with-standard-io-syntax
     (let ((*print-readably* nil)) ; turn this off so that log printing #<xxx> doesn't crash
       (send-stream (iopub s)
