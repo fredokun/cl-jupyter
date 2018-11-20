@@ -13,7 +13,7 @@
 
   (defparameter *example-equal-predicate* #'equal)
 
-  (defparameter *example-with-echo* nil)
+  (defparameter *example-with-echo* t)
   
   )
 
