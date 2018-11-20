@@ -9,11 +9,11 @@
 
 ;; To activate the inline examples
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defparameter *example-enabled* nil) ;; nil in production / t for self-testing
+  (defparameter *example-enabled* t) ;; nil in production / t for self-testing
 
   (defparameter *example-equal-predicate* #'equal)
 
-  (defparameter *example-with-echo* nil)
+  (defparameter *example-with-echo* t)
   
   )
 
