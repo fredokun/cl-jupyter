@@ -174,6 +174,7 @@ The wire-serialization of IPython kernel messages uses multi-parts ZMQ messages.
 
 ;; XXX: should be a defconstant but  strings are not EQL-able...
 (defvar +WIRE-IDS-MSG-DELIMITER+ "<IDS|MSG>")
+(defvar +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ (babel:string-to-octets +WIRE-IDS-MSG-DELIMITER+))
 
 (defmethod wire-serialize ((msg message) &key (identities nil) (key nil))
   (with-slots (header parent-header metadata content) msg
@@ -232,7 +233,7 @@ The wire-deserialization part follows.
 
 
 (defun wire-deserialize (parts)
-  (let ((delim-index (position +WIRE-IDS-MSG-DELIMITER+ parts :test  #'equal)))
+  (let ((delim-index (position +WIRE-IDS-MSG-DELIMITER-UB-VECTOR+ parts :test  #'equalp)))
     (when (not delim-index)
       (error "no <IDS|MSG> delimiter found in message parts"))
     (let ((identities (subseq parts 0 delim-index))
@@ -240,12 +241,12 @@ The wire-deserialization part follows.
       (let ((msg (destructuring-bind (header parent-header metadata content)
                      (subseq parts (+ 2 delim-index) (+ 6 delim-index))
                    (make-instance 'message
-                                  :header (wire-deserialize-header header)
-                                  :parent-header (wire-deserialize-header parent-header)
-                                  :metadata metadata
-                                  :content content))))
-        (values identities
-                signature
+                                  :header (wire-deserialize-header (babel:octets-to-string header))
+                                  :parent-header (wire-deserialize-header (babel:octets-to-string parent-header))
+                                  :metadata (babel:octets-to-string metadata)
+                                  :content (babel:octets-to-string content)))))
+        (values (babel:octets-to-string identities)
+                (babel:octets-to-string signature)
                 msg
                 (subseq parts (+ 6 delim-index)))))))
 
@@ -280,24 +281,40 @@ The wire-deserialization part follows.
 	   (pzmq:send socket nil)))
     (bordeaux-threads:release-lock *message-send-lock*)))
 
-(defun recv-string (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
-  "Receive a message part from a socket as a string."
-  (pzmq:with-message msg
+(defun recv-array-bytes (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
+  "Receive a message part from a socket as an array of bytes."
+  (pzmq:with-message
+    msg
     (pzmq:msg-recv msg socket :dontwait dontwait)
     (values
-     (handler-case 
-         (cffi:foreign-string-to-lisp (pzmq:msg-data msg) :count (pzmq:msg-size msg) :encoding encoding)
-       (BABEL-ENCODINGS:INVALID-UTF8-STARTER-BYTE
-           ()
-         ;; if it's not utf-8 we try latin-1 (Ugly !)
-         (format t "[Recv]: issue with UTF-8 decoding~%")
-         (cffi:foreign-string-to-lisp (pzmq:msg-data msg) :count (pzmq:msg-size msg) :encoding :latin-1)))
+     (let* ((data (pzmq:msg-data msg))
+	    (len (pzmq:msg-size msg))
+	    (array-bytes (make-array len :element-type '(unsigned-byte 8))))
+       (loop for index from 0 below len
+	  do (setf (aref array-bytes index) (cffi:mem-aref data :uint8 index)))
+       array-bytes)
      (pzmq:getsockopt socket :rcvmore))))
+
+;; (defun recv-string (socket &key dontwait (encoding cffi:*default-foreign-encoding*))
+;;   "Receive a message part from a socket as a string."
+;;   (pzmq:with-message msg
+;;     (pzmq:msg-recv msg socket :dontwait dontwait)
+;;     (format t "[Shell]: (type-of msg data) => ~A~%" (type-of (pzmq:msg-data msg)))
+;;     (let ((bytes (recv
+;;     (values
+;;      (handler-case 
+;;          (cffi:foreign-string-to-lisp (pzmq:msg-data msg) :count (pzmq:msg-size msg) :encoding encoding)
+;;        (BABEL-ENCODINGS:INVALID-UTF8-STARTER-BYTE
+;;            ()
+;;          ;; if it's not utf-8 we try latin-1 (Ugly !)
+;;          (format t "[Recv]: issue with UTF-8 decoding~%")
+;;          (cffi:foreign-string-to-lisp (pzmq:msg-data msg) :count (pzmq:msg-size msg) :encoding :latin-1)))
+;;      (pzmq:getsockopt socket :rcvmore))))
 
 (defun zmq-recv-list (socket &optional (parts nil) (part-num 1))
   (multiple-value-bind (part more)
-      (recv-string socket)
-    ;;(format t "[Shell]: received message part #~A: ~W (more? ~A)~%" part-num part more)
+      (recv-array-bytes socket)
+    (format t "[Shell]: received message part #~A: ~W (more? ~A)~%" part-num part more)
     (if more
         (zmq-recv-list socket (cons part parts) (+ part-num 1))
         (reverse (cons part parts)))))
