@@ -27,9 +27,7 @@ An enhanced interactive Shell for Common Lisp (based on the Jupyter protocol)
    ------------------                          
 ```
 
-**Important** : this is beta-quality software, expect (and please report) some bugs...
-
-**New** : a long-standing serialization bug is now fixed (thanks drmeister)!
+**Important** : cl-jupyter is entering *maintenance*, I do not plan further enhancement beyond bug fixes. A derivative of cl-jupyter with more features supported is available at: https://github.com/yitzchak/common-lisp-jupyter
 
 ## Requirements ##
 
